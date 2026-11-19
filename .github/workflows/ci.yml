@@ -1,0 +1,205 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.13.7"
+  # Test-only values. They protect nothing and exist only inside CI job containers.
+  DJANGO_SECRET_KEY: ci-only-not-a-secret-0000000000000000000000000000000000000000
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+  DATABASE_URL: postgres://crm:ci-only-password@127.0.0.1:5432/crm
+  REDIS_URL: redis://127.0.0.1:6379/0
+  CRM_ENV_FILE: ""
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  frontend:
+    name: Frontend (lint, types, Vitest, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Formatting (Prettier)
+        run: pnpm exec prettier --check .
+      - name: Lint, typecheck, unit/component tests, build
+        run: pnpm exec turbo run lint typecheck test build --filter=!@crm/api --filter=!@crm/worker
+      - name: Generated contract types are up to date
+        run: |
+          pnpm run contracts:generate
+          git diff --exit-code -- packages/contracts
+
+  backend:
+    name: Backend (Ruff, mypy, migrations, pytest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.7-alpine
+        env:
+          POSTGRES_DB: crm
+          POSTGRES_USER: crm
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready --username crm --dbname crm"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:8.10.3-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install locked dependencies (Python from .python-version)
+        run: uv sync --locked --all-packages
+      - name: Lint and formatting (Ruff)
+        run: |
+          uv run --locked --all-packages ruff check .
+          uv run --locked --all-packages ruff format --check .
+      - name: Types (mypy)
+        run: |
+          cd apps/api && uv run --locked --all-packages mypy .
+          cd ../worker && uv run --locked --all-packages mypy .
+      - name: Django system check
+        working-directory: apps/api
+        run: uv run --locked --all-packages python manage.py check
+      - name: No model change without a migration
+        working-directory: apps/api
+        run: uv run --locked --all-packages python manage.py makemigrations --check --dry-run
+      - name: Migrations apply to an empty database
+        working-directory: apps/api
+        run: uv run --locked --all-packages python manage.py migrate --noinput
+      - name: API tests (pytest + pytest-django)
+        working-directory: apps/api
+        run: uv run --locked --all-packages pytest
+      - name: Worker tests (real Celery worker)
+        working-directory: apps/worker
+        run: uv run --locked --all-packages pytest
+
+  backend-python-315:
+    # D033: additional compatibility run. Informational — it does not block a merge
+    # until the critical dependencies officially support Python 3.15.
+    name: Backend compatibility (Python 3.15.2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    env:
+      UV_PYTHON: "3.15.2"
+    services:
+      postgres:
+        image: postgres:18.7-alpine
+        env:
+          POSTGRES_DB: crm
+          POSTGRES_USER: crm
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready --username crm --dbname crm"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:8.10.3-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - run: uv run --locked --all-packages python -VV
+      - name: API tests
+        working-directory: apps/api
+        run: uv run --locked --all-packages pytest
+      - name: Worker tests
+        working-directory: apps/worker
+        run: uv run --locked --all-packages pytest
+
+  e2e:
+    name: E2E (Docker Compose + Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Generate throwaway local secrets
+        run: sh scripts/init-env.sh
+      - name: Build and start the stack
+        run: docker compose up --build --wait --wait-timeout 300
+      - name: Smoke check (API, web, worker round trip)
+        run: sh scripts/smoke.sh
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@crm/e2e..."
+      - name: Install the browser
+        run: pnpm --filter @crm/e2e exec playwright install --with-deps chromium
+      - name: Playwright tests
+        run: pnpm run e2e
+      - name: Container state and logs
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 200
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes
+
+  security:
+    name: Security (secrets, dependency audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks, full history)
+        run: >-
+          docker run --rm --volume "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1
+          git /repo --redact --verbose
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - name: JavaScript dependency audit
+        run: pnpm audit --audit-level high
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Python dependency audit
+        run: |
+          uv export --locked --all-packages --no-emit-workspace --format requirements-txt --output-file /tmp/requirements.txt
+          uvx --from pip-audit==2.10.1 pip-audit --requirement /tmp/requirements.txt --require-hashes --disable-pip
