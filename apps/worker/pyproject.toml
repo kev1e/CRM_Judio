@@ -1,0 +1,19 @@
+[project]
+name = "crm-worker"
+version = "0.0.0"
+description = "CRM background worker runtime: Celery entrypoint over the crm-api domain services"
+requires-python = ">=3.14"
+dependencies = [
+  "crm-api",
+]
+
+[tool.uv.sources]
+crm-api = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "crm_worker"
+module-root = ""
