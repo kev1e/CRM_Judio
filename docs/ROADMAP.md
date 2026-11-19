@@ -8,7 +8,7 @@ Deliver: polyglot monorepo (pnpm + Turborepo for JS/TS, uv for Python), pinned v
 
 **Exit:** `docker compose` starts; smoke endpoints and placeholder UI work locally, CI passes; no real CRM business logic assumed.
 
-**Status (2026-11-19):** implemented on branch `s0-foundation`. Verified locally: lint, types, Vitest, pytest (Python 3.14.10 and 3.15.2), Next.js build, Docker Compose stack healthy, smoke script, Playwright. The GitHub Actions run must be confirmed green before S0 is closed. Known S0 limits, intentionally left to later sprints: no authentication, sessions or CSRF (S1, after D032); no TLS/HSTS and no reverse proxy (S8); no shadcn/ui components yet (S3); `manage.py check --deploy` therefore reports W003, W004, W008.
+**Status (2026-11-19):** implemented on branch `s0-foundation`. Verified locally: lint, types, Vitest, pytest (Python 3.14.10 and 3.15.2), Next.js build, Docker Compose stack healthy, smoke script, Playwright. GitHub Actions: all five jobs green (frontend, backend, backend on Python 3.15.2, E2E, security). S0 is closed once the branch is merged into `main`. Known S0 limits, intentionally left to later sprints: no authentication, sessions or CSRF (S1, after D032); no TLS/HSTS and no reverse proxy (S8); no shadcn/ui components yet (S3); `manage.py check --deploy` therefore reports W003, W004, W008.
 
 ## S1 — identity, Telegram enrollment/MFA, users
 
