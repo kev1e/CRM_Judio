@@ -1,9 +1,10 @@
 name: CI
 
+# Runs for every pushed commit on every branch, so a pull request shows the result
+# of its head commit without a second, duplicate run.
 on:
   push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

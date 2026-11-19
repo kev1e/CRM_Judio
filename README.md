@@ -107,7 +107,7 @@ pnpm --filter @crm/web run dev
 pnpm --filter @crm/e2e exec playwright install chromium
 ```
 
-Те же проверки выполняет GitHub Actions (`.github/workflows/ci.yml`) на каждый pull request и push в `main`: frontend, backend, E2E, безопасность и дополнительный информационный прогон backend на Python 3.15.2.
+Те же проверки выполняет GitHub Actions (`.github/workflows/ci.yml`) на каждый push в любую ветку: frontend, backend, E2E, безопасность и дополнительный информационный прогон backend на Python 3.15.2.
 
 ## Изменение API и схемы данных
 
