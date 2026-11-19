@@ -1,0 +1,28 @@
+import "./globals.css";
+
+import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
+
+import { ThemeProvider } from "@/components/theme-provider";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata");
+  return { title: t("title"), description: t("description") };
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale();
+
+  return (
+    // The theme class is set on <html> before hydration by the theme provider.
+    <html lang={locale} suppressHydrationWarning>
+      <body className="min-h-dvh antialiased">
+        <NextIntlClientProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}
