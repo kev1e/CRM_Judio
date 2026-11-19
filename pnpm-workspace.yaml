@@ -1,0 +1,20 @@
+packages:
+  - apps/*
+  - packages/*
+  - e2e
+
+# D031: a package version must be at least 7 days old before it can be installed.
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+# Documented exceptions for urgent security fixes go here, one per line, with a
+# comment naming the advisory and the date. Remove the entry once the release ages out.
+minimumReleaseAgeExclude: []
+
+saveExact: true
+strictPeerDependencies: true
+
+# Dependency install scripts are blocked unless listed here. These two ship
+# prebuilt binaries as optional packages, so their scripts are not needed.
+allowBuilds:
+  "@parcel/watcher": false
+  "@swc/core": false

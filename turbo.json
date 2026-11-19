@@ -1,0 +1,33 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": [
+    ".node-version",
+    ".python-version",
+    "pyproject.toml",
+    "uv.lock",
+    "packages/config/**"
+  ],
+  "globalPassThroughEnv": [
+    "CI",
+    "CRM_ENV_FILE",
+    "DJANGO_*",
+    "DATABASE_URL",
+    "DATABASE_CONN_MAX_AGE",
+    "REDIS_URL",
+    "CELERY_BROKER_URL",
+    "API_INTERNAL_URL",
+    "API_SCHEMA_ENABLED",
+    "LOG_LEVEL",
+    "UV_*",
+    "VIRTUAL_ENV"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "lint": {},
+    "typecheck": {},
+    "test": {}
+  }
+}

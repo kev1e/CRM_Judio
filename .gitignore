@@ -1,0 +1,38 @@
+# Secrets and local environment — never commit
+.env
+.env.*
+!.env.example
+
+# JavaScript / TypeScript
+node_modules/
+.next/
+.turbo/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+staticfiles/
+
+# Playwright
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+pnpm-lock.yaml linguist-generated=true
+uv.lock linguist-generated=true
+packages/contracts/openapi.yaml linguist-generated=true
+packages/contracts/src/generated/** linguist-generated=true

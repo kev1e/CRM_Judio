@@ -1,0 +1,24 @@
+{
+  "name": "crm-judio",
+  "private": true,
+  "packageManager": "pnpm@12.20.0",
+  "engines": {
+    "node": ">=26.13.1 <27"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write . && uv run --locked --all-packages ruff format .",
+    "format:check": "prettier --check . && uv run --locked --all-packages ruff format --check .",
+    "contracts:export": "pnpm --filter @crm/api run schema:export",
+    "contracts:generate": "pnpm --filter @crm/contracts run generate",
+    "contracts:check": "pnpm run contracts:export && pnpm run contracts:generate && git diff --exit-code -- packages/contracts",
+    "e2e": "pnpm --filter @crm/e2e run e2e"
+  },
+  "devDependencies": {
+    "prettier": "3.10.1",
+    "turbo": "2.11.11"
+  }
+}

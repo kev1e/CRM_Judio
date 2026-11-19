@@ -1,0 +1,72 @@
+# Workspace root for the Python side of the monorepo (uv).
+# JavaScript/TypeScript is managed by pnpm — see package.json.
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/worker"]
+
+[tool.uv]
+required-version = ">=0.13.7,<0.14"
+# D031: a release must be at least 7 days old before it can be locked.
+exclude-newer = "7 days"
+# Documented exceptions for urgent security fixes go here, with a comment naming
+# the advisory and the date, e.g.:
+# exclude-newer-package = { some-package = "2026-12-01T00:00:00Z" }
+
+[dependency-groups]
+dev = [
+  "celery-types==0.26.0",
+  "django-stubs==6.1.2",
+  "djangorestframework-stubs==3.18.2",
+  "mypy==2.4.1",
+  "pytest==9.2.0",
+  "pytest-django==4.14.0",
+  "ruff==0.17.4",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["node_modules", ".next", ".turbo"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",  # pycodestyle, pyflakes
+  "I",            # import order
+  "B",            # bugbear
+  "UP",           # modern syntax
+  "S",            # security (bandit)
+  "DJ",           # Django
+  "SIM", "C4", "PT", "T20", "N", "RUF",
+]
+ignore = [
+  "RUF001", "RUF002", "RUF003",  # Cyrillic text is expected in this project
+  "RUF012",                      # Django/DRF declare class-level lists by convention
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106", "S603"]
+"**/migrations/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["crm", "crm_worker"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["/migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["environ"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "crm.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "crm.settings"
+addopts = "-ra --strict-markers --strict-config"
+python_files = ["test_*.py"]
+xfail_strict = true
+filterwarnings = ["error"]
