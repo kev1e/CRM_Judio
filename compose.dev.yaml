@@ -1,0 +1,11 @@
+# Development override: publishes PostgreSQL and Redis on localhost so the apps
+# can run on the host with hot reload (`pnpm --filter @crm/api dev`, etc.).
+#
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --wait postgres redis
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
