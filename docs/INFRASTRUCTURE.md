@@ -19,13 +19,16 @@ Containers (stack revised 2026-11-19):
 | Service | Runtime | From sprint |
 |---|---|---|
 | `web` | Next.js (Node.js) | S0 |
-| `api` | Django + DRF under gunicorn; runs `migrate` as a separate one-off step, not on every start | S0 |
+| `migrate` | One-off job: `manage.py migrate`, exits; `api` and `worker` start only after it succeeds | S0 |
+| `api` | Django + DRF under gunicorn | S0 |
 | `worker` | Celery worker, same image as `api` with a different command | S0 |
 | `beat` | Celery beat, exactly one instance | S8 (when schedules appear) |
 | `bot` | aiogram process (webhook mode behind the proxy; long polling allowed in local dev only) | S1 |
 | `postgres`, `redis` | Official images, private network only, named volumes | S0 |
 
-`api`, `worker`, `beat` and `bot` are built from one Python image so they always run the same code and migrations. A live-update transport (WebSocket/SSE, which would add an ASGI server) is not decided and not part of S0. SMTP provider if needed for verified recovery email. Optional local storage with dedicated mounted volume or external S3-compatible bucket through same storage abstraction. Secret values stored outside repo.
+`api`, `worker`, `beat` and `bot` are built from one Python image so they always run the same code and migrations. Local stack (S0): `compose.yaml`; PostgreSQL and Redis are not published to the host, `api` and `web` listen on `127.0.0.1` only, application containers run as non-root with all capabilities dropped (`api`/`worker` with a read-only root filesystem). `compose.dev.yaml` publishes PostgreSQL and Redis on localhost for host-based development.
+
+A live-update transport (WebSocket/SSE, which would add an ASGI server) is not decided and not part of S0. SMTP provider if needed for verified recovery email. Optional local storage with dedicated mounted volume or external S3-compatible bucket through same storage abstraction. Secret values stored outside repo.
 
 **Initial VPS sizing for load testing only**: 4 vCPU / 8GB RAM / 80GB SSD suggested as trial, NOT a guaranteed capacity figure. Measure memory under build/run, Redis queues, database connections and 100MB uploads before selecting production size.
 

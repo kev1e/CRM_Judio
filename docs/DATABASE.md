@@ -8,8 +8,7 @@ This is a **logical design**, not an approved concrete migration. Final names/ca
 - Applied migrations are never edited; a fix is a new migration. Squashing only by a reviewed, separate change.
 - Destructive or long-locking changes follow expand/contract over two releases and need explicit review. Data migrations are written to be re-runnable and are tested.
 - Constraints live in the database, not only in Python: `UniqueConstraint` (including conditional ones), `CheckConstraint`, foreign keys with explicit `on_delete` (`PROTECT` by default for history-bearing rows, never an implicit `CASCADE`).
-- **Custom user model:** Django requires the user model to be chosen before the first migration that references it. The S0 baseline therefore creates no `django.contrib.auth` tables; S1 introduces the CRM user model (`AUTH_USER_MODEL`) as its first migration (D032, proposed). `users`, `user_credentials` and `user_sessions` below map onto that model and the session mechanism chosen in S1.
-- Roles, permissions and scoped grants below are own tables. Django's built-in model permissions and groups are not used for CRM authorization.
+- **User model (D032, pending):** Django requires the user model to be chosen before the first migration that references it. The S0 baseline therefore creates no `django.contrib.auth` tables and contains a single technical table, `system_heartbeat`. Whether `users` below becomes a custom Django user model, and whether roles/grants are own tables or Django groups/permissions, is decided in D032 before S1.
 - Multi-step business operations use `transaction.atomic` with `select_for_update` where rows race; optimistic locking uses `row_version`.
 - ID generation remains an open item (see the end of this document). PostgreSQL 18 provides `uuidv7()` natively, which makes time-ordered UUID primary keys available without extensions; this is a proposal, not a decision.
 

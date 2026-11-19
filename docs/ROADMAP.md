@@ -8,6 +8,8 @@ Deliver: polyglot monorepo (pnpm + Turborepo for JS/TS, uv for Python), pinned v
 
 **Exit:** `docker compose` starts; smoke endpoints and placeholder UI work locally, CI passes; no real CRM business logic assumed.
 
+**Status (2026-11-19):** implemented on branch `s0-foundation`. Verified locally: lint, types, Vitest, pytest (Python 3.14.10 and 3.15.2), Next.js build, Docker Compose stack healthy, smoke script, Playwright. The GitHub Actions run must be confirmed green before S0 is closed. Known S0 limits, intentionally left to later sprints: no authentication, sessions or CSRF (S1, after D032); no TLS/HSTS and no reverse proxy (S8); no shadcn/ui components yet (S3); `manage.py check --deploy` therefore reports W003, W004, W008.
+
 ## S1 — identity, Telegram enrollment/MFA, users
 
 Resolve Q11–Q13, Q28 and Q30. Introduce the custom Django user model as the first identity migration and the minimal aiogram bot process needed for binding and login approval (the request wizard and Mini App stay in S6). Implement verified Telegram binding, login username/password and per-attempt bot confirmation, account lock/rate limits, sessions, admin/manager-managed user creation within allowed scope, revocation, recovery admin workflow. Tests for username change, duplicate binds, replay, rejected challenge, Telegram outage.

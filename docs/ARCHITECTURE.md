@@ -12,47 +12,53 @@ Stack revised on 2026-11-19 (D025, D026, D029, D030 in `DECISIONS.md`).
 - Deployment: Docker Compose on own VPS; GitHub Actions CI/CD; monitoring Grafana/Prometheus/Loki (proposed exact setup); file backend interface Local/S3.
 - Tooling: pnpm (JS/TS dependencies), Turborepo (orchestration of build/lint/test across all apps, including the Python ones through thin `package.json` scripts), uv (Python dependencies, one workspace and one `uv.lock`).
 - Testing: Vitest + React Testing Library for frontend unit/component tests; pytest + pytest-django for backend, business logic and permissions; Playwright for browser E2E. Vitest is never used for Python packages.
-- **Version policy (D030):** latest stable release of every program and library, pinned exactly and committed in `pnpm-lock.yaml` and `uv.lock`. A release older than latest is allowed only for a proven incompatibility, recorded in the table below (D031, proposed).
+- **Version policy (D030, D031, D033):** latest stable release of every program and library, pinned exactly and committed in `pnpm-lock.yaml` and `uv.lock`. Approved exceptions: TypeScript 6.0.3, ESLint 9.39.5, Python 3.14.10 as the primary interpreter, and a 7-day quarantine for new releases.
 
-## Verified versions (checked 2026-11-19; PROPOSED until the S0 plan is approved)
-
-Sources: npm registry and PyPI metadata (`engines`, `peerDependencies`, `requires_python`, `requires_dist`, classifiers), Docker Hub tags, and a throwaway smoke project.
+## Pinned versions (installed and verified in S0, 2026-11-19)
 
 | Component | Version | Note |
 |---|---|---|
-| Node.js | 26.13.1 (LTS) | Accepted by Next, Vitest, ESLint, jsdom `engines` |
-| pnpm / Turborepo | 12.21.0 / 2.11.13 | pnpm pinned through `packageManager` |
-| TypeScript | **6.0.3** (latest is 7.0.2) | Exception: typescript-eslint 8.73.0 (and its canary) requires `typescript <6.1.0` |
+| Node.js | 26.13.1 (LTS) | `.node-version` |
+| pnpm / Turborepo | 12.20.0 / 2.11.11 | Newest releases older than 7 days |
+| TypeScript | **6.0.3** (latest is 7.0.2) | D031: typescript-eslint requires `typescript <6.1.0` |
+| ESLint | **9.39.5** (latest is 10.x) | D031: `eslint-config-next` bundles plugins whose peer ranges stop at ESLint 9. See the warning below |
+| typescript-eslint / eslint-config-next | 8.72.2 / 16.4.6 | |
 | Next.js / React | 16.4.6 / 19.3.1 | |
-| Tailwind CSS / shadcn CLI | 4.3.5 / 4.23.0 | |
-| Vitest / Vite / jsdom | 5.1.1 / 8.3.8 / 31.0.1 | With `@vitejs/plugin-react` 6.3.0 |
-| React Testing Library | 16.3.3 | `@testing-library/dom` 10.4.2, `jest-dom` 8.0.0, `user-event` 14.6.13 |
-| Playwright | 1.65.1 | |
-| ESLint | **9.39.5** (latest is 10.15.0) | Exception: `eslint-config-next` 16.4.6 pulls `eslint-plugin-react`, `-jsx-a11y`, `-import`, whose peer ranges stop at ESLint 9 |
+| next-intl / next-themes | 4.15.1 / 0.4.6 | |
+| Tailwind CSS | 4.3.5 | shadcn/ui components are added with the first real screens (S3) |
+| Vitest / Vite / jsdom | 5.1.0 / 8.3.8 / 31.0.0 | |
+| React Testing Library | 16.3.3 | `dom` 10.4.2, `jest-dom` 7.0.1, `user-event` 14.6.10 |
+| Playwright | 1.65.0 | |
 | Prettier | 3.10.1 | |
-| OpenAPI → TS types | `@hey-api/openapi-ts` 0.99.0 | `openapi-typescript` 7.13.0 requires TypeScript 5 |
-| Python | 3.15.2 | |
-| uv | 0.13.9 | |
-| Django / DRF | 6.1.3 / 3.18.3 | Django 6.1 is not an LTS line; plan the move to the next LTS when it ships |
-| drf-spectacular | 0.30.0 | |
-| psycopg | 3.3.9 | |
-| Celery / redis-py | 5.7.0 / 8.1.0 | |
-| gunicorn | 27.0.1 | |
-| pytest / pytest-django / pytest-cov | 9.2.0 / 4.14.0 / 7.1.0 | |
-| Ruff / mypy | 0.17.6 / 2.4.1 | With django-stubs 6.1.2, djangorestframework-stubs 3.18.2, celery-types 0.26.0 |
-| aiogram | 3.32.0 | Installed in S1; requires Python `<3.16` |
-| argon2-cffi | 25.1.0 | Installed in S1 |
-| PostgreSQL | 18.7 | |
-| Redis | 8.10.3 | |
+| OpenAPI → TS types | `@hey-api/openapi-ts` 0.99.0 | `openapi-typescript` requires TypeScript 5 |
+| Python | **3.14.10** primary; 3.15.2 CI compatibility run | D033, `.python-version` |
+| uv | 0.13.7 | |
+| Django / DRF / drf-spectacular | 6.1.3 / 3.18.3 / 0.30.0 | Django 6.1 is not an LTS line; plan the move to the next LTS when it ships |
+| psycopg | 3.3.9 (binary wheels) | |
+| Celery / redis-py | 5.7.0 / 8.1.0 | `packaging` 26.3 is declared explicitly: kombu 5.7.0 imports it without declaring it |
+| gunicorn | 27.0.0 | |
+| django-environ | 0.14.0 | |
+| pytest / pytest-django | 9.2.0 / 4.14.0 | |
+| Ruff / mypy | 0.17.4 / 2.4.1 | With django-stubs 6.1.2, djangorestframework-stubs 3.18.2, celery-types 0.26.0 |
+| PostgreSQL / Redis | 18.7 / 8.10.3 | Docker images |
+| aiogram / argon2-cffi | 3.32.0 / 25.1.0 | Verified in the pre-S0 smoke project; installed in S1 |
 
-Compatibility evidence:
+Compatibility evidence (D031 condition "after checking compatibility with all tools"):
 
-- `uv sync` of the Python set on CPython 3.15.2 resolves with no conflicts (`uv pip check` clean).
-- Smoke project on Python 3.15.2 + PostgreSQL 18.7 + Redis 8.10.3: Django migrations applied, 3 pytest tests passed with `DeprecationWarning` as error, drf-spectacular schema validated, mypy strict clean, a Celery prefork worker executed a task that wrote through the ORM, gunicorn served the health endpoint.
-- `pnpm install` of the frontend set resolves; the only peer conflict is ESLint 10 against the plugins bundled by `eslint-config-next`, hence ESLint 9.
-- Not declared by upstream although it worked in the smoke run: Celery 5.7.0, kombu, billiard, redis-py, pytest-django and drf-spectacular list Python up to 3.14 in their classifiers; pytest-django and drf-spectacular list Django up to 6.0. Fallback if a defect appears: Python 3.14.10, where all of them declare support.
+- TypeScript 6.0.3: `tsc --noEmit` passes in `apps/web`, `packages/contracts` and `e2e`; Next.js 16.4.6 builds with it; Vitest, Playwright and `@hey-api/openapi-ts` run with it; pnpm reports no peer conflict with `strictPeerDependencies` on.
+- ESLint 9.39.5: flat config with `typescript-eslint` 8.72.2, `eslint-config-next` 16.4.6 and `eslint-config-prettier` lints every TypeScript package with no peer conflict.
+- **Warning about ESLint 9:** npm marks 9.39.5 as "no longer supported" (the 9.x line reached end of life; its last release is from July 2026). It is a development-only tool and never ships in an image, but it will not receive fixes. The supported alternative is ESLint 10 with a config assembled from `typescript-eslint`, `eslint-plugin-react-hooks` and `@next/eslint-plugin-next`, which loses `eslint-plugin-jsx-a11y`, `eslint-plugin-react` and `eslint-plugin-import` until they support ESLint 10. Revisit when those plugins or `eslint-config-next` move.
+- Python: the full backend suite (API and worker) passes on 3.14.10 and on 3.15.2.
 - Known incompatibility: `django-celery-beat` 2.9.0 requires `Django<6.1`. Not needed before S8.
-- Freshly published packages: several of the versions above were released 0–3 days before the check. Proposal (D031): keep pnpm's release-age quarantine and uv's `exclude-newer` at 7 days and take the newest release older than that; the lockfiles record the result.
+- Known open advisory: `minimatch` <11.0.1 (moderate, GHSA-g3hv-75wg-m249) through `typescript-eslint`; development-only, no fixed version in the 10.x line that typescript-eslint accepts.
+
+### Dependency quarantine (D031)
+
+- pnpm: `minimumReleaseAge: 10080` (minutes) with `minimumReleaseAgeStrict: true` in `pnpm-workspace.yaml`.
+- uv: `exclude-newer = "7 days"` in the root `pyproject.toml`.
+- Exception for an urgent security fix: add the package to `minimumReleaseAgeExclude` (pnpm) or `exclude-newer-package` (uv) **with a comment naming the advisory and the date**, record it in the pull request, and remove the entry once the release is older than 7 days.
+- Transitive security fixes go through `overrides` in `pnpm-workspace.yaml`, each with its advisory ID.
+- The quarantine covers packages from npm and PyPI. Tool and image versions (Node.js, Python, PostgreSQL, Redis, pnpm, uv) are pinned by hand.
 
 ## Repository layout
 
@@ -67,23 +73,26 @@ packages/
   contracts/      # OpenAPI schema exported from the API + generated TypeScript types; no hand-written business logic
   config/         # Shared tsconfig, ESLint and Prettier config
   ui/             # Shared accessible components & theme — added when a second front-end needs it
+e2e/              # Playwright tests against the running Docker Compose stack
 infra/
-  docker/ ci/ monitoring/
+  docker/         # Dockerfiles (CI lives in .github/workflows, monitoring arrives in S8)
+scripts/          # init-env.sh, smoke.sh
 docs/
 pyproject.toml    # uv workspace root (members: apps/api, apps/worker), Ruff/mypy/pytest config
 uv.lock
 package.json  pnpm-workspace.yaml  pnpm-lock.yaml  turbo.json
 ```
 
-S0 creates `apps/web`, `apps/api`, `apps/worker`, `packages/contracts`, `packages/config` only.
+S0 created `apps/web`, `apps/api`, `apps/worker`, `packages/contracts`, `packages/config` and `e2e`.
 
 Rules:
 
 - Each module from the list below is one Django app inside `apps/api` with `models`, `services` (domain logic and authorization), `selectors` (rights-scoped queries), `api` (serializers, views, urls) and `tests`.
+- The Celery application object is defined in `apps/api/crm/celery.py`, next to the settings, because the API process enqueues tasks; `apps/worker` re-exports it and owns the worker runtime and its tests.
 - `apps/worker` and the bot hold no business rules; Celery tasks and bot handlers call the same domain services as the HTTP views.
 - `apps/web` talks to the backend only through HTTP using the generated contract types. It never connects to PostgreSQL or Redis.
-- The Django admin site is not exposed (D032, proposed): it would bypass record-level ACL and audit. Administration is built as CRM screens over the same services.
-- CRM roles and scoped grants are own tables evaluated by the policy layer, not Django's model-level permissions.
+- User model, Django admin site and the place of roles/grants are **pending (D032)**. S0 installs none of `django.contrib.auth`, `admin`, `sessions`, `contenttypes`, so no option is closed.
+- Error responses use one envelope: `{"error": {"code", "message", "details"}}`; unhandled errors never expose internals.
 
 ## Key modules and their responsibilities
 
