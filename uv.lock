@@ -229,6 +229,7 @@ dependencies = [
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "gunicorn" },
+    { name = "packaging" },
     { name = "psycopg", extra = ["binary"] },
     { name = "redis" },
 ]
@@ -241,6 +242,7 @@ requires-dist = [
     { name = "djangorestframework", specifier = "==3.18.3" },
     { name = "drf-spectacular", specifier = "==0.30.0" },
     { name = "gunicorn", specifier = "==27.0.0" },
+    { name = "packaging", specifier = "==26.3" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.9" },
     { name = "redis", specifier = "==8.1.0" },
 ]
