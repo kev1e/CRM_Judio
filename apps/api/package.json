@@ -1,0 +1,14 @@
+{
+  "name": "@crm/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run --locked --all-packages python manage.py runserver 127.0.0.1:8000",
+    "lint": "uv run --locked --all-packages ruff check .",
+    "typecheck": "uv run --locked --all-packages mypy .",
+    "test": "uv run --locked --all-packages pytest",
+    "migrate": "uv run --locked --all-packages python manage.py migrate",
+    "migrations:check": "uv run --locked --all-packages python manage.py makemigrations --check --dry-run",
+    "schema:export": "uv run --locked --all-packages python manage.py spectacular --validate --fail-on-warn --file ../../packages/contracts/openapi.yaml"
+  }
+}
