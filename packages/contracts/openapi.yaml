@@ -1,0 +1,93 @@
+openapi: 3.0.3
+info:
+  title: CRM API
+  version: 0.0.0
+  description: Internal corporate CRM — HTTP API.
+paths:
+  /api/v1/health:
+    get:
+      operationId: health
+      description: 'Liveness: the process is up. Touches no external dependency.'
+      tags:
+      - system
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/v1/ready:
+    get:
+      operationId: ready
+      description: 'Readiness: PostgreSQL and Redis answer. Reports status only, never
+        error text.'
+      tags:
+      - system
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+          description: ''
+components:
+  schemas:
+    CheckResultEnum:
+      enum:
+      - ok
+      - fail
+      type: string
+      description: |-
+        * `ok` - ok
+        * `fail` - fail
+    Health:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatusEnum'
+      required:
+      - status
+    HealthStatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
+    Readiness:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ReadinessStatusEnum'
+        checks:
+          $ref: '#/components/schemas/ReadinessChecks'
+      required:
+      - checks
+      - status
+    ReadinessChecks:
+      type: object
+      properties:
+        database:
+          $ref: '#/components/schemas/CheckResultEnum'
+        redis:
+          $ref: '#/components/schemas/CheckResultEnum'
+      required:
+      - database
+      - redis
+    ReadinessStatusEnum:
+      enum:
+      - ok
+      - unavailable
+      type: string
+      description: |-
+        * `ok` - ok
+        * `unavailable` - unavailable
