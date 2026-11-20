@@ -4,51 +4,91 @@
 
 ## BLOCKER — before building the affected feature
 
+Resolved Q01–Q30 are recorded in `DECISIONS.md`; see their approved scope, tests and safeguards. Q12 identity-verification baseline and the decision to use a reserve emergency admin account are APPROVED in REC-01/REC-02; concrete break-glass and exception procedures remain OPEN before production.
+
 | ID | Question | Current suggestion / why important |
 |---|---|---|
-| Q01 | How designate a **primary department** while allowing membership in any number? | Admin sets exactly one primary membership, can change with audit; needed for deactivation handoff |
-| Q02 | If the creator assigns a task to someone else, may creator still access/edit it? | Existing mandatory rule employee sees only assigned task. Recommended: provide creation confirmation only; no later read unless separately assigned/manager/superuser |
-| Q03 | Can one task have multiple assignees? | UI says “исполнитель” singular, but prior design considered task_assignees plural. Recommend one initial assignee; preserve extensible schema only if confirmed |
-| Q04 | What specifically marks a task **completed**? | Admin-configurable status with `category=completed`; when first entering it, atomically auto-archive. Decide whether multiple completed statuses allowed |
-| Q05 | Can archived tasks be reopened, and who may do so? | Avoid accidental unarchive by assignee; define exact status restoration rule and manager/superuser scopes |
-| Q06 | Who can soft-delete and restore, who can permanently purge, for how long keep Trash? | Mechanism approved, authority/retention not agreed. Security-sensitive |
-| Q07 | Manager/superuser **manual** archive and auto-archive interaction | Interpretation: automation by system, manual actions privileged. Confirm if manual archive before completion permitted |
-| Q08 | How decide which manager receives deactivated employee's work if multiple managers for primary dept or the fallback superuser pool? | Define deterministic fallback/queue, lock concurrency, log decisions |
-| Q09 | How are existing tasks migrated when admin edits/removes statuses/transitions? | Preserve history, prohibit deleting in-use status without explicit mapping |
-| Q10 | When manager from another dept invites multi-dept employee, which department manager approves? | Explicit selection and validation to prevent bypass |
-| Q11 | How can employees initially link Telegram ID before first Telegram-MFA login? | Secure enrollment + admin-assisted bootstrap + private bot initiation |
-| Q12 | Telegram-loss recovery identity proof and emergency administrative account access | Admin-mediated reset, not email-only bypass; define strong identity checks and break-glass process |
-| Q13 | Password, session and MFA challenge expiry/lockout rules | Need safe thresholds and approved recovery/2FA controls |
-| Q14 | Which users can view audit events, and how long is audit retained? | Needed for sensitive employee and task information |
-| Q15 | RPO/RTO and acceptable downtime; then backup cadence | User explicitly requested assessment first. Do not assume daily copies meet need |
-| Q16 | File volume, types, virus scanning requirements, encryption and location -> storage provider | Max file 100MB, total volume unknown |
-| Q30 | A Telegram account may have **no username**, and usernames change. What is the CRM login label then, must it be unique, and who updates it? (registered 2026-11-19, needed for S1) | Suggestion: CRM keeps its own unique login field, pre-filled from the Telegram username at binding and editable under audit; identity stays bound to Telegram ID. Not approved |
 
 ## Important before advanced modules
 
 | ID | Question | Implication |
 |---|---|---|
-| Q17 | Is completion date due date current/original for on-time KPI? | Prevent deadline gaming and incorrect metrics |
-| Q18 | Is average completion time calculated from creation or assignment; how handle reopened tasks? | KPI definition |
-| Q19 | Which tasks can employee/author change: status, checkpoints, comments, priority, due date, attachments? | Field-level permissions; assignment edit is strictly manager/superuser |
-| Q20 | Are shared views department-only, per-project, or user-shared? Who can publish? | Access never broader than viewer permission |
-| Q21 | What kinds of request templates may employees use; who approves template publication? | Template availability and version controls |
-| Q22 | Which groups may use the bot? How to handle group visibility and confidential form fields? | Private entry/Mini App best practice |
-| Q23 | Scheduled digest recipient/timezone and retry/failure policies | Only approved flexible scheduling so far |
-| Q24 | Should employee be able to access Archive directly; when should archive affect search and KPIs? | Define view settings and record retention |
-| Q25 | Data location/compliance (personal data, employee records, cross-border Telegram use) | VPS jurisdiction, provider, GDPR where applicable |
-| Q26 | Actual load/SLA expectations and deployment approval policy for production | Select VPS and thresholds empirically |
-| Q27 | Full domain model of related CRM records (contacts, companies, deals, products) | Universal CRM is goal, but full business modules were not explicitly chosen; avoid inventing them in sprint 1 |
-| Q28 | Email recovery contact verification, delivery provider and policy | User specified verified email for recovery, admin-controlled action |
-| Q29 | Status of 'superuser' editing: company-wide read is approved, edit scope/approvals require separate specific grants | Avoid privilege escalation |
 
-## Sprint mapping gaps noticed during the readiness review (2026-11-19)
+## Engineering items without an approved value
 
-- Q28 (recovery email verification) is needed for S1 although it is listed under advanced modules.
-- Q29 (superuser edit scope) and Q14 (audit visibility/retention) are needed for S2.
-- "Who may mark a task completed" is listed in `PERMISSIONS.md` as open but has no ID; treat it as part of Q19 before S3.
-- A live-update transport (WebSocket/SSE) is implied by the revocation requirements but not chosen; decide before the first feature that pushes data to the browser.
+These are technical parameters or choices that the approved decisions leave open. Code uses a clearly labelled **provisional** value that can be changed without a migration of meaning; none of them is a business rule, and none is approved by being listed here.
+
+| Item | Provisional handling | Needed by |
+|---|---|---|
+| Live-update transport (WebSocket/SSE) for boards and revocation push | Not chosen; nothing pushes data to the browser yet | First real-time feature |
+| Size of the "known-compromised passwords" corpus (Q13 fixes the rule, not the dataset) | Django's bundled list of 20,000 leaked/common passwords; a larger local file can be supplied through `PASSWORD_COMMON_LIST_PATH` | Production |
+| Format of the CRM login (Q30 fixes uniqueness and independence from Telegram) | Lowercase Latin letters, digits, `.`, `_`, `-`; 3–64 characters; starts with a letter or digit | Production |
+| Primary keys | UUIDv7 generated by the application | — |
+
+## Process note (2026-11-20)
+
+The owner asked to continue development and to settle further questions after the first version of the CRM. Open items therefore do not stop work on approved functionality, but each one still blocks **the specific behaviour it governs**, and all "production blocker" items below still block go-live.
 
 ## Proposed clarifying decisions to request early
 
-Ask Q01–Q09 and Q11–Q16 in small logical batches, not one huge questionnaire. Prioritize user experience/security blockers before sprint concerned. Work on repo scaffolding, auth skeleton and documentation without silently answering business questions.
+Q01–Q30 are APPROVED in DECISIONS.md (Q25 **hosting geography only**; compliance remains OPEN). Continue with remaining unresolved implementation/security questions in small batches, not one huge questionnaire. Prioritize user experience/security blockers before sprint concerned. Work on repo scaffolding, auth skeleton and documentation without silently answering business questions.
+
+**Q12 follow-up (not silently approved):** specify identity evidence, administrator authorization, privileged-account emergency recovery and review/recordkeeping before production.
+
+## Closed in v1.6
+
+- **Q13 — APPROVED:** >=12 character passwords, compromise/common password screening, progressive non-permanent throttling, Telegram MFA 3-minute TTL, web session 12-hour absolute maximum.
+- **Q14 — APPROVED:** administrator all audit, manager managed-department audit, superuser by separate grant; indefinite audit retention until authorized manual cleanup.
+- Remain open: precise rate-limit thresholds (security engineering parameters), legal retention/hold process, Q12 identity evidence and emergency-admin process. These are **not** implied approvals.
+
+
+## Closed in v1.7
+
+- **Q15 — APPROVED:** RPO ≤1 hour, RTO ≤4 hours, backups retained 30 days. Exact backup schedule/tool and demonstrated RPO/RTO are **implementation work still open**, not automatic approval of a proposed tool.
+- **Q16 — APPROVED:** local persistent VPS primary attachment storage; approved formats documents (PDF/Word/Excel), images, ZIP; max 100MB per file; no mandatory antivirus scanning. Total volume and exact file subtype allowlist, VPS disk size, off-VPS backup vendor and data residency remain open.
+- Keep open: Q12 administrator identity-proof/emergency recovery, legal hold/retention, storage capacity thresholds, backup key custody and recovery drills.
+
+## Closed in v1.8
+
+- **Q17 — APPROVED:** calculate separate on-time rates against the original deadline and the current deadline effective at completion.
+- **Q18 — APPROVED:** completion-time measurement begins at executor assignment; preserve separate cycles and overall task duration across reopening.
+- Still **OPEN:** handling tasks with no original/current deadline, treatment of reopened completion cycles in KPI denominators, assignment changes during a cycle, elapsed versus working-hours duration and the exact start of a reopened cycle. These follow-up metric definitions require their own approvals.
+
+## Closed in v1.9
+
+- **Q19 — APPROVED:** field-level permissions for status/completion, priority, checkpoints, comments, attachments and deadline, with record ACL, manager-only reassignment, explicit edit mode and audit. See `DECISIONS.md` / `PERMISSIONS.md`.
+- Still OPEN: more granular restrictions on editing existing checkpoint definitions by assignees (only adding and checking explicitly approved), attachment removal rights, comment editing limits (e.g. time window), and precise superuser action grants; these may require later decisions and must not be guessed.
+
+## Closed in v2.0
+
+- **Q20 — APPROVED:** employees can create private views, managers publish department-scoped views for managed departments, and administrators publish company-wide views. All views preserve current viewer record ACL.
+- **Q21 — APPROVED:** only administrators create, modify and publish versioned request templates; published templates are offered only to explicitly listed departments and enforced consistently across CRM and Telegram.
+- Still **OPEN:** template multi-department selection at request creation, ownership handoff for saved views after deactivation, changes to template eligibility for drafts; do not invent rules.
+
+## Closed in v2.1
+
+- **Q22 — APPROVED:** Telegram group use only via administrator-approved group allowlist; group interaction limited to command and safe private DM/Mini App handoff; sensitive form fields and task data never posted in group.
+- **Q23 — APPROVED:** personal employee digests, managed-department manager digests; each user's own timezone; bounded automatic delivery retries and terminal-failure alert; administrator-configurable digest time/frequency with no preapproved clock values.
+- **Still OPEN (not implicit approval):** exact admin-configured schedule values, max retry/backoff policy and terminal failure operator, what timezone to use before employee chooses one, and optional user digest settings. Next: unresolved technical and security follow-ups.
+
+## Closed in v2.2
+
+- **Q24 — APPROVED:** Archive is directly accessible to employees with task-level ACL; hidden from active boards/default search, available by explicit search filter; historically completed archived tasks count in completion KPIs, manually archived unfinished tasks do not.
+- **Q25 — APPROVED ONLY FOR LOCATION/TEAM:** initial production VPS and primary CRM data are physically hosted in **Russia**; employees operate from **multiple countries**.
+- **Q25 compliance — OPEN / PRODUCTION BLOCKER:** actual data-center/provider and country of off-VPS backups, applicable Russian and other privacy/employment laws, legal grounds, cross-border transfers and Telegram data flows, data-controller/operator responsibilities, international employee locations, retention and deletion/legal holds including indefinite audit/Trash, and independent legal/security review. No compliance certification or determination is implied.
+- Other OPEN questions remain unchanged: all documented unresolved edge-case decisions.
+
+## Closed in v2.3
+- **Q26 — APPROVED:** target up to **20 concurrently active users**; **99.5% monthly availability** as a target only; production deployments require successful mandatory tests **and manual administrator approval**. Operational uptime measurement policy, load scenarios/latency thresholds, provider resilience, 99.5% vs 4h RTO interaction, and release audit implementation remain OPEN.
+- **Q27 — APPROVED:** first release includes tasks, projects, departments, task-based requests, reports and minimal needed links to external CRM entities. Full contact/company/deal/product modules and sync/import workflows are **deferred**. External reference providers, identifiers, validation and visibility specifics remain OPEN.
+- **Next decision batch:** outstanding recovery identity-proof, email verification mechanics and privileged account emergency access. Previously noted legal/technical edge-case questions remain OPEN and must not be silently approved.
+
+## Closed in v2.4
+- **Q28 — APPROVED:** recovery email confirmation by administrator ONLY; account recovery ONLY by manual administrator-mediated action, never by email-only self-service. Still OPEN: accepted identity evidence, actual verification of mailbox ownership/deliverability, email provider, procedures for changing verified addresses, emergency administrator access and evidence retention.
+- **Q29 — APPROVED:** superuser can read tasks company-wide, but EVERY write, reassignment, approval, archive/restore or other action requires separate explicit grants. No implicit administrative privilege, no implied audit read.
+- Remaining issue tracker: specific Q12/Q28 recovery proof and break-glass; Q25 jurisdiction/compliance; exact limits for authentication/notifications; analytics edge cases; exact operational thresholds and deployment readiness; other previously documented OPEN items. No default becomes approved by closing Q28/Q29.
+
+## Closed in v2.5 — Q12/Q28 recovery clarifications
+- **REC-01 — APPROVED:** simple employee identity confirmation by authenticated administrator comparing existing HR records and obtaining confirmation from the recorded manager. No routine video calls, passport scans, biometric checks or cumbersome multi-step verification. Recovery remains manual/admin-only (Q28), old Telegram binding and live MFA attempts must be revoked (Q12).
+- **REC-02 — APPROVED:** dedicated reserve emergency administrator account with a separately protected access procedure; normal admin use is prohibited.
+- **Still OPEN / production blockers:** specific compared HR attributes; manager-confirmation channel, absence/dispute/compromise cases and conflict-of-interest protections; custody, activation factor, emergency credential storage, reviewer, logging/alerting, rotation, recovery if both admin and break-glass inaccessible; legal and other preexisting OPEN questions. Do not silently select default values.

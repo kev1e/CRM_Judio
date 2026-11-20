@@ -91,7 +91,9 @@ Rules:
 - The Celery application object is defined in `apps/api/crm/celery.py`, next to the settings, because the API process enqueues tasks; `apps/worker` re-exports it and owns the worker runtime and its tests.
 - `apps/worker` and the bot hold no business rules; Celery tasks and bot handlers call the same domain services as the HTTP views.
 - `apps/web` talks to the backend only through HTTP using the generated contract types. It never connects to PostgreSQL or Redis.
-- User model, Django admin site and the place of roles/grants are **pending (D032)**. S0 installs none of `django.contrib.auth`, `admin`, `sessions`, `contenttypes`, so no option is closed.
+- D032 (approved): own user model, no Django admin site (`/admin` does not exist; administration is CRM screens over the DRF API), own scoped RBAC. None of `django.contrib.auth`, `admin`, `sessions`, `contenttypes` is installed.
+- **Authorization** lives in `crm.access` and is the only place that answers "may this actor do this": REST views, Celery tasks and Telegram handlers all call it. Grants are read from PostgreSQL on every check, so a change of rights applies to already open sessions at once.
+- **Audit** lives in `crm.audit`: append-only events written by the domain services in the same transaction as the change.
 - Error responses use one envelope: `{"error": {"code", "message", "details"}}`; unhandled errors never expose internals.
 
 ## Key modules and their responsibilities
@@ -153,3 +155,22 @@ Use transaction + outbox table for important state changes; Celery tasks are enq
 ## Non-functional implementation constraints
 
 Time stored in UTC, rendered in user timezone; explicit currency codes; data validation both client/server. Files not publicly exposed; storage adapter must support secure streaming/presigned access after authorization. Structured logs redact credentials, bot tokens and sensitive form values.
+
+## Approved task lifecycle service rules (Q05–Q09)
+
+- Task status, automatic completion/archive and manual archival are separate domain operations with a shared auditable service layer.
+- `archive_task` can archive incomplete tasks only when invoked by authorized manager/superuser; `reopen_completed_task` restores the prior valid non-completed status, with explicit remapping if obsolete.
+- `soft_delete_task`/`restore_task` verify action and record scope; `purge_task` is a separate administrator-only safeguarded operation with no automatic Trash TTL.
+- `deactivate_user` locks affected rows, finds one designated responsible manager for employee primary dept, else one designated authorized superuser, or stops with alert. Audit, session revocation, assignment changes and outbox must be consistent.
+- `retire_status` requires explicit old-to-new mapping and historical event preservation; no automatic matching by name or nearest position.
+- A valid CRM login is unique; Telegram numeric user ID is the provider identity; Django auth uses a custom user model from first migration.
+
+## Approved Q26 — performance and release architecture
+- The first deployment has a **measured design target of up to 20 simultaneous active users**. Exercise the Next.js UI, Django/DRF API, PostgreSQL, Celery/Redis workers, Telegram and local file IO under representative concurrent activity. Production VPS sizing remains a measured choice.
+- Monthly availability target: **99.5%**, not an observed guarantee. Monitor external health checks, dependency failure modes and latency; one VPS is a potential single point of failure. Keep RPO ≤1h and RTO ≤4h requirements distinct from availability.
+- Promote tested immutable artifacts through staging and a **protected manual approval gate owned by an authorized administrator**, then deploy with controlled migration, smoke tests and rollback plan; do not deploy to production automatically solely upon tests passing.
+
+## Approved Q27 — scope boundaries
+- V1 modules: organization/departments/RBAC, tasks/projects, requests/templates, reporting/analytics, and supporting auth/Telegram/audit/files/automation services already approved.
+- Model any necessary external CRM entity association as a **minimal external reference/link**, with authorization and safe URL/identifier validation. Do not fabricate a universal external CRM data model or data synchronization flow.
+- Contacts, companies, deals and products as first-class internal domain modules are explicitly **out of scope for the initial release**, not permanently rejected. Future designs must obtain separate approval and add migrations/contracts/tests.

@@ -43,3 +43,29 @@ Celery tasks scheduled by a single Celery beat instance, with idempotency and ti
 ## Open metrics decisions
 
 What counts as complete/closed, historical changes to deadlines, reopened tasks, tasks without deadlines, deleted/archived inclusion, how manager counts multi-assignee tasks, shared dashboard editors, max export size, notification lead times and scheduled report retention.
+
+## Approved Q17 — on-time completion dual KPIs
+
+Report two separately named on-time-completion percentages using the same ACL-filtered eligible task population:
+- **Original-deadline on-time rate**: compare completion timestamp against the initial recorded original due-date baseline.
+- **Current-deadline on-time rate**: compare completion timestamp against the due date effective at the moment of that completion.
+
+Track immutable original baseline and append-only due-date changes. A later due-date edit must not retroactively change a historical cycle's due date at completion. Exclude cancelled records from completed task counts. No-deadline rules and whether reopened cycles count separately in the rate remain **OPEN**, so no silently chosen denominator/aggregation policy.
+
+## Approved Q18 — completion duration and reopened cycles
+
+- Begin measurement at **assignment to the task's executor**, not task creation.
+- Record each completion/reopening cycle separately, with timestamps, actor and cycle index or immutable event references.
+- Report both **per-cycle completion duration** and **overall completion duration** without discarding any historic completion/reopening cycle.
+- Do not zero out earlier duration when reopening or changing status.
+- Exact reporting treatment of reassignment, reopened-cycle start, active/waiting time, and population/aggregation remains **OPEN**.
+
+**Superseded draft definitions in this document:** the earlier sample formula `completed_at - created_at` and the earlier statement that Q17/Q18 themselves were open are obsolete as of this approval.
+
+## Approved Q23 — Recipient-scoped digests and delivery
+
+- Schedule digests for employees (personal tasks only) and managers (tasks in currently managed departments only); ensure data minimization and ACL at **execution and send time**, not merely when scheduling.
+- Store recipient IANA timezone and use it to derive next delivery instant; handle DST transitions deterministically with tests. Time and frequency are administrator-configurable and deliberately **unspecified** here.
+- Implement queued delivery with an idempotency key per recipient/schedule occurrence and finite retries (e.g. configurable exponential backoff + bounded jitter); handle Telegram `retry_after`/flood limits, distinguish retryable vs non-retryable errors. On final failure, persist status and notify authorized operator; do not retry forever or disclose private data in alerts.
+- Admin alone configures automations/digest schedules under existing policy; ordinary users and managers cannot edit global automation rules without separately authorized permissions. Keep an audit of schedule/config changes.
+- Open parameters: exact frequency, time, max retries and delay values, unconfigured timezone default, notification recipient for terminal failures, user opt-out specifics. Do not silently assume values.

@@ -8,23 +8,36 @@ Deliver: polyglot monorepo (pnpm + Turborepo for JS/TS, uv for Python), pinned v
 
 **Exit:** `docker compose` starts; smoke endpoints and placeholder UI work locally, CI passes; no real CRM business logic assumed.
 
-**Status (2026-11-19):** implemented on branch `s0-foundation`. Verified locally: lint, types, Vitest, pytest (Python 3.14.10 and 3.15.2), Next.js build, Docker Compose stack healthy, smoke script, Playwright. GitHub Actions: all five jobs green (frontend, backend, backend on Python 3.15.2, E2E, security). S0 is closed once the branch is merged into `main`. Known S0 limits, intentionally left to later sprints: no authentication, sessions or CSRF (S1, after D032); no TLS/HSTS and no reverse proxy (S8); no shadcn/ui components yet (S3); `manage.py check --deploy` therefore reports W003, W004, W008.
+**Status:** done. Merged into `main` on 2026-11-20 with all five CI jobs green. Known S0 limits, intentionally left to later sprints: no TLS/HSTS and no reverse proxy (S8); no shadcn/ui components yet (S3).
 
 ## S1 — identity, Telegram enrollment/MFA, users
 
-Resolve Q11–Q13, Q28 and Q30. Introduce the custom Django user model as the first identity migration and the minimal aiogram bot process needed for binding and login approval (the request wizard and Mini App stay in S6). Implement verified Telegram binding, login username/password and per-attempt bot confirmation, account lock/rate limits, sessions, admin/manager-managed user creation within allowed scope, revocation, recovery admin workflow. Tests for username change, duplicate binds, replay, rejected challenge, Telegram outage.
+Q11–Q13, Q28, Q30, REC-01, REC-02 and D032 are approved. Implement verified Telegram binding, login with CRM login + password and per-attempt bot confirmation, progressive rate limits, sessions, admin/manager-managed user creation within allowed scope, revocation, recovery admin workflow. Tests for username change, duplicate binds, replay, rejected challenge, Telegram outage.
 
 **Exit:** real end-to-end authenticated login; Telegram-dependent login blocked when bot offline; safe existing sessions continue; access revokes on deactivation.
 
+Delivery slices (engineering order; the scope above is unchanged):
+
+| Slice | Content | Status |
+|---|---|---|
+| S1.1 | Audit log (append-only), own user model (Q30 login, Telegram ID, verified-email fields), password policy (Q13), RBAC core of D032-C1 (roles, scoped grants, single authorization service, permission version), CLI that creates the first administrator | In progress |
+| S1.2 | Telegram enrollment (Q11): one-time binding token, minimal aiogram bot process, atomic binding of the numeric Telegram ID | Next |
+| S1.3 | Login (Q13): password check, 3-minute single-use bot approval, 12-hour sessions with immediate revocation, progressive throttling, login screen | Planned |
+| S1.4 | User provisioning and deactivation through the API and CRM screens (administrator; managers once S2 departments exist) | Planned |
+| S1.5 | Administrator-only email verification (Q28) and the recovery workflow of REC-01 | Planned; the items REC-01 leaves OPEN are not implemented |
+| S1.6 | Reserve emergency administrator account (REC-02) and the emergency CLI of D032-B1 | Blocked on the OPEN procedure details; only marking and audit groundwork until they are approved |
+
+The RBAC core is built in S1.1 rather than S2 because user provisioning and every later administrative action need a permission check. Departments, memberships, manager scopes and the `MANAGED_DEPARTMENTS` resolution remain S2.
+
 ## S2 — organization & authorization core
 
-Resolve Q01–Q03/Q08. Dept/role/permission tables, multi-membership, manager assignments and primary dept, ACL evaluator, scope enforcement hooks/query builder. Audit and negative cross-department tests.
+Q01–Q03, Q08, Q14 and Q29 are approved. Departments, multi-membership, manager assignments and primary dept, role administration API/UI, resolution of the `MANAGED_DEPARTMENTS` scope in the authorization service (its core arrives in S1.1), scope enforcement hooks/query builder, scoped audit reading. Audit and negative cross-department tests.
 
 **Exit:** employee, manager, superuser, admin privileges distinct and measurable via APIs; access revokes immediately.
 
 ## S3 — canonical tasks & personal boards
 
-Resolve Q04–Q07/Q09/Q19. Tasks, assignee, single responsible dept, status/transition admin UI, checkpoints, due date, audit, archive/trash, modal details/edit mode, personal Kanban, drag-and-drop, responsive UX, light/dark and i18n structure.
+Q01–Q09 and Q30 have been resolved; resolve Q19 (field-level permissions) before implementing edits. Tasks, assignee, single responsible dept, status/transition admin UI, checkpoints, due date, audit, archive/trash, modal details/edit mode, personal Kanban, drag-and-drop, responsive UX, light/dark and i18n structure.
 
 **Exit:** employee cannot enumerate others' tasks; completion auto-archives; checkboxes do not change status; unauthorized transitions denied; history and archive/trash tested.
 
@@ -71,3 +84,14 @@ Accessibility, keyboard controls, compact information architecture, user onboard
 3. Migration/change safety, realistic seed data without real users.
 4. Explain known limitations, remaining tasks and any deviation.
 5. No claim of passing a test that has not been run.
+
+**S3 task-lifecycle acceptance supplement:** privileged manual archive of incomplete tasks; manager/superuser scoped restore/reopen; indefinite Trash (manual admin purge only); deterministic deactivation handoff; administrator-approved in-use status mapping; add negative authorization tests.
+
+**S1/S2 prerequisites updated:** implement Q11 enrollment before Telegram-2FA login; model Q12 admin reset and audit without inventing the precise verification procedure; implement Q10 chosen-department approval, membership and server-side scope checks before cross-department invites. Q13/Q14 and Q12 operational recovery detail remain open.
+
+## Q26–Q27 approved scope and delivery gates (applies to S0–S9)
+- **S0–S2:** retain auth/role/organization foundations. Initial performance target is **20 concurrently active users**; establish reproducible representative workload and capture capacity baseline.
+- **S3–S7:** deliver approved initial features: departments, projects, tasks, templated requests and reports/analytics. Implement only minimal external CRM record references necessary for these workflows; **no internal contacts/companies/deals/products domain modules** in the first release.
+- **S8:** make production promotion dependent on automated test results **plus manual administrator approval**, with protected environment, immutable artifact, migration/rollback procedure, audit and staging smoke checks. Validate backup/restore objectives and alerting.
+- **S9:** test concurrency (20 simultaneously active users) and the **99.5% monthly availability target** against an explicit measurement definition; document single-VPS risks and measured results, do not claim that a load or SLA test passed unless run.
+- Deferred external CRM modules and synchronization require separate design/approval and are not automatically scheduled into initial sprints. Outstanding legal and production-readiness blockers remain.

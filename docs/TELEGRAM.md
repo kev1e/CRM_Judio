@@ -19,9 +19,9 @@
 
 ## Proposed secure account linking
 
-1. Authenticated CRM user starts link flow or admin initiates supervised enrollment.
-2. CRM generates short-lived single-use link token; employee opens bot, proves control of Telegram account.
-3. Telegram service records verified numeric Telegram user ID, current username as display/login alias, and binding audit.
+1. Administrator or authorized department manager provisions the CRM account and initiates controlled enrollment; first-time users need not pass Telegram MFA before binding.
+2. CRM generates a short-lived single-use enrollment token and delivers it over an approved private channel (never group chat or logs); employee opens a private chat with the approved bot and redeems the token.
+3. Server validates token expiry, single use, provisioned account and Telegram sender identity, then atomically binds the verified numeric Telegram user ID; username is only mutable display metadata, not canonical CRM login. Audit enrollment, reject replay/collision.
 4. Reject duplicate bindings, expired/replayed tokens, unauthorized group messages. Username change must be supported without account takeover.
 
 ## Login MFA flow
@@ -31,7 +31,7 @@
 3. Bot sends approval request via personal DM to verified Telegram user ID; if bot cannot DM, fail safely and explain enrollment requirement.
 4. User approves/denies within Telegram; backend correlates exact challenge and atomically consumes it.
 5. API issues secure session (cookie flags/token policies), logs outcome; approval for another request cannot be reused.
-6. During Telegram outage, **new Telegram-dependent login is blocked**. Existing valid web sessions continue while permissions remain current. Lost Telegram recovery is administrator-controlled, with extra identity proof and audit (details pending security review).
+6. During Telegram outage, **new Telegram-dependent login is blocked**. Existing valid web sessions continue while permissions remain current. Lost Telegram recovery is administrator-mediated: verify employee identity under the established procedure, revoke prior Telegram link and pending MFA challenges, require new secure enrollment, and audit. Exact identity verification and emergency admin recovery are still OPEN for implementation/production.
 
 ## Requests through Telegram
 
@@ -54,3 +54,19 @@
 - Bot direct notifications generally require users to have started or otherwise authorized private bot communication; onboarding flow must ensure this.
 - In groups privacy mode/admin privileges affect which commands bot can see; use targeted commands or Mini App launches.
 - Define which source groups are authorized, moderation/spam rules, recovery verification, outage behavior of pending login, exact formats of notification texts, scheduling preferences.
+
+## Approved Q22 — Telegram group allowlist and privacy
+
+1. Maintain administrator-controlled `telegram_allowed_groups` with canonical numeric `chat_id`, enabled state and audited lifecycle. On every group-originated command, deny by default if group is not enabled. Group approval never bypasses user identity or task/template ACL.
+2. Group bot interaction is **command and safe handoff link only**. Do not request, echo, preview or publish any sensitive form fields, task descriptions, assignees, attachments, status history or personal metrics in the group.
+3. Hand off to the user's private bot DM or signed Telegram Mini App via opaque short-lived, single-use context; never include authorization credentials, personal data or reusable submission tokens in a group URL. Validate sender's stable Telegram user ID and CRM binding, context, allowed template departments and record rights server-side.
+4. No chat synchronization/transcript storage or chat-to-task linking. Store only minimal metadata necessary for authorization, group allowlist audits, replay prevention and operational diagnostics.
+5. Group membership is not automatically proof of CRM employment; restrict bot to active authenticated staff. Disallow arbitrary `/start` payloads to impersonate an already linked employee.
+
+## Approved Q23 — Delivery and digest constraints
+
+- Personal user digests cover only assigned/authorized records. Manager digests cover currently managed department scope. Re-check scope and membership at dispatch, including after role/dept revocation.
+- Use an individual user-configured IANA timezone for scheduling; handle DST and ambiguous/missing local times. Administrator chooses and can change digest frequency and exact dispatch times; none are prescribed by this decision.
+- Outbox/Celery delivery implements deduplication and bounded, backoff-based retries, honors Telegram rate-limit responses and avoids duplicates after a successful send. Notify authorized operational contacts of permanent failure without including confidential task content.
+- Telegram transport failure does not stop unrelated CRM/API operations. Keep pending/failure status for monitoring and troubleshooting.
+- Still OPEN: retry count/backoff intervals, timezone choice when a user has not configured one, precise schedule defaults and permitted digest opt-outs. These must not be treated as approved product defaults.
