@@ -227,3 +227,23 @@ These are test specifications; actual automated tests and recovery drills must b
 - Sensitive personnel details and tokens never appear in ordinary logs, audit diffs or Telegram group messages; store only minimal status/actor metadata.
 - Break-glass administrator cannot be used as ordinary account access, and its access/use is auditable and generates appropriate security alerts. Test recovery in isolated staging after a documented separate emergency procedure is approved.
 - **OPEN before production:** exact break-glass factor, custody, activation and rollback; manager confirmation delivery channel and exceptional unavailable-manager cases. Do not claim these have been tested already.
+
+## Implemented automated tests
+
+Which of the scenarios above are executable today. Everything not listed here is still a specification.
+
+### S1.1 (backend: `apps/api/crm/{identity,access,audit}/tests`, run in CI on Python 3.14.10 and 3.15.2)
+
+| Requirement | Covered |
+|---|---|
+| Q30 | Unique CRM login enforced by service and database; the same Telegram username on two accounts is allowed, the same Telegram numeric ID is not |
+| Q13 (password part) | Passwords under 12 characters, common passwords and over-long inputs are refused; strong passwords without character classes are accepted; Argon2id hash stored |
+| Q28 (data part) | Verified state cannot be stored without the verifying administrator and an address; uniqueness and normalisation of the recovery email |
+| D020 / D032-C1 req. 8 | Revoking a role, changing a role's grants and deactivating a user take effect for an already loaded actor; `permissions_version` is bumped |
+| D032-C1 req. 1, 2, 7, 9, 10 | Several roles per user; scope ordering; one central check; every role/grant change audited; negative tests for users without roles, holders of a custom role, system and CLI actors |
+| D003 | The administrator role grants no task permission |
+| Privilege escalation | Self-assignment of the administrator role is refused; administrator-only permissions cannot be put into a custom role; the last active administrator cannot be removed, also under concurrent requests |
+| D032-B1 req. 5, 6 | `/admin` returns 404; first-administrator CLI works once, applies the password policy, never takes the password from the command line, is audited; two simultaneous runs create one administrator |
+| Q14 (storage part) | Audit events cannot be updated or deleted through the ORM or raw SQL; deletion is possible only inside a transaction that switched on the cleanup flag |
+
+Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: Telegram enrollment and MFA, sessions and their 12-hour limit, throttling, audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.

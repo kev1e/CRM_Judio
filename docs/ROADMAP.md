@@ -20,7 +20,7 @@ Delivery slices (engineering order; the scope above is unchanged):
 
 | Slice | Content | Status |
 |---|---|---|
-| S1.1 | Audit log (append-only), own user model (Q30 login, Telegram ID, verified-email fields), password policy (Q13), RBAC core of D032-C1 (roles, scoped grants, single authorization service, permission version), CLI that creates the first administrator | In progress |
+| S1.1 | Audit log (append-only), own user model (Q30 login, Telegram ID, verified-email fields), password policy (Q13), RBAC core of D032-C1 (roles, scoped grants, single authorization service, permission version), CLI that creates the first administrator | Done (2026-11-20) |
 | S1.2 | Telegram enrollment (Q11): one-time binding token, minimal aiogram bot process, atomic binding of the numeric Telegram ID | Next |
 | S1.3 | Login (Q13): password check, 3-minute single-use bot approval, 12-hour sessions with immediate revocation, progressive throttling, login screen | Planned |
 | S1.4 | User provisioning and deactivation through the API and CRM screens (administrator; managers once S2 departments exist) | Planned |

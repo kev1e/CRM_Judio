@@ -141,3 +141,30 @@ All views remain permission-filtered; being a task creator does not grant read. 
 - Require administrator authorization and prevent self-approval/conflict of interest. Ordinary employees, task authors, department managers and task-read-only superusers cannot initiate privileged recovery actions.
 - Emergency administrator is a separately protected break-glass account, not a blanket task/content ACL bypass. Restrict it to incident functions and audit use.
 - Ensure recovery requests and confirmation metadata are visible only to specifically authorized actors; revoke sessions/bindings before issuing replacement credentials.
+
+## Implementation status (S1.1)
+
+The authorization service is `crm.access.services` (D032-C1). REST views, Celery tasks and Telegram handlers call `require_permission(actor, code, at_least=scope)`; nothing else decides. Grants are read from PostgreSQL on every check.
+
+Permission catalogue so far (codes are added together with the feature that checks them):
+
+| Code | Scopes it can be granted in | Custom roles may hold it |
+|---|---|---|
+| `user.create` | managed departments, company | Yes |
+| `user.update` | company | Yes |
+| `user.deactivate` | company | Yes |
+| `user.email.verify` | company | **No** — administrator only (Q28) |
+| `user.recovery.manage` | company | **No** — administrator only (Q12, Q28, REC-01) |
+| `role.manage` | company | **No** — administrator only |
+| `role.assign` | company | **No** — administrator only |
+| `audit.read` | managed departments, company | Yes (Q14: a superuser needs this separate grant) |
+
+Rules enforced by the service and covered by tests:
+
+- A user without roles, a deactivated user, and every non-user actor (worker, CLI) hold no permissions.
+- Several roles combine; the widest scope per permission wins. A department-scoped grant never satisfies a company-level check.
+- The built-in `administrator` role holds every code above company-wide and **no task permission**; it cannot be edited or deleted at runtime.
+- Only a holder of `role.assign` can give or take roles; nobody can raise their own rights. The last active administrator cannot lose the role.
+- Every role creation, grant change, assignment and revocation is audited and bumps `permissions_version` of the affected users in the same transaction.
+
+Not implemented yet: departments and the resolution of the `MANAGED_DEPARTMENTS` scope against concrete departments (S2), task permissions (S3), the superuser role (S2/S3), the HTTP API and screens for role administration (S2).

@@ -164,3 +164,25 @@ Task workflow scoping, file retention vs object backups, relation field targets,
 - Recovery approval and reset must use atomic state transitions; prevent reuse/duplicate approval and race conditions. Revoke old Telegram bindings/MFA challenges/sessions and issue new one-time binding tokens with Q11/Q13 semantics.
 - Mark the emergency administrator account as explicitly distinguished for monitoring and restricted workflows; never store emergency secrets in DB cleartext or source code. Record every break-glass session and action with tamper-resistant audit/alert references.
 - Exact HR fields, confirmation channel, fallback, break-glass authentication and secret custody remain OPEN; schema choices must not silently set policy.
+
+## Implemented schema
+
+Concrete tables created by migrations so far. Everything above remains the logical design for the parts not built yet.
+
+### S1.1 — identity, RBAC core, audit
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `identity_user` | `id` UUIDv7, `crm_login`, `display_name`, `password` (Argon2id hash), `last_login`, `email`, `email_verified_at`, `email_verified_by_id`, `telegram_user_id`, `telegram_username`, `telegram_bound_at`, `is_active`, `deactivated_at`, `permissions_version`, `created_at`, `updated_at` | `crm_login` unique and format-checked; `telegram_user_id` unique when set; `email` unique when set and lowercase; verified state requires both the address and the verifying administrator; Telegram ID and binding time are set together; inactive ⇔ `deactivated_at` set |
+| `access_role` | `id`, `key`, `name`, `description`, `is_system`, `created_at` | `key` unique and format-checked |
+| `access_role_grant` | `id`, `role_id`, `permission_code`, `scope` | one row per (role, permission); `scope` ∈ `own`, `managed_departments`, `company` |
+| `access_user_role` | `id`, `user_id`, `role_id`, `granted_at`, `granted_by_id` | one row per (user, role); users and roles are protected from deletion while linked |
+| `audit_event` | `id` UUIDv7, `occurred_at` (database clock), `actor_type` (`user`/`system`/`cli`), `actor_id`, `actor_label`, `action`, `entity_type`, `entity_id`, `metadata` JSON, `correlation_id` | a `user` actor must reference a user and other actors must not; trigger `audit_event_append_only` refuses every UPDATE, and every DELETE outside a transaction that set `crm.audit_cleanup = 'on'` |
+
+Notes:
+
+- The permission catalogue lives in code (`crm/access/permissions.py`), not in a table: a permission only exists together with the code that checks it. `access_role_grant.permission_code` is validated against the catalogue by the service.
+- The built-in `administrator` role is created by a data migration; its grants change only through migrations.
+- `permissions_version` is incremented in the same transaction as any change of the user's roles or of the grants of a role they hold.
+- The audit row has no department scope column yet; it is added with departments in S2 (Q14 scoped reading).
+- Not built yet: sessions, login challenges, enrollment tokens, throttling counters, recovery requests, the emergency-account marker.

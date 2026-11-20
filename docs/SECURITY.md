@@ -104,3 +104,14 @@ Password policy, session TTL, MFA challenge TTL, admin identity verification for
 - Reserve a dedicated **break-glass administrative account** with separately protected access and strict access to required recovery functions. Do not use this account for routine work or as a business-superuser data-reading bypass.
 - Require an explicit emergency-use procedure, strong independently protected credentials/MFA or an approved alternative that remains functional during the incident, independent audit logs/alerts and post-event review. Never hardcode keys, secrets or recovery tokens.
 - **OPEN:** exact custody, enrollment, activation, auth factor, duration, independent reviewer, unavailable-manager fallback and end-to-end operational runbook. Production activation is blocked until documented and tested.
+
+## Implementation status (S1.1)
+
+Implemented and covered by automated tests:
+
+- Passwords: Argon2id only; Q13 policy (minimum 12 characters, rejection of common/leaked passwords from a local list, no character-class rules, no forced rotation); inputs over 128 characters are refused before hashing.
+- No Django admin site and no `/admin` route; `django.contrib.auth`, `admin`, `sessions`, `contenttypes` are not installed (D032).
+- Audit events are written in the same transaction as the change they describe, and the table is append-only at the database level. Metadata whose keys look like secrets (password, token, hash, cookie, ...) is refused by the audit service.
+- The first administrator is created only by the CLI command `create_first_administrator`, only while no active administrator exists; the password is never accepted as a command-line argument; the action is audited with the operating-system account as the actor.
+
+Not implemented yet (so nothing can sign in to the CRM yet): Telegram enrollment, login with bot approval, sessions, throttling, email verification, the recovery workflow, the emergency administrator account.
