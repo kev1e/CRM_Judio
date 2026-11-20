@@ -1,4 +1,4 @@
-"""Guards of the S0 baseline: what must not exist yet."""
+"""Guards of the platform baseline: what must never appear, and what must stay in sync."""
 
 import subprocess
 import sys
@@ -8,21 +8,27 @@ import pytest
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connection
+from django.test import Client
 
 API_DIR = Path(settings.BASE_DIR)
 COMMITTED_SCHEMA = API_DIR.parent.parent / "packages" / "contracts" / "openapi.yaml"
 
 
 @pytest.mark.django_db
-def test_baseline_creates_only_the_technical_table() -> None:
-    # No auth/session/admin tables before the user model is decided (D032, S1).
+def test_schema_contains_only_own_tables() -> None:
+    # D032: no auth_*, django_admin_log, django_session or django_content_type tables.
     assert sorted(connection.introspection.table_names()) == [
+        "access_role",
+        "access_role_grant",
+        "access_user_role",
+        "audit_event",
         "django_migrations",
+        "identity_user",
         "system_heartbeat",
     ]
 
 
-def test_auth_admin_and_sessions_are_not_installed() -> None:
+def test_django_auth_admin_sessions_and_contenttypes_are_not_installed() -> None:
     forbidden = {
         "django.contrib.auth",
         "django.contrib.admin",
@@ -30,6 +36,16 @@ def test_auth_admin_and_sessions_are_not_installed() -> None:
         "django.contrib.contenttypes",
     }
     assert forbidden.isdisjoint(settings.INSTALLED_APPS)
+    assert settings.AUTH_USER_MODEL == "identity.User"
+
+
+@pytest.mark.parametrize("path", ["/admin", "/admin/", "/admin/login/", "/api/admin/"])
+def test_admin_route_does_not_exist(path: str) -> None:
+    # D032-B1, requirement 6.
+    response = Client().get(path)
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
 
 
 @pytest.mark.django_db

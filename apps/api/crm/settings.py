@@ -38,13 +38,40 @@ if not DEBUG and (
         f"{_MIN_SECRET_KEY_LENGTH} characters, not the placeholder from .env.example."
     )
 
-# Deliberately absent in S0: django.contrib.auth, admin, sessions, contenttypes.
-# The user model, the session mechanism and the admin question (D032) are decided
-# before S1; installing them now would create tables that are hard to replace.
+# D032: django.contrib.auth, admin, sessions and contenttypes are deliberately not
+# installed. Users, sessions, roles and grants are own tables, administration is
+# done through the CRM's own screens, and there is no /admin route.
 INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "crm.system",
+    "crm.identity",
+    "crm.access",
+    "crm.audit",
+]
+
+AUTH_USER_MODEL = "identity.User"
+
+# Argon2id only; there are no legacy hashes to accept.
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
+
+# Q13: at least 12 characters and not a common/known-compromised password. No
+# character-class rules and no periodic rotation. The bundled list holds 20,000
+# leaked passwords; PASSWORD_COMMON_LIST_PATH may point to a larger local file
+# (one password per line, optionally gzipped). Passwords are never sent anywhere.
+_common_password_options: dict[str, str] = {}
+if _common_password_list := env.str("PASSWORD_COMMON_LIST_PATH", default=""):
+    _common_password_options["password_list_path"] = _common_password_list
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "OPTIONS": _common_password_options,
+    },
 ]
 
 MIDDLEWARE = [

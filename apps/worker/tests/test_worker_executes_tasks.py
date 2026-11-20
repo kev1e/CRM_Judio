@@ -19,7 +19,9 @@ from crm.system.models import Heartbeat
 from crm.system.tasks import record_heartbeat
 from crm_worker.app import app as worker_app
 
-pytestmark = pytest.mark.django_db(transaction=True)
+# Real transactions, because the worker is another process. `serialized_rollback`
+# restores the rows created by data migrations (system roles) after each test.
+pytestmark = pytest.mark.django_db(transaction=True, serialized_rollback=True)
 
 STARTUP_TIMEOUT_SECONDS = 60
 TASK_TIMEOUT_SECONDS = 30
