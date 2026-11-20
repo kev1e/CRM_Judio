@@ -1,6 +1,7 @@
 """Access-separation tests for the authorization service (D032-C1, req. 7, 8, 10)."""
 
 import pytest
+from django.db.models import F
 from django.utils import timezone
 
 from crm.access import services
@@ -166,3 +167,13 @@ def test_change_of_role_grants_applies_to_an_already_loaded_actor(
 
     assert services.scope_for(actor, "audit.read") is Scope.MANAGED_DEPARTMENTS
     assert not services.has_permission(actor, "audit.read", at_least=Scope.COMPANY)
+
+
+def test_bump_permissions_version_touches_only_named_users(make_user: UserFactory) -> None:
+    first, second = make_user(), make_user()
+
+    assert services.bump_permissions_version([first.pk]) == 1
+
+    assert User.objects.get(pk=first.pk).permissions_version == 2
+    assert User.objects.get(pk=second.pk).permissions_version == 1
+    assert User.objects.filter(permissions_version=F("permissions_version")).count() == 2

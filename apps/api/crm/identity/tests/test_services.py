@@ -1,5 +1,4 @@
 import pytest
-from django.db.models import F
 
 from crm.audit.models import AuditEvent
 from crm.common.actors import Actor
@@ -132,13 +131,3 @@ def test_set_password_applies_the_policy(make_user: UserFactory) -> None:
     user.refresh_from_db()
     assert user.check_password(STRONG_PASSWORD) is True
     assert not AuditEvent.objects.filter(action="user.password_changed").exists()
-
-
-def test_bump_permissions_version_touches_only_named_users(make_user: UserFactory) -> None:
-    first, second = make_user(), make_user()
-
-    assert services.bump_permissions_version([first.pk]) == 1
-
-    assert User.objects.get(pk=first.pk).permissions_version == 2
-    assert User.objects.get(pk=second.pk).permissions_version == 1
-    assert User.objects.filter(permissions_version=F("permissions_version")).count() == 2

@@ -2,17 +2,19 @@
 
 The only code that creates users or changes their credentials. Transport layers
 (REST, CLI, bot) call these functions; they never write the User model directly.
+
+Layering: the identity package may call `crm.access.services` (authorization); the
+access package uses only the identity models, never the identity services. The
+functions in this module do not authorize by themselves — they are building blocks
+for the use cases in `enrollment.py` and `setup.py`, which do.
 """
 
 import re
-from collections.abc import Iterable
-from uuid import UUID
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import F
 
 from crm.audit import services as audit
 from crm.common.actors import Actor
@@ -115,13 +117,3 @@ def set_password(*, actor: Actor, user: User, raw_password: str) -> None:
             entity_id=str(user.pk),
         )
     user.password = locked.password
-
-
-def bump_permissions_version(user_ids: Iterable[UUID]) -> int:
-    """Mark everything issued for the users' previous permissions as stale (D020).
-
-    Must run inside the transaction that changes the roles or grants.
-    """
-    return User.objects.filter(pk__in=list(user_ids)).update(
-        permissions_version=F("permissions_version") + 1
-    )

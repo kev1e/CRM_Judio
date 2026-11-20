@@ -10,16 +10,17 @@ scope, and department-scoped grants do not satisfy a COMPANY-level check.
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
+from uuid import UUID
 
 from django.db import IntegrityError, transaction
+from django.db.models import F
 
 from crm.access.models import ROLE_KEY_REGEX, Role, RoleGrant, UserRole
 from crm.access.permissions import ADMINISTRATOR_ROLE_KEY, REGISTRY, Scope
 from crm.audit import services as audit
 from crm.common.actors import Actor, ActorType
 from crm.common.exceptions import DomainError, PermissionDeniedError
-from crm.identity import services as identity
 from crm.identity.models import User
 
 _ROLE_KEY_RE = re.compile(ROLE_KEY_REGEX)
@@ -67,6 +68,25 @@ def require_permission(actor: Actor, code: str, *, at_least: Scope) -> Scope:
     if scope is None or not scope.covers(at_least):
         raise PermissionDeniedError()
     return scope
+
+
+def bump_permissions_version(user_ids: Iterable[UUID]) -> int:
+    """Mark everything issued for the users' previous permissions as stale (D020).
+
+    Must run inside the transaction that changes the roles or grants.
+    """
+    return User.objects.filter(pk__in=list(user_ids)).update(
+        permissions_version=F("permissions_version") + 1
+    )
+
+
+def is_administrator(user: User) -> bool:
+    return UserRole.objects.filter(
+        user_id=user.pk,
+        user__is_active=True,
+        role__key=ADMINISTRATOR_ROLE_KEY,
+        role__is_system=True,
+    ).exists()
 
 
 # --- Role administration ----------------------------------------------------
@@ -143,7 +163,7 @@ def set_role_grants(*, actor: Actor, role: Role, grants: Mapping[str, Scope]) ->
             for code, scope in after.items()
         )
         holders = list(locked.user_links.values_list("user_id", flat=True))
-        identity.bump_permissions_version(holders)
+        bump_permissions_version(holders)
         audit.record(
             actor=actor,
             action="role.grants_changed",
@@ -178,7 +198,7 @@ def _link_role(*, actor: Actor, user: User, role: Role) -> bool:
     )
     if not created:
         return False
-    identity.bump_permissions_version([user.pk])
+    bump_permissions_version([user.pk])
     audit.record(
         actor=actor,
         action="role.assigned",
@@ -221,7 +241,7 @@ def revoke_role(*, actor: Actor, user: User, role: Role) -> bool:
                 "last_administrator", "The last active administrator cannot lose the role."
             )
         link.delete()
-        identity.bump_permissions_version([user.pk])
+        bump_permissions_version([user.pk])
         audit.record(
             actor=actor,
             action="role.revoked",
@@ -235,25 +255,38 @@ def revoke_role(*, actor: Actor, user: User, role: Role) -> bool:
 # --- First administrator ----------------------------------------------------
 
 
-def create_first_administrator(
-    *, operator: str, crm_login: str, display_name: str, password: str
-) -> User:
-    """Create the very first administrator on an installation that has none.
+def claim_first_administrator_slot() -> Role:
+    """Lock the administrator role and make sure nobody holds it yet.
 
-    This is not the emergency (break-glass) procedure of REC-02: it refuses to run
-    as soon as any active administrator exists.
+    The only way to obtain the role without an existing administrator starts here.
+    It refuses as soon as any active administrator exists; this is not the emergency
+    (break-glass) procedure of REC-02. Must run inside the caller's transaction.
     """
-    actor = Actor.cli(operator)
-    with transaction.atomic():
-        role = Role.objects.select_for_update().get(key=ADMINISTRATOR_ROLE_KEY, is_system=True)
-        if UserRole.objects.filter(role=role, user__is_active=True).exists():
-            raise DomainError(
-                "administrator_exists",
-                "An active administrator already exists; this command only sets up the first one.",
-            )
-        user = identity.create_user(
-            actor=actor, crm_login=crm_login, display_name=display_name, password=password
+    role = Role.objects.select_for_update().get(key=ADMINISTRATOR_ROLE_KEY, is_system=True)
+    if UserRole.objects.filter(role=role, user__is_active=True).exists():
+        raise DomainError(
+            "administrator_exists",
+            "An active administrator already exists; this command only sets up the first one.",
         )
-        _link_role(actor=actor, user=user, role=role)
-    user.refresh_from_db()
-    return user
+    return role
+
+
+def grant_first_administrator(*, actor: Actor, user: User) -> None:
+    """Give the administrator role to the first administrator of the installation."""
+    role = claim_first_administrator_slot()
+    _link_role(actor=actor, user=user, role=role)
+
+
+def claim_setup_phase() -> None:
+    """Lock the administrator role and make sure the installation is still being set up:
+    no active administrator has bound a Telegram account, so nobody can sign in yet.
+    Must run inside the caller's transaction.
+    """
+    role = Role.objects.select_for_update().get(key=ADMINISTRATOR_ROLE_KEY, is_system=True)
+    if UserRole.objects.filter(
+        role=role, user__is_active=True, user__telegram_user_id__isnull=False
+    ).exists():
+        raise DomainError(
+            "setup_finished",
+            "An administrator can already sign in; ask them to issue the binding code.",
+        )

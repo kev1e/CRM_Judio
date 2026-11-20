@@ -11,6 +11,7 @@ from crm.access.models import Role, UserRole
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.conftest import STRONG_PASSWORD
+from crm.identity import setup
 from crm.identity.models import User
 
 # Real transactions and separate connections are required for the row locks to matter.
@@ -43,13 +44,13 @@ def _run_together(*operations: Callable[[], object]) -> list[object]:
 
 def test_only_one_of_two_simultaneous_first_administrators_is_created() -> None:
     def create(login: str) -> Callable[[], object]:
-        return lambda: services.create_first_administrator(
+        return lambda: setup.create_first_administrator(
             operator="os:tests", crm_login=login, display_name=login, password=STRONG_PASSWORD
         )
 
     results = _run_together(create("first.admin"), create("second.admin"))
 
-    created = [r for r in results if isinstance(r, User)]
+    created = [r for r in results if isinstance(r, tuple)]
     refused = [r for r in results if isinstance(r, DomainError)]
     assert len(created) == 1, results
     assert len(refused) == 1, results
@@ -59,7 +60,7 @@ def test_only_one_of_two_simultaneous_first_administrators_is_created() -> None:
 
 
 def test_two_administrators_cannot_remove_each_other_at_the_same_time() -> None:
-    first = services.create_first_administrator(
+    first, _token = setup.create_first_administrator(
         operator="os:tests", crm_login="first.admin", display_name="A", password=STRONG_PASSWORD
     )
     role = Role.objects.get(key="administrator")

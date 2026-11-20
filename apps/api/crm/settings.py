@@ -112,6 +112,16 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = "UTC"
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
+# --- Telegram ---------------------------------------------------------------
+
+# PROVISIONAL (docs/OPEN_QUESTIONS.md): Q11 asks for a "short-lived" binding token
+# without fixing the number. Change it here or through the environment.
+TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES: int = env.int(
+    "TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES", default=30
+)
+if TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES < 1:
+    raise ImproperlyConfigured("TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES must be at least 1.")
+
 # --- Internationalisation ---------------------------------------------------
 
 LANGUAGE_CODE = "ru"

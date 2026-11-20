@@ -4,22 +4,16 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
-from crm.access import services
 from crm.common.exceptions import DomainError
-
-
-def _operator() -> str:
-    try:
-        return f"os:{getpass.getuser()}"
-    except OSError, KeyError:
-        return "os:unknown"
+from crm.identity import setup
+from crm.identity.management.commands._output import operator, print_binding_token
 
 
 class Command(BaseCommand):
     help = (
         "Create the first administrator account. Works only while no active administrator "
         "exists. The password is read from a prompt or from standard input, never from "
-        "the command line. The action is written to the audit log."
+        "the command line. Prints a one-time Telegram binding code. The action is audited."
     )
 
     def add_arguments(self, parser: CommandParser) -> None:
@@ -42,8 +36,8 @@ class Command(BaseCommand):
             raise CommandError("The password must not be empty.")
 
         try:
-            user = services.create_first_administrator(
-                operator=_operator(),
+            user, token = setup.create_first_administrator(
+                operator=operator(),
                 crm_login=options["login"],
                 display_name=options["display_name"],
                 password=password,
@@ -54,3 +48,4 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Administrator '{user.crm_login}' created (id {user.pk}).")
         )
+        print_binding_token(self, token)

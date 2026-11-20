@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.db.models import Q
@@ -98,3 +99,43 @@ class User(AbstractBaseUser):
 
     def __str__(self) -> str:
         return self.crm_login
+
+
+class TelegramEnrollmentToken(models.Model):
+    """A one-time, expiring ticket that lets an employee bind their Telegram account (Q11).
+
+    Only the SHA-256 of the token is stored; the token itself is shown once to
+    whoever issued it. A user has at most one pending token: issuing a new one
+    revokes the previous.
+    """
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="enrollment_tokens"
+    )
+    token_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(db_default=Now())
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "identity_telegram_enrollment_token"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=Q(used_at__isnull=True, revoked_at__isnull=True),
+                name="identity_enrollment_one_pending_per_user",
+            ),
+            models.CheckConstraint(
+                condition=Q(used_at__isnull=True) | Q(revoked_at__isnull=True),
+                name="identity_enrollment_used_xor_revoked",
+            ),
+            models.CheckConstraint(
+                condition=Q(token_hash__regex=r"^[0-9a-f]{64}$"),  # noqa: S106 - a format, not a secret
+                name="identity_enrollment_hash_format",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"enrollment:{self.pk}"

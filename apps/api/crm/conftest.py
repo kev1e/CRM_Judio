@@ -4,9 +4,9 @@ from collections.abc import Callable
 
 import pytest
 
-from crm.access import services as access
 from crm.common.actors import Actor
 from crm.identity import services as identity
+from crm.identity import setup
 from crm.identity.models import User
 
 STRONG_PASSWORD = "plum-orbit-candle-73"
@@ -33,9 +33,10 @@ def make_user(db: None) -> UserFactory:
 
 @pytest.fixture
 def administrator(db: None) -> User:
-    return access.create_first_administrator(
+    user, _token = setup.create_first_administrator(
         operator="os:tests", crm_login="root.admin", display_name="Admin", password=STRONG_PASSWORD
     )
+    return user
 
 
 @pytest.fixture
