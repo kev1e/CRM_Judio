@@ -70,3 +70,9 @@
 - Outbox/Celery delivery implements deduplication and bounded, backoff-based retries, honors Telegram rate-limit responses and avoids duplicates after a successful send. Notify authorized operational contacts of permanent failure without including confidential task content.
 - Telegram transport failure does not stop unrelated CRM/API operations. Keep pending/failure status for monitoring and troubleshooting.
 - Still OPEN: retry count/backoff intervals, timezone choice when a user has not configured one, precise schedule defaults and permitted digest opt-outs. These must not be treated as approved product defaults.
+
+## Implementation status (S1.2a)
+
+Built and tested: the binding service `crm.identity.enrollment` — `issue_token` (authorized, audited), `redeem_token` (called by the bot with the sender's numeric ID and the chat type) and the CLI path for the first administrator. See `SECURITY.md` for the guarantees.
+
+Not built yet: the aiogram process (`apps/telegram-bot`), which will be a thin adapter: on `/start <code>` in a private chat it calls `redeem_token` and answers with a fixed success or failure text. It waits for aiogram 3.32.0 to leave the dependency quarantine (see `ROADMAP.md`, S1.2b). A real bot token from BotFather will be needed to try it against Telegram; it goes into `.env` only.

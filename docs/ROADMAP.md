@@ -21,7 +21,8 @@ Delivery slices (engineering order; the scope above is unchanged):
 | Slice | Content | Status |
 |---|---|---|
 | S1.1 | Audit log (append-only), own user model (Q30 login, Telegram ID, verified-email fields), password policy (Q13), RBAC core of D032-C1 (roles, scoped grants, single authorization service, permission version), CLI that creates the first administrator | Done (2026-11-20) |
-| S1.2 | Telegram enrollment (Q11): one-time binding token, minimal aiogram bot process, atomic binding of the numeric Telegram ID | Next |
+| S1.2a | Telegram enrollment, domain part (Q11): one-time binding code stored as a hash, atomic binding of the numeric Telegram ID, refusal and audit of replayed, altered, expired or misdirected codes, binding code for the first administrator from the CLI | Done (2026-11-20) |
+| S1.2b | The aiogram bot process that receives `/start <code>` in a private chat and calls the binding service | Waiting: aiogram 3.32.0 is the first release that supports Python 3.15 (required by the D033 compatibility run) and it leaves the 7-day quarantine on 2026-11-22; the newest release allowed today, 3.31.0, is limited to Python below 3.15 |
 | S1.3 | Login (Q13): password check, 3-minute single-use bot approval, 12-hour sessions with immediate revocation, progressive throttling, login screen | Planned |
 | S1.4 | User provisioning and deactivation through the API and CRM screens (administrator; managers once S2 departments exist) | Planned |
 | S1.5 | Administrator-only email verification (Q28) and the recovery workflow of REC-01 | Planned; the items REC-01 leaves OPEN are not implemented |

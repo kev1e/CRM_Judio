@@ -179,10 +179,18 @@ Concrete tables created by migrations so far. Everything above remains the logic
 | `access_user_role` | `id`, `user_id`, `role_id`, `granted_at`, `granted_by_id` | one row per (user, role); users and roles are protected from deletion while linked |
 | `audit_event` | `id` UUIDv7, `occurred_at` (database clock), `actor_type` (`user`/`system`/`cli`), `actor_id`, `actor_label`, `action`, `entity_type`, `entity_id`, `metadata` JSON, `correlation_id` | a `user` actor must reference a user and other actors must not; trigger `audit_event_append_only` refuses every UPDATE, and every DELETE outside a transaction that set `crm.audit_cleanup = 'on'` |
 
+### S1.2a — Telegram enrollment
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `identity_telegram_enrollment_token` | `id` UUIDv7, `user_id`, `token_hash` (SHA-256 hex), `created_at`, `expires_at`, `used_at`, `revoked_at` | `token_hash` unique and format-checked; at most one pending (not used, not revoked) row per user; a row cannot be both used and revoked |
+
+The code itself is never stored. Binding sets `telegram_user_id`, `telegram_username` and `telegram_bound_at` on `identity_user` and marks the row used in one transaction; the unique index on `telegram_user_id` settles simultaneous attempts.
+
 Notes:
 
 - The permission catalogue lives in code (`crm/access/permissions.py`), not in a table: a permission only exists together with the code that checks it. `access_role_grant.permission_code` is validated against the catalogue by the service.
 - The built-in `administrator` role is created by a data migration; its grants change only through migrations.
 - `permissions_version` is incremented in the same transaction as any change of the user's roles or of the grants of a role they hold.
 - The audit row has no department scope column yet; it is added with departments in S2 (Q14 scoped reading).
-- Not built yet: sessions, login challenges, enrollment tokens, throttling counters, recovery requests, the emergency-account marker.
+- Not built yet: sessions, login challenges, throttling counters, the Telegram binding lifecycle history beyond audit events, recovery requests, the emergency-account marker.

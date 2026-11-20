@@ -114,4 +114,7 @@ Implemented and covered by automated tests:
 - Audit events are written in the same transaction as the change they describe, and the table is append-only at the database level. Metadata whose keys look like secrets (password, token, hash, cookie, ...) is refused by the audit service.
 - The first administrator is created only by the CLI command `create_first_administrator`, only while no active administrator exists; the password is never accepted as a command-line argument; the action is audited with the operating-system account as the actor.
 
-Not implemented yet (so nothing can sign in to the CRM yet): Telegram enrollment, login with bot approval, sessions, throttling, email verification, the recovery workflow, the emergency administrator account.
+- Telegram enrollment (Q11), domain part: the binding code is 256 bits of randomness, stored only as a SHA-256 hash, valid once and for a limited time; issuing a new code revokes the previous one. Binding takes the numeric Telegram ID from the update, never from user text, and never uses the username as identity. Codes sent outside a private chat, replayed, altered, expired, revoked, for a deactivated or already bound account, or from a Telegram account bound elsewhere are refused with one generic answer and audited with the real reason. Re-binding is impossible here: it is a recovery action.
+- Binding codes for the first administrator can be issued from the CLI only until an administrator has bound Telegram.
+
+Not implemented yet (so nothing can sign in to the CRM yet): the bot process itself, login with bot approval, sessions, throttling, email verification, the recovery workflow, the emergency administrator account.

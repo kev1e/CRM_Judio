@@ -246,4 +246,13 @@ Which of the scenarios above are executable today. Everything not listed here is
 | D032-B1 req. 5, 6 | `/admin` returns 404; first-administrator CLI works once, applies the password policy, never takes the password from the command line, is audited; two simultaneous runs create one administrator |
 | Q14 (storage part) | Audit events cannot be updated or deleted through the ORM or raw SQL; deletion is possible only inside a transaction that switched on the cleanup flag |
 
-Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: Telegram enrollment and MFA, sessions and their 12-hour limit, throttling, audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.
+### S1.2a (backend: `apps/api/crm/identity/tests/test_enrollment.py`, `test_first_administrator.py`)
+
+| Requirement | Covered |
+|---|---|
+| Q11 issuing | Only a holder of company-wide `user.create` can issue; users without roles, with a department-scoped grant, the account owner, system and CLI actors are refused; the code is stored only as a hash and never appears in audit; a new code revokes the previous one; no code for a bound or deactivated account |
+| Q11 redeeming | Binding of the numeric Telegram ID; accounts without a Telegram username; single use; expiry; altered and unknown codes; codes sent outside a private chat (not burned); a Telegram account already bound elsewhere; a deactivated account; username impersonation; two Telegram accounts redeeming one code at the same instant bind exactly one |
+| Q11 audit | Every refusal is audited with its reason; the sender always receives the same generic answer |
+| First administrator | The CLI prints a binding code once; a new one can be issued from the CLI only for an administrator and only until an administrator has bound Telegram |
+
+Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: the bot transport and MFA, sessions and their 12-hour limit, throttling, audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.
