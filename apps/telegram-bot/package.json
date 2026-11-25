@@ -1,0 +1,14 @@
+{
+  "name": "@crm/telegram-bot",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run --locked --all-packages python -m crm_bot",
+    "lint": "uv run --locked --all-packages ruff check .",
+    "typecheck": "uv run --locked --all-packages mypy .",
+    "test": "uv run --locked --all-packages pytest"
+  },
+  "dependencies": {
+    "@crm/api": "workspace:*"
+  }
+}
