@@ -321,6 +321,23 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S4 — comments (`apps/api/crm/tasks/tests/test_comments.py`, `task-board.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| Q19 who comments | Assignee and manager of the responsible department add comments; a colleague, a manager of another department, an employee of another department and the administrator get "not found" and read nothing |
+| Q02 | The task's author without access cannot comment |
+| Q29 | A superuser reads comments and cannot write until a separate grant is given |
+| Own comment only | The author edits; the manager and the next assignee are refused; a comment addressed through another task is not found |
+| Revisions | Every earlier text is kept with its time and editor; author never changes; saving the same text is not an edit; the database refuses an empty body and an inconsistent revision |
+| Access revocation | After reassignment the former assignee neither edits nor reads their comment |
+| Q24 / read-only | Archived and deleted tasks take no new comments or edits; the archive keeps comments readable under the same rules |
+| Audit | Adding and editing are recorded with the comment ID; the text appears in no audit event |
+| HTTP | Round trip, 403 for somebody else's comment, 404 for outsiders and unknown IDs, 400 for an empty text, session required |
+| Web | Send and clear the field, edit only one's own, read-only without the right |
+
+Verified by hand in a browser on 2026-11-26: add a two-line comment, edit it, the mark "изменён".
+
 ### S3 — status administration (`apps/api/crm/tasks/tests/test_workflow.py`, `workflow-panel.test.tsx`)
 
 | Requirement | Covered |

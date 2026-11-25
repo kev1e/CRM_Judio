@@ -238,6 +238,15 @@
     "checkpointRemove": "Убрать пункт: {text}",
     "noCheckpoints": "Пунктов пока нет.",
     "checkpointsNote": "Отметка всех пунктов не меняет статус задачи.",
+    "commentsTitle": "Комментарии",
+    "commentsCount": "({count})",
+    "noComments": "Комментариев пока нет.",
+    "commentPlaceholder": "Новый комментарий",
+    "commentAdd": "Отправить",
+    "commentEdit": "Изменить",
+    "commentEditLabel": "Текст комментария",
+    "commentEdited": "изменён",
+    "commentsNote": "Комментарии видят те же сотрудники, что и задачу. Изменить можно только свой комментарий; прежний текст сохраняется.",
     "historyTitle": "История",
     "archive": "В архив",
     "reopen": "Вернуть в работу",
@@ -269,6 +278,8 @@
       "checkpoint_undone": "Снята отметка с чек-пойнта",
       "checkpoint_removed": "Удалён чек-пойнт",
       "status_remapped": "Статус заменён администратором",
+      "comment_added": "Добавлен комментарий",
+      "comment_edited": "Изменён комментарий",
       "other": "Изменение"
     },
     "errors": {
@@ -284,7 +295,9 @@
       "previous_status_unavailable": "Прежнего статуса больше нет. Обратитесь к администратору.",
       "invalid_checkpoint": "Введите текст пункта (до 200 символов).",
       "validation_error": "Проверьте заполнение полей.",
-      "department_not_found": "Отдел не найден или закрыт."
+      "department_not_found": "Отдел не найден или закрыт.",
+      "invalid_comment": "Введите текст комментария (до 5000 символов).",
+      "comment_not_found": "Комментарий не найден."
     }
   },
   "newTask": {

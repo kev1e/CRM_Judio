@@ -27,6 +27,12 @@ urlpatterns = [
         views.TaskCheckpointView.as_view(),
         name="task-checkpoint",
     ),
+    path("tasks/<uuid:task_id>/comments", views.TaskCommentsView.as_view(), name="task-comments"),
+    path(
+        "tasks/<uuid:task_id>/comments/<uuid:comment_id>",
+        views.TaskCommentView.as_view(),
+        name="task-comment",
+    ),
     path("workflow/statuses", workflow_views.WorkflowView.as_view(), name="workflow"),
     path("workflow/order", workflow_views.WorkflowOrderView.as_view(), name="workflow-order"),
     path(

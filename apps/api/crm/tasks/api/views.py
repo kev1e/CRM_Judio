@@ -19,6 +19,7 @@ from crm.tasks.api.serializers import (
     VIEWS,
     CheckpointCreateSerializer,
     CheckpointUpdateSerializer,
+    CommentWriteSerializer,
     OptionsSerializer,
     StatusListSerializer,
     TaskCreatedSerializer,
@@ -42,6 +43,7 @@ _ACTION_KEYS = {
     "task.deadline": "deadline",
     "task.checkpoints.use": "checkpoints_use",
     "task.checkpoints.manage": "checkpoints_manage",
+    "task.comment": "comment",
     "task.priority": "priority",
     "task.reassign": "reassign",
     "task.archive": "archive",
@@ -96,6 +98,17 @@ def _detail(actor: Actor, task: Task) -> dict[str, Any]:
         "created_at": task.created_at,
         "completed_at": task.completed_at,
         "checkpoints": [{"id": c.pk, "text": c.label, "is_done": c.is_done} for c in checkpoints],
+        "comments": [
+            {
+                "id": c.pk,
+                "author": {"id": c.author_id, "name": c.author.display_name},
+                "text": c.body,
+                "created_at": c.created_at,
+                "edited_at": c.edited_at,
+                "is_own": actor.user is not None and c.author_id == actor.user.pk,
+            }
+            for c in services.comments(actor, task)
+        ],
         # Only what happened and who did it; never the old or new text of a field.
         "history": [
             {
@@ -353,4 +366,39 @@ class TaskCheckpointView(APIView):
     def delete(self, request: Request, task_id: UUID, checkpoint_id: UUID) -> Response:
         actor = _actor(request)
         services.remove_checkpoint(actor=actor, task_id=task_id, checkpoint_id=checkpoint_id)
+        return _task_response(actor, task_id)
+
+
+class TaskCommentsView(APIView):
+    @extend_schema(
+        operation_id="tasks_add_comment",
+        request=CommentWriteSerializer,
+        responses={200: TaskDetailSerializer, **_ERRORS},
+        tags=["tasks"],
+    )
+    def post(self, request: Request, task_id: UUID) -> Response:
+        serializer = CommentWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        services.add_comment(actor=actor, task_id=task_id, body=serializer.validated_data["text"])
+        return _task_response(actor, task_id)
+
+
+class TaskCommentView(APIView):
+    @extend_schema(
+        operation_id="tasks_edit_comment",
+        request=CommentWriteSerializer,
+        responses={200: TaskDetailSerializer, **_ERRORS},
+        tags=["tasks"],
+    )
+    def patch(self, request: Request, task_id: UUID, comment_id: UUID) -> Response:
+        serializer = CommentWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        services.edit_comment(
+            actor=actor,
+            task_id=task_id,
+            comment_id=comment_id,
+            body=serializer.validated_data["text"],
+        )
         return _task_response(actor, task_id)

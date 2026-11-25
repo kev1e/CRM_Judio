@@ -51,6 +51,7 @@ _TASK = (
     PermissionDef("task.status", "Move a task between statuses, including completion.", _ANY_SCOPE),
     PermissionDef("task.deadline", "Change a task's deadline.", _ANY_SCOPE),
     PermissionDef("task.checkpoints.use", "Add checkpoints and tick them.", _ANY_SCOPE),
+    PermissionDef("task.comment", "Comment on a task and edit one's own comments.", _ANY_SCOPE),
     PermissionDef(
         "task.checkpoints.manage", "Rename and remove checkpoints.", _DEPARTMENT_OR_COMPANY
     ),
@@ -161,6 +162,7 @@ BASELINE_GRANTS: dict[str, Scope] = dict.fromkeys(
         "task.status",
         "task.deadline",
         "task.checkpoints.use",
+        "task.comment",
     ),
     Scope.OWN,
 )

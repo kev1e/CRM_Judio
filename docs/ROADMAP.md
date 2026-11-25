@@ -52,6 +52,8 @@ Resolve Q10/Q16. Projects and membership, own-dept invites direct, other-dept ap
 
 **Exit:** cross-dept invitation flow works without granting task read by mere project membership; file IDOR tests pass.
 
+**Status (2026-11-26):** task comments are done — the assignee and the department's manager comment, everybody who sees the task reads, only the author edits and every earlier text is kept, nothing of the text reaches the audit log. **Not done:** projects and membership, invitations with approval, files (the production storage provider is not confirmed), deleting comments, mentions and notifications (S6).
+
 ## S5 — request templates & web creation
 
 Template builder UI, published immutable versions, all eight field types and validation, eligibility, dynamic fields, task creation with eligible assignee, checkpoint templates, history. Shared service for future Telegram forms.

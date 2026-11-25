@@ -815,6 +815,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/tasks/{task_id}/comments:
+    post:
+      operationId: tasks_add_comment
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentWriteRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/comments/{comment_id}:
+    patch:
+      operationId: tasks_edit_comment
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentWriteRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/tasks/{task_id}/reopen:
     post:
       operationId: tasks_reopen
@@ -1419,6 +1514,42 @@ components:
           maxLength: 200
       required:
       - text
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/Named'
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_own:
+          type: boolean
+          description: Written by the viewer.
+      required:
+      - author
+      - created_at
+      - edited_at
+      - id
+      - is_own
+      - text
+    CommentWriteRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+      required:
+      - text
     CurrentUser:
       type: object
       properties:
@@ -1701,6 +1832,13 @@ components:
       properties:
         is_done:
           type: boolean
+    PatchedCommentWriteRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
     PatchedDepartmentUpdateRequest:
       type: object
       properties:
@@ -1854,6 +1992,8 @@ components:
           type: boolean
         checkpoints_manage:
           type: boolean
+        comment:
+          type: boolean
         priority:
           type: boolean
         reassign:
@@ -1866,6 +2006,7 @@ components:
       - archive
       - checkpoints_manage
       - checkpoints_use
+      - comment
       - deadline
       - delete
       - edit
@@ -2025,6 +2166,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Checkpoint'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
         history:
           type: array
           items:
@@ -2041,6 +2186,7 @@ components:
       - checkpoints
       - checkpoints_done
       - checkpoints_total
+      - comments
       - completed_at
       - created_at
       - department

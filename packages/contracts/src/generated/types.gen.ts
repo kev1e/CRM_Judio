@@ -40,6 +40,22 @@ export type CheckpointCreateRequest = {
     text: string;
 };
 
+export type Comment = {
+    id: string;
+    author: Named;
+    text: string;
+    created_at: string;
+    edited_at: string | null;
+    /**
+     * Written by the viewer.
+     */
+    is_own: boolean;
+};
+
+export type CommentWriteRequest = {
+    text: string;
+};
+
 export type CurrentUser = {
     id: string;
     crm_login: string;
@@ -167,6 +183,10 @@ export type PatchedCheckpointUpdateRequest = {
     is_done?: boolean;
 };
 
+export type PatchedCommentWriteRequest = {
+    text?: string;
+};
+
 export type PatchedDepartmentUpdateRequest = {
     name?: string;
     is_active?: boolean;
@@ -247,6 +267,7 @@ export type TaskActions = {
     deadline: boolean;
     checkpoints_use: boolean;
     checkpoints_manage: boolean;
+    comment: boolean;
     priority: boolean;
     reassign: boolean;
     archive: boolean;
@@ -315,6 +336,7 @@ export type TaskDetail = {
     created_at: string;
     completed_at: string | null;
     checkpoints: Array<Checkpoint>;
+    comments: Array<Comment>;
     history: Array<HistoryEntry>;
     /**
      * What the interface may offer. Every operation is checked again by the server.
@@ -930,6 +952,53 @@ export type TasksSetCheckpointResponses = {
 };
 
 export type TasksSetCheckpointResponse = TasksSetCheckpointResponses[keyof TasksSetCheckpointResponses];
+
+export type TasksAddCommentData = {
+    body: CommentWriteRequest;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/comments';
+};
+
+export type TasksAddCommentErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksAddCommentError = TasksAddCommentErrors[keyof TasksAddCommentErrors];
+
+export type TasksAddCommentResponses = {
+    200: TaskDetail;
+};
+
+export type TasksAddCommentResponse = TasksAddCommentResponses[keyof TasksAddCommentResponses];
+
+export type TasksEditCommentData = {
+    body?: PatchedCommentWriteRequest;
+    path: {
+        comment_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/comments/{comment_id}';
+};
+
+export type TasksEditCommentErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksEditCommentError = TasksEditCommentErrors[keyof TasksEditCommentErrors];
+
+export type TasksEditCommentResponses = {
+    200: TaskDetail;
+};
+
+export type TasksEditCommentResponse = TasksEditCommentResponses[keyof TasksEditCommentResponses];
 
 export type TasksReopenData = {
     body?: never;

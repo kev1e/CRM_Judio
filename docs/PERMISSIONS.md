@@ -161,6 +161,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `role.manage` | company | **No** — administrator only |
 | `role.assign` | company | **No** — administrator only |
 | `audit.read` | managed departments, company | Yes (Q14: a superuser needs this separate grant) |
+| `task.comment` | own, managed departments, company | Yes. Every active employee holds it for the tasks assigned to them, a manager for the managed departments; a superuser does not (Q29). Editing is limited to one's own comments |
 | `workflow.manage` | company | **No** — administrator only. Configures task statuses and moves (D005, Q09); shows task counts per status and never a task |
 
 Rules enforced by the service and covered by tests:
