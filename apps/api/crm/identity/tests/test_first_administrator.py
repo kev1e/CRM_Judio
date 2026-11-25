@@ -7,7 +7,7 @@ from django.core.management.base import CommandError
 
 from crm.access import services as access
 from crm.access.models import UserRole
-from crm.access.permissions import ADMINISTRATOR_GRANTS
+from crm.access.permissions import ADMINISTRATOR_GRANTS, BASELINE_GRANTS
 from crm.audit.models import AuditEvent
 from crm.common.exceptions import DomainError
 from crm.conftest import STRONG_PASSWORD, UserFactory
@@ -38,7 +38,7 @@ def test_command_creates_administrator_and_audits_as_cli(monkeypatch: pytest.Mon
     assert user.display_name == "Главный администратор"
     assert user.check_password(STRONG_PASSWORD)
     assert user.permissions_version == 2
-    assert access.effective_grants(user) == ADMINISTRATOR_GRANTS
+    assert access.effective_grants(user) == {**BASELINE_GRANTS, **ADMINISTRATOR_GRANTS}
     assert STRONG_PASSWORD not in output
 
     events = list(AuditEvent.objects.order_by("occurred_at", "id"))

@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 
 from crm.access import services as access
 from crm.access.models import Role
-from crm.access.permissions import ADMINISTRATOR_GRANTS, Scope
+from crm.access.permissions import ADMINISTRATOR_GRANTS, BASELINE_GRANTS, Scope
 from crm.audit.models import AuditEvent
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError, PermissionDeniedError
@@ -66,7 +66,7 @@ def post(client: APIClient, path: str, data: object = None):  # type: ignore[no-
 
 def test_administrator_role_grants_match_the_catalogue(administrator: User) -> None:
     assert "user.read" in ADMINISTRATOR_GRANTS
-    assert access.effective_grants(administrator) == ADMINISTRATOR_GRANTS
+    assert access.effective_grants(administrator) == {**BASELINE_GRANTS, **ADMINISTRATOR_GRANTS}
 
 
 def test_provisioning_creates_a_passwordless_account_with_a_binding_code(
@@ -84,7 +84,7 @@ def test_provisioning_creates_a_passwordless_account_with_a_binding_code(
     )
     assert not user.has_usable_password()
     assert user.telegram_user_id is None
-    assert access.effective_grants(user) == {}  # no role is given implicitly
+    assert access.effective_grants(user) == BASELINE_GRANTS  # no role is given implicitly
     bound = enrollment.redeem_token(
         raw_token=provisioned.binding_token.value,
         telegram_user_id=777001,
@@ -428,7 +428,7 @@ def test_client_cannot_set_fields_it_was_not_asked_for(admin_client: APIClient) 
     assert not user.has_usable_password()
     assert user.is_active
     assert user.telegram_user_id is None
-    assert access.effective_grants(user) == {}
+    assert access.effective_grants(user) == BASELINE_GRANTS
 
 
 def test_new_binding_code_replaces_the_old_one(admin_client: APIClient) -> None:

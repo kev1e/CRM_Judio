@@ -12,6 +12,7 @@ from crm.access import services as access
 from crm.access.models import Role
 from crm.access.permissions import (
     ADMINISTRATOR_GRANTS,
+    BASELINE_GRANTS,
     DEPARTMENT_MANAGER_GRANTS,
     DEPARTMENT_MANAGER_ROLE_KEY,
 )
@@ -79,7 +80,7 @@ def call(client: APIClient, method: str, path: str, data: object = None):  # typ
 
 
 def test_built_in_roles_match_the_catalogue(administrator: User, manager: Employee) -> None:
-    assert access.effective_grants(administrator) == ADMINISTRATOR_GRANTS
+    assert access.effective_grants(administrator) == {**BASELINE_GRANTS, **ADMINISTRATOR_GRANTS}
     assert access.effective_grants(manager.user) == DEPARTMENT_MANAGER_GRANTS
     # A manager configures nothing company-wide and cannot touch roles.
     assert "department.manage" not in DEPARTMENT_MANAGER_GRANTS
@@ -302,7 +303,7 @@ def test_manager_role_follows_the_fact_of_managing(
 
     org.remove_manager(actor=admin_actor, department_id=support.pk, user_id=employee.user.pk)
     assert not holds_manager_role(employee.user)
-    assert access.effective_grants(employee.user) == {}
+    assert access.effective_grants(employee.user) == BASELINE_GRANTS
 
 
 def test_belonging_to_a_department_gives_no_rights(
@@ -310,7 +311,7 @@ def test_belonging_to_a_department_gives_no_rights(
 ) -> None:
     org.add_member(actor=admin_actor, department_id=sales.pk, user_id=employee.user.pk)
 
-    assert access.effective_grants(employee.user) == {}
+    assert access.effective_grants(employee.user) == BASELINE_GRANTS
     with pytest.raises(PermissionDeniedError):
         org.visible_departments(actor=Actor.for_user(employee.user))
 

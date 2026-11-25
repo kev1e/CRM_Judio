@@ -221,4 +221,15 @@ Notes:
 
 Managing and belonging are separate tables on purpose. The built-in `department_manager` role and its grants are created by a data migration; the service links the role to exactly the users who manage at least one department.
 
+### S3 — tasks
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `tasks_status` | `id`, `name`, `category` (`new`/`active`/`completed`/`cancelled`), `position`, `is_active`, `created_at` | name unique |
+| `tasks_status_transition` | `id`, `from_status_id`, `to_status_id` | one row per pair; no move to itself |
+| `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
+| `tasks_checkpoint` | `id`, `task_id`, `label`, `position`, `is_done`, `done_by_id`, `done_at`, `created_at` | done state, author and time set together |
+
+The single assignee is a column of the task (Q03); a separate assignee table comes only if several assignees are ever approved. The history of a task is the audit log filtered by the task; titles and descriptions are never copied into it. Default statuses and moves are created by a data migration and are configuration, not code.
+
 "Expired" is not a stored challenge state: it is a `pending` or `approved` row past `expires_at`. Neither the browser's attempt secret nor the session token is stored; rights are never read from the session row. Old rows of these three tables are not purged yet (S8).

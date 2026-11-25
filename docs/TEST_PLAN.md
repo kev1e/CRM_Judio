@@ -304,6 +304,25 @@ Verified by hand on 2026-11-25 in a real browser against a local stack (Telegram
 
 Verified by hand in a browser on 2026-11-25: create a department, add a member and a manager, refusal to close a primary department, new employee placed into a department from the Users screen.
 
+### S3 — tasks (`apps/api/crm/tasks/tests`, `task-board.test.tsx`, `tasks.test.ts`)
+
+| Requirement | Covered |
+|---|---|
+| D002/D008 visibility | Assignee, manager of the responsible department and superuser see a task; a colleague of the same department, a manager of another department (also through an employee shared between departments), an administrator and non-user actors do not; boards, archive and trash return only what the viewer may see |
+| Q02 | The author who is not assignee or manager cannot open or change the task; over HTTP gets a receipt without the task |
+| Q19 | For each of eight operations: allowed or refused for the assignee as specified, allowed for the manager, "not found" for four kinds of outsiders, refused for the read-only superuser; interface hints equal what the services allow |
+| Q29 | Superuser reads all and acts only with a separately granted permission; an action grant without read access is useless |
+| D020 | Removing the manager removes access to the department's tasks on the next call |
+| D016/Q04/Q05 | Completion archives in the same step (also a database constraint); cancelled is neither completed nor archived; manual archive completes nothing; archived tasks are read-only; reopening restores the previous status, is the manager's only, and is refused when that status is gone (Q07) |
+| D015 | Ticking every checkpoint leaves the status untouched; assignee adds and ticks, only a manager removes |
+| D017/Q17/Q18 | Deadline change keeps before/after in history and never rewrites the original deadline; reassignment starts a new assignment time |
+| Q06 | Trash hides the task from everybody but those who may restore, removes nothing, restore returns it unchanged; archive and trash are separate |
+| D019/Q08 | Open tasks go to the designated manager on deactivation, finished and cancelled ones stay; refusal when nobody can take them |
+| Concurrency | A stale edit is refused (409) |
+| Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
+
+Verified by hand in a browser on 2026-11-25: drag a card to another column, drag to "Готово" (archived, notice shown), open a task by link, tick a checkpoint, edit title and priority, create a task for another employee, "Все задачи", Archive, phone width.
+
 Real Telegram, 2026-11-25, with the owner's bot token and the owner's Telegram account against a throwaway database: the bot connected to the Bot API; `/start <code>` from a deep link bound the account; the login prompt was delivered by the worker; pressing «Подтвердить вход» approved the challenge and the waiting browser session was opened (audit trail: `telegram.bound` → `auth.challenge_created` → `auth.challenge_approved` → `auth.login_succeeded`, 19 seconds end to end). **Not yet observed with a real Telegram account:** the «Отклонить» button and the password link of D036 (the test account already had a password).
 
 Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.

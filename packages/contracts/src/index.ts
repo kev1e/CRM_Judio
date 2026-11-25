@@ -13,4 +13,8 @@ export const API_PATHS = {
   passwordSetup: "/api/v1/auth/password/setup",
   users: "/api/v1/users",
   departments: "/api/v1/departments",
+  tasks: "/api/v1/tasks",
+  taskStatuses: "/api/v1/task-statuses",
+  taskDepartments: "/api/v1/task-departments",
+  taskAssignees: "/api/v1/task-assignees",
 } as const satisfies Record<string, `/api/v${number}/${string}`>;

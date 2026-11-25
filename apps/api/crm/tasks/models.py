@@ -1,0 +1,194 @@
+from django.conf import settings
+from django.db import models
+from django.db.models import Q
+from django.db.models.functions import Now
+
+from crm.common.ids import new_id
+from crm.organization.models import Department
+
+
+class StatusCategory(models.TextChoices):
+    NEW = "new"
+    ACTIVE = "active"
+    # Entering a completed status archives the task at once (D016). Several
+    # completed statuses may exist (Q04).
+    COMPLETED = "completed"
+    # Cancelled is not completed and is never counted as such (Q04).
+    CANCELLED = "cancelled"
+
+
+class TaskStatus(models.Model):
+    """A column of the board. Statuses and the moves between them are configuration
+    owned by the administrator (D005)."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    name = models.CharField(max_length=80, unique=True)
+    category = models.CharField(max_length=16, choices=StatusCategory.choices)
+    position = models.PositiveIntegerField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(db_default=Now())
+
+    class Meta:
+        db_table = "tasks_status"
+        ordering = ["position", "name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(category__in=[c.value for c in StatusCategory]),
+                name="tasks_status_category",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class StatusTransition(models.Model):
+    """An allowed move from one status to another. Anything not listed is refused."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    from_status = models.ForeignKey(TaskStatus, on_delete=models.CASCADE, related_name="moves_out")
+    to_status = models.ForeignKey(TaskStatus, on_delete=models.CASCADE, related_name="moves_in")
+
+    class Meta:
+        db_table = "tasks_status_transition"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["from_status", "to_status"], name="tasks_transition_unique"
+            ),
+            models.CheckConstraint(
+                condition=~Q(from_status=models.F("to_status")), name="tasks_transition_not_self"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.from_status_id}->{self.to_status_id}"
+
+
+class TaskType(models.TextChoices):
+    TASK = "task"
+    # A request is a kind of task, not a separate entity (D006).
+    REQUEST = "request"
+
+
+class Priority(models.TextChoices):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+
+class Task(models.Model):
+    """The canonical task. Boards, the archive and the trash are views of this table.
+
+    Exactly one responsible department (D008) and exactly one assignee (Q03).
+    Completed, archived, deleted and cancelled are four different facts and are
+    stored separately (Q24).
+    """
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    task_type = models.CharField(max_length=16, choices=TaskType.choices, default=TaskType.TASK)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=16, choices=Priority.choices, default=Priority.NORMAL)
+
+    responsible_department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="tasks"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="authored_tasks"
+    )
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="assigned_tasks"
+    )
+    # Start of the current assignment (Q18: completion time is measured from here).
+    assigned_at = models.DateTimeField()
+
+    status = models.ForeignKey(TaskStatus, on_delete=models.PROTECT, related_name="tasks")
+    # The status the task had before it was completed, for reopening (Q05).
+    status_before_completion = models.ForeignKey(
+        TaskStatus, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    due_at = models.DateTimeField(null=True, blank=True)
+    # The first deadline the task ever had; never changed afterwards (Q17).
+    original_due_at = models.DateTimeField(null=True, blank=True)
+
+    completed_at = models.DateTimeField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    # Incremented by every change; lets a client detect that it edits stale data.
+    row_version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(db_default=Now())
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tasks_task"
+        indexes = [
+            models.Index(
+                fields=["assignee", "archived_at", "deleted_at"], name="tasks_assignee_idx"
+            ),
+            models.Index(
+                fields=["responsible_department", "archived_at", "deleted_at"],
+                name="tasks_department_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(condition=~Q(title=""), name="tasks_task_title_not_empty"),
+            models.CheckConstraint(
+                condition=Q(priority__in=[p.value for p in Priority]), name="tasks_task_priority"
+            ),
+            models.CheckConstraint(
+                condition=Q(task_type__in=[t.value for t in TaskType]), name="tasks_task_type"
+            ),
+            # D016: a completed task is always archived, in the same transaction.
+            models.CheckConstraint(
+                condition=Q(completed_at__isnull=True) | Q(archived_at__isnull=False),
+                name="tasks_task_completed_is_archived",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(deleted_at__isnull=True, deleted_by__isnull=True)
+                    | Q(deleted_at__isnull=False, deleted_by__isnull=False)
+                ),
+                name="tasks_task_deletion_consistent",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"task:{self.pk}"
+
+
+class Checkpoint(models.Model):
+    """A checklist item. Ticking all of them never changes the task's status (D015)."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="checkpoints")
+    label = models.CharField(max_length=200)
+    position = models.PositiveIntegerField()
+    is_done = models.BooleanField(default=False)
+    done_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    done_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(db_default=Now())
+
+    class Meta:
+        db_table = "tasks_checkpoint"
+        ordering = ["position", "created_at"]
+        constraints = [
+            models.CheckConstraint(condition=~Q(label=""), name="tasks_checkpoint_label_not_empty"),
+            models.CheckConstraint(
+                condition=(
+                    Q(is_done=False, done_by__isnull=True, done_at__isnull=True)
+                    | Q(is_done=True, done_by__isnull=False, done_at__isnull=False)
+                ),
+                name="tasks_checkpoint_done_consistent",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"checkpoint:{self.pk}"
