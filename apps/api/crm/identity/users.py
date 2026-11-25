@@ -78,8 +78,9 @@ def reissue_binding_token(*, actor: Actor, user: User) -> enrollment.IssuedToken
 def deactivate_user(*, actor: Actor, user: User) -> bool:
     """Close the account: no login, no open session, no pending code or link.
 
-    Returns False if it was already deactivated. Handing the employee's open
-    tasks over (D019, Q08) joins this transaction when tasks exist (S3).
+    Returns False if it was already deactivated. The employee's open tasks are
+    handed over in the same transaction (D019, Q08); without somebody to take
+    them the deactivation is refused.
     """
     access.require_permission(actor, "user.deactivate", at_least=Scope.COMPANY)
     if actor.user is not None and actor.user.pk == user.pk:
@@ -104,6 +105,12 @@ def deactivate_user(*, actor: Actor, user: User) -> bool:
                 "last_administrator", "The last active administrator cannot be deactivated."
             )
 
+        # D019/Q08: open tasks go to the designated manager of the primary
+        # department, or the deactivation is refused. Same transaction.
+        from crm.tasks import services as tasks
+
+        handed_over = tasks.hand_over_open_tasks(actor=actor, user=target)
+
         now = timezone.now()
         target.is_active = False
         target.deactivated_at = now
@@ -118,6 +125,7 @@ def deactivate_user(*, actor: Actor, user: User) -> bool:
             action="user.deactivated",
             entity_type="user",
             entity_id=str(target.pk),
+            metadata={"tasks_handed_over": handed_over},
         )
     user.is_active, user.deactivated_at = False, now
     return True

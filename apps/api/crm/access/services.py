@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 
 from crm.access.models import ROLE_KEY_REGEX, Role, RoleGrant, UserRole
-from crm.access.permissions import ADMINISTRATOR_ROLE_KEY, REGISTRY, Scope
+from crm.access.permissions import ADMINISTRATOR_ROLE_KEY, BASELINE_GRANTS, REGISTRY, Scope
 from crm.audit import services as audit
 from crm.common.actors import Actor, ActorType
 from crm.common.exceptions import DomainError, PermissionDeniedError
@@ -39,7 +39,7 @@ def effective_grants(user: User) -> dict[str, Scope]:
     """Widest scope per permission across all roles of an active user."""
     if not User.objects.filter(pk=user.pk, is_active=True).exists():
         return {}
-    grants: dict[str, Scope] = {}
+    grants: dict[str, Scope] = dict(BASELINE_GRANTS)
     rows = RoleGrant.objects.filter(role__user_links__user_id=user.pk).values_list(
         "permission_code", "scope"
     )

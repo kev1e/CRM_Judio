@@ -17,10 +17,28 @@ export type BindingCode = {
 };
 
 /**
+ * * `new` - New
+ * * `active` - Active
+ * * `completed` - Completed
+ * * `cancelled` - Cancelled
+ */
+export type CategoryEnum = 'new' | 'active' | 'completed' | 'cancelled';
+
+/**
  * * `ok` - ok
  * * `fail` - fail
  */
 export type CheckResultEnum = 'ok' | 'fail';
+
+export type Checkpoint = {
+    id: string;
+    text: string;
+    is_done: boolean;
+};
+
+export type CheckpointCreateRequest = {
+    text: string;
+};
 
 export type CurrentUser = {
     id: string;
@@ -69,6 +87,12 @@ export type Health = {
  * * `ok` - ok
  */
 export type HealthStatusEnum = 'ok';
+
+export type HistoryEntry = {
+    occurred_at: string;
+    action: string;
+    actor_name: string;
+};
 
 export type LoginProgress = {
     state: StateEnum;
@@ -124,16 +148,49 @@ export type MemberAddRequest = {
     is_primary?: boolean;
 };
 
+export type Named = {
+    id: string;
+    name: string;
+};
+
 export type NullEnum = never;
+
+export type Options = {
+    results: Array<Named>;
+};
 
 export type PasswordSetupRequestRequest = {
     token: string;
+};
+
+export type PatchedCheckpointUpdateRequest = {
+    is_done?: boolean;
 };
 
 export type PatchedDepartmentUpdateRequest = {
     name?: string;
     is_active?: boolean;
 };
+
+export type PatchedTaskUpdateRequest = {
+    /**
+     * The version the client edited.
+     */
+    version?: number;
+    title?: string;
+    description?: string;
+    due_at?: string | null;
+    priority?: PriorityEnum;
+    assignee_id?: string;
+};
+
+/**
+ * * `low` - Low
+ * * `normal` - Normal
+ * * `high` - High
+ * * `urgent` - Urgent
+ */
+export type PriorityEnum = 'low' | 'normal' | 'high' | 'urgent';
 
 export type Readiness = {
     status: ReadinessStatusEnum;
@@ -163,6 +220,117 @@ export type SessionInfo = {
  * * `authenticated` - authenticated
  */
 export type StateEnum = 'pending' | 'denied' | 'expired' | 'invalid' | 'authenticated';
+
+export type Status = {
+    id: string;
+    name: string;
+    category: CategoryEnum;
+    position: number;
+    /**
+     * Statuses a task may be moved to from this one.
+     */
+    next_status_ids: Array<string>;
+};
+
+export type StatusList = {
+    results: Array<Status>;
+};
+
+export type TaskActions = {
+    edit: boolean;
+    status: boolean;
+    deadline: boolean;
+    checkpoints_use: boolean;
+    checkpoints_manage: boolean;
+    priority: boolean;
+    reassign: boolean;
+    archive: boolean;
+    delete: boolean;
+};
+
+/**
+ * Exactly what a card on the board shows (D005).
+ */
+export type TaskCard = {
+    id: string;
+    title: string;
+    task_type: TaskTypeEnum;
+    priority: PriorityEnum;
+    status_id: string;
+    due_at: string | null;
+    department: Named;
+    assignee: Named;
+    checkpoints_done: number;
+    checkpoints_total: number;
+    is_completed: boolean;
+    is_archived: boolean;
+    is_deleted: boolean;
+    version: number;
+};
+
+export type TaskCreateRequest = {
+    title: string;
+    description?: string;
+    department_id: string;
+    assignee_id: string;
+    priority?: PriorityEnum;
+    due_at?: string | null;
+    task_type?: TaskTypeEnum;
+};
+
+/**
+ * A receipt. `task` is present only if the creator may read what they created (Q02).
+ */
+export type TaskCreated = {
+    id: string;
+    title: string;
+    task: TaskDetail | null;
+};
+
+/**
+ * Exactly what a card on the board shows (D005).
+ */
+export type TaskDetail = {
+    id: string;
+    title: string;
+    task_type: TaskTypeEnum;
+    priority: PriorityEnum;
+    status_id: string;
+    due_at: string | null;
+    department: Named;
+    assignee: Named;
+    checkpoints_done: number;
+    checkpoints_total: number;
+    is_completed: boolean;
+    is_archived: boolean;
+    is_deleted: boolean;
+    version: number;
+    description: string;
+    author: Named;
+    created_at: string;
+    completed_at: string | null;
+    checkpoints: Array<Checkpoint>;
+    history: Array<HistoryEntry>;
+    /**
+     * What the interface may offer. Every operation is checked again by the server.
+     */
+    actions: TaskActions;
+};
+
+export type TaskList = {
+    results: Array<TaskCard>;
+};
+
+/**
+ * * `task` - Task
+ * * `request` - Request
+ */
+export type TaskTypeEnum = 'task' | 'request';
+
+export type TransitionRequest = {
+    status_id: string;
+    version?: number | null;
+};
 
 export type User = {
     id: string;
@@ -487,6 +655,329 @@ export type ReadyResponses = {
 };
 
 export type ReadyResponse = ReadyResponses[keyof ReadyResponses];
+
+export type TaskAssigneesData = {
+    body?: never;
+    path?: never;
+    query: {
+        department_id: string;
+    };
+    url: '/api/v1/task-assignees';
+};
+
+export type TaskAssigneesErrors = {
+    400: Error;
+};
+
+export type TaskAssigneesError = TaskAssigneesErrors[keyof TaskAssigneesErrors];
+
+export type TaskAssigneesResponses = {
+    200: Options;
+};
+
+export type TaskAssigneesResponse = TaskAssigneesResponses[keyof TaskAssigneesResponses];
+
+export type TaskDepartmentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/task-departments';
+};
+
+export type TaskDepartmentsResponses = {
+    200: Options;
+};
+
+export type TaskDepartmentsResponse = TaskDepartmentsResponses[keyof TaskDepartmentsResponses];
+
+export type TaskStatusesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/task-statuses';
+};
+
+export type TaskStatusesResponses = {
+    200: StatusList;
+};
+
+export type TaskStatusesResponse = TaskStatusesResponses[keyof TaskStatusesResponses];
+
+export type TasksListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Default: mine.
+         */
+        view?: 'all' | 'archive' | 'mine' | 'trash';
+    };
+    url: '/api/v1/tasks';
+};
+
+export type TasksListErrors = {
+    400: Error;
+};
+
+export type TasksListError = TasksListErrors[keyof TasksListErrors];
+
+export type TasksListResponses = {
+    200: TaskList;
+};
+
+export type TasksListResponse = TasksListResponses[keyof TasksListResponses];
+
+export type TasksCreateData = {
+    body: TaskCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tasks';
+};
+
+export type TasksCreateErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type TasksCreateError = TasksCreateErrors[keyof TasksCreateErrors];
+
+export type TasksCreateResponses = {
+    201: TaskCreated;
+};
+
+export type TasksCreateResponse = TasksCreateResponses[keyof TasksCreateResponses];
+
+export type TasksGetData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}';
+};
+
+export type TasksGetErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksGetError = TasksGetErrors[keyof TasksGetErrors];
+
+export type TasksGetResponses = {
+    200: TaskDetail;
+};
+
+export type TasksGetResponse = TasksGetResponses[keyof TasksGetResponses];
+
+export type TasksUpdateData = {
+    body?: PatchedTaskUpdateRequest;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}';
+};
+
+export type TasksUpdateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksUpdateError = TasksUpdateErrors[keyof TasksUpdateErrors];
+
+export type TasksUpdateResponses = {
+    200: TaskDetail;
+};
+
+export type TasksUpdateResponse = TasksUpdateResponses[keyof TasksUpdateResponses];
+
+export type TasksArchiveData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/archive';
+};
+
+export type TasksArchiveErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksArchiveError = TasksArchiveErrors[keyof TasksArchiveErrors];
+
+export type TasksArchiveResponses = {
+    200: TaskDetail;
+};
+
+export type TasksArchiveResponse = TasksArchiveResponses[keyof TasksArchiveResponses];
+
+export type TasksAddCheckpointData = {
+    body: CheckpointCreateRequest;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/checkpoints';
+};
+
+export type TasksAddCheckpointErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksAddCheckpointError = TasksAddCheckpointErrors[keyof TasksAddCheckpointErrors];
+
+export type TasksAddCheckpointResponses = {
+    200: TaskDetail;
+};
+
+export type TasksAddCheckpointResponse = TasksAddCheckpointResponses[keyof TasksAddCheckpointResponses];
+
+export type TasksRemoveCheckpointData = {
+    body?: never;
+    path: {
+        checkpoint_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/checkpoints/{checkpoint_id}';
+};
+
+export type TasksRemoveCheckpointErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksRemoveCheckpointError = TasksRemoveCheckpointErrors[keyof TasksRemoveCheckpointErrors];
+
+export type TasksRemoveCheckpointResponses = {
+    200: TaskDetail;
+};
+
+export type TasksRemoveCheckpointResponse = TasksRemoveCheckpointResponses[keyof TasksRemoveCheckpointResponses];
+
+export type TasksSetCheckpointData = {
+    body?: PatchedCheckpointUpdateRequest;
+    path: {
+        checkpoint_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/checkpoints/{checkpoint_id}';
+};
+
+export type TasksSetCheckpointErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksSetCheckpointError = TasksSetCheckpointErrors[keyof TasksSetCheckpointErrors];
+
+export type TasksSetCheckpointResponses = {
+    200: TaskDetail;
+};
+
+export type TasksSetCheckpointResponse = TasksSetCheckpointResponses[keyof TasksSetCheckpointResponses];
+
+export type TasksReopenData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/reopen';
+};
+
+export type TasksReopenErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksReopenError = TasksReopenErrors[keyof TasksReopenErrors];
+
+export type TasksReopenResponses = {
+    200: TaskDetail;
+};
+
+export type TasksReopenResponse = TasksReopenResponses[keyof TasksReopenResponses];
+
+export type TasksRestoreData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/restore';
+};
+
+export type TasksRestoreErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksRestoreError = TasksRestoreErrors[keyof TasksRestoreErrors];
+
+export type TasksRestoreResponses = {
+    200: TaskDetail;
+};
+
+export type TasksRestoreResponse = TasksRestoreResponses[keyof TasksRestoreResponses];
+
+export type TasksTransitionData = {
+    body: TransitionRequest;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/transitions';
+};
+
+export type TasksTransitionErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksTransitionError = TasksTransitionErrors[keyof TasksTransitionErrors];
+
+export type TasksTransitionResponses = {
+    200: TaskDetail;
+};
+
+export type TasksTransitionResponse = TasksTransitionResponses[keyof TasksTransitionResponses];
+
+export type TasksTrashData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/trash';
+};
+
+export type TasksTrashErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksTrashError = TasksTrashErrors[keyof TasksTrashErrors];
+
+export type TasksTrashResponses = {
+    200: TaskDetail;
+};
+
+export type TasksTrashResponse = TasksTrashResponses[keyof TasksTrashResponses];
 
 export type UsersListData = {
     body?: never;

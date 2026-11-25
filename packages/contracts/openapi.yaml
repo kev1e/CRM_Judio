@@ -436,6 +436,547 @@ paths:
               schema:
                 $ref: '#/components/schemas/Readiness'
           description: ''
+  /api/v1/task-assignees:
+    get:
+      operationId: task_assignees
+      description: Employees a task of the given department may be assigned to (names
+        only).
+      parameters:
+      - in: query
+        name: department_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Options'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/task-departments:
+    get:
+      operationId: task_departments
+      description: Departments a new task may be addressed to.
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Options'
+          description: ''
+  /api/v1/task-statuses:
+    get:
+      operationId: task_statuses
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusList'
+          description: ''
+  /api/v1/tasks:
+    get:
+      operationId: tasks_list
+      parameters:
+      - in: query
+        name: view
+        schema:
+          type: string
+          enum:
+          - all
+          - archive
+          - mine
+          - trash
+        description: 'Default: mine.'
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    post:
+      operationId: tasks_create
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCreated'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}:
+    get:
+      operationId: tasks_get
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    patch:
+      operationId: tasks_update
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/archive:
+    post:
+      operationId: tasks_archive
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/checkpoints:
+    post:
+      operationId: tasks_add_checkpoint
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckpointCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/checkpoints/{checkpoint_id}:
+    patch:
+      operationId: tasks_set_checkpoint
+      parameters:
+      - in: path
+        name: checkpoint_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCheckpointUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    delete:
+      operationId: tasks_remove_checkpoint
+      parameters:
+      - in: path
+        name: checkpoint_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/reopen:
+    post:
+      operationId: tasks_reopen
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/restore:
+    post:
+      operationId: tasks_restore
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/transitions:
+    post:
+      operationId: tasks_transition
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/trash:
+    post:
+      operationId: tasks_trash
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/users:
     get:
       operationId: users_list
@@ -625,6 +1166,18 @@ components:
       - code
       - command
       - expires_at
+    CategoryEnum:
+      enum:
+      - new
+      - active
+      - completed
+      - cancelled
+      type: string
+      description: |-
+        * `new` - New
+        * `active` - Active
+        * `completed` - Completed
+        * `cancelled` - Cancelled
     CheckResultEnum:
       enum:
       - ok
@@ -633,6 +1186,29 @@ components:
       description: |-
         * `ok` - ok
         * `fail` - fail
+    Checkpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        is_done:
+          type: boolean
+      required:
+      - id
+      - is_done
+      - text
+    CheckpointCreateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - text
     CurrentUser:
       type: object
       properties:
@@ -731,6 +1307,20 @@ components:
       - ok
       type: string
       description: '* `ok` - ok'
+    HistoryEntry:
+      type: object
+      properties:
+        occurred_at:
+          type: string
+          format: date-time
+        action:
+          type: string
+        actor_name:
+          type: string
+      required:
+      - action
+      - actor_name
+      - occurred_at
     LoginProgress:
       type: object
       properties:
@@ -858,9 +1448,29 @@ components:
           default: false
       required:
       - user_id
+    Named:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
     NullEnum:
       enum:
       - null
+    Options:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Named'
+      required:
+      - results
     PasswordSetupRequestRequest:
       type: object
       properties:
@@ -876,6 +1486,11 @@ components:
       required:
       - password
       - token
+    PatchedCheckpointUpdateRequest:
+      type: object
+      properties:
+        is_done:
+          type: boolean
     PatchedDepartmentUpdateRequest:
       type: object
       properties:
@@ -885,6 +1500,41 @@ components:
           maxLength: 150
         is_active:
           type: boolean
+    PatchedTaskUpdateRequest:
+      type: object
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          description: The version the client edited.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 20000
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        assignee_id:
+          type: string
+          format: uuid
+    PriorityEnum:
+      enum:
+      - low
+      - normal
+      - high
+      - urgent
+      type: string
+      description: |-
+        * `low` - Low
+        * `normal` - Normal
+        * `high` - High
+        * `urgent` - Urgent
     Readiness:
       type: object
       properties:
@@ -935,6 +1585,283 @@ components:
         * `expired` - expired
         * `invalid` - invalid
         * `authenticated` - authenticated
+    Status:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        position:
+          type: integer
+        next_status_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Statuses a task may be moved to from this one.
+      required:
+      - category
+      - id
+      - name
+      - next_status_ids
+      - position
+    StatusList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Status'
+      required:
+      - results
+    TaskActions:
+      type: object
+      properties:
+        edit:
+          type: boolean
+        status:
+          type: boolean
+        deadline:
+          type: boolean
+        checkpoints_use:
+          type: boolean
+        checkpoints_manage:
+          type: boolean
+        priority:
+          type: boolean
+        reassign:
+          type: boolean
+        archive:
+          type: boolean
+        delete:
+          type: boolean
+      required:
+      - archive
+      - checkpoints_manage
+      - checkpoints_use
+      - deadline
+      - delete
+      - edit
+      - priority
+      - reassign
+      - status
+    TaskCard:
+      type: object
+      description: Exactly what a card on the board shows (D005).
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        task_type:
+          $ref: '#/components/schemas/TaskTypeEnum'
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status_id:
+          type: string
+          format: uuid
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        department:
+          $ref: '#/components/schemas/Named'
+        assignee:
+          $ref: '#/components/schemas/Named'
+        checkpoints_done:
+          type: integer
+        checkpoints_total:
+          type: integer
+        is_completed:
+          type: boolean
+        is_archived:
+          type: boolean
+        is_deleted:
+          type: boolean
+        version:
+          type: integer
+      required:
+      - assignee
+      - checkpoints_done
+      - checkpoints_total
+      - department
+      - due_at
+      - id
+      - is_archived
+      - is_completed
+      - is_deleted
+      - priority
+      - status_id
+      - task_type
+      - title
+      - version
+    TaskCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          default: ''
+          maxLength: 20000
+        department_id:
+          type: string
+          format: uuid
+        assignee_id:
+          type: string
+          format: uuid
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: normal
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        task_type:
+          allOf:
+          - $ref: '#/components/schemas/TaskTypeEnum'
+          default: task
+      required:
+      - assignee_id
+      - department_id
+      - title
+    TaskCreated:
+      type: object
+      description: A receipt. `task` is present only if the creator may read what
+        they created (Q02).
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        task:
+          allOf:
+          - $ref: '#/components/schemas/TaskDetail'
+          nullable: true
+      required:
+      - id
+      - task
+      - title
+    TaskDetail:
+      type: object
+      description: Exactly what a card on the board shows (D005).
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        task_type:
+          $ref: '#/components/schemas/TaskTypeEnum'
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        status_id:
+          type: string
+          format: uuid
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        department:
+          $ref: '#/components/schemas/Named'
+        assignee:
+          $ref: '#/components/schemas/Named'
+        checkpoints_done:
+          type: integer
+        checkpoints_total:
+          type: integer
+        is_completed:
+          type: boolean
+        is_archived:
+          type: boolean
+        is_deleted:
+          type: boolean
+        version:
+          type: integer
+        description:
+          type: string
+        author:
+          $ref: '#/components/schemas/Named'
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        checkpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Checkpoint'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+        actions:
+          allOf:
+          - $ref: '#/components/schemas/TaskActions'
+          description: What the interface may offer. Every operation is checked again
+            by the server.
+      required:
+      - actions
+      - assignee
+      - author
+      - checkpoints
+      - checkpoints_done
+      - checkpoints_total
+      - completed_at
+      - created_at
+      - department
+      - description
+      - due_at
+      - history
+      - id
+      - is_archived
+      - is_completed
+      - is_deleted
+      - priority
+      - status_id
+      - task_type
+      - title
+      - version
+    TaskList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskCard'
+      required:
+      - results
+    TaskTypeEnum:
+      enum:
+      - task
+      - request
+      type: string
+      description: |-
+        * `task` - Task
+        * `request` - Request
+    TransitionRequest:
+      type: object
+      properties:
+        status_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          nullable: true
+      required:
+      - status_id
     User:
       type: object
       properties:

@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from crm.access import services
 from crm.access.models import Role, RoleGrant
-from crm.access.permissions import ADMINISTRATOR_GRANTS, REGISTRY, Scope
+from crm.access.permissions import ADMINISTRATOR_GRANTS, BASELINE_GRANTS, REGISTRY, Scope
 from crm.common.actors import Actor
 from crm.common.exceptions import PermissionDeniedError
 from crm.conftest import UserFactory
@@ -36,11 +36,14 @@ def test_scopes_are_ordered_from_own_to_company() -> None:
     assert not Scope.MANAGED_DEPARTMENTS.covers(Scope.COMPANY)
 
 
-def test_user_without_roles_has_no_permissions(make_user: UserFactory) -> None:
+def test_user_without_roles_has_only_the_employee_baseline(make_user: UserFactory) -> None:
+    # Every employee may work with the tasks assigned to them; nothing else.
     actor = Actor.for_user(make_user())
 
-    assert services.effective_grants(actor.user) == {}  # type: ignore[arg-type]
-    for code in REGISTRY:
+    assert services.effective_grants(actor.user) == BASELINE_GRANTS  # type: ignore[arg-type]
+    assert set(BASELINE_GRANTS.values()) == {Scope.OWN}
+    assert all(code.startswith("task.") for code in BASELINE_GRANTS)
+    for code in REGISTRY.keys() - BASELINE_GRANTS.keys():
         assert services.scope_for(actor, code) is None
         assert services.has_permission(actor, code, at_least=Scope.OWN) is False
         with pytest.raises(PermissionDeniedError):
@@ -48,7 +51,10 @@ def test_user_without_roles_has_no_permissions(make_user: UserFactory) -> None:
 
 
 def test_administrator_holds_configuration_rights_company_wide(admin_actor: Actor) -> None:
-    assert services.effective_grants(admin_actor.user) == ADMINISTRATOR_GRANTS  # type: ignore[arg-type]
+    assert services.effective_grants(admin_actor.user) == {  # type: ignore[arg-type]
+        **BASELINE_GRANTS,
+        **ADMINISTRATOR_GRANTS,
+    }
     assert services.require_permission(admin_actor, "role.assign", at_least=Scope.COMPANY)
 
 
@@ -111,6 +117,7 @@ def test_several_roles_combine_and_the_widest_scope_wins(
     )
 
     assert services.effective_grants(user) == {
+        **BASELINE_GRANTS,
         "audit.read": Scope.COMPANY,
         "user.create": Scope.MANAGED_DEPARTMENTS,
     }

@@ -9,7 +9,7 @@ from pytest_django.fixtures import Settings
 from rest_framework.test import APIClient
 
 from crm.access import services as access
-from crm.access.permissions import Scope
+from crm.access.permissions import BASELINE_GRANTS, Scope
 from crm.common.actors import Actor
 from crm.conftest import Employee, EmployeeFactory
 from crm.identity import auth
@@ -18,6 +18,8 @@ from crm.identity.models import LoginChallenge, Session, User
 pytestmark = pytest.mark.django_db
 
 ORIGIN = "http://127.0.0.1:3000"
+# What every employee may do without any role.
+OWN_TASKS = {code: scope.value for code, scope in BASELINE_GRANTS.items()}
 SESSION_COOKIE = "__Host-crm_session"
 ATTEMPT_COOKIE = "crm_login_attempt"
 
@@ -215,7 +217,7 @@ def test_me_returns_the_user_and_live_permissions(client: APIClient, employee: E
         "crm_login": "anna.petrova",
         "display_name": employee.user.display_name,
     }
-    assert body["permissions"] == {}
+    assert body["permissions"] == OWN_TASKS
     assert body["session"]["expires_at"]
     assert "password" not in response.content.decode()
 
@@ -229,10 +231,13 @@ def test_granted_and_revoked_rights_show_up_without_a_new_login(
     access.set_role_grants(actor=admin_actor, role=role, grants={"audit.read": Scope.COMPANY})
 
     access.assign_role(actor=admin_actor, user=employee.user, role=role)
-    assert client.get("/api/v1/auth/me").json()["permissions"] == {"audit.read": "company"}
+    assert client.get("/api/v1/auth/me").json()["permissions"] == {
+        **OWN_TASKS,
+        "audit.read": "company",
+    }
 
     access.revoke_role(actor=admin_actor, user=employee.user, role=role)
-    assert client.get("/api/v1/auth/me").json()["permissions"] == {}
+    assert client.get("/api/v1/auth/me").json()["permissions"] == OWN_TASKS
 
 
 def test_deactivation_cuts_the_open_session(client: APIClient, employee: Employee) -> None:

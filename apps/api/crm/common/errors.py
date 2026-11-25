@@ -29,6 +29,10 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
         return Response(envelope(exc.code, "Permission denied."), status=403)
     if isinstance(exc, DomainError):
         # A business rule refused the request; the code is stable, the text is safe to show.
+        if exc.code.endswith("_not_found"):
+            return Response(envelope(exc.code, exc.message), status=404)
+        if exc.code == "task_changed":
+            return Response(envelope(exc.code, exc.message), status=409)
         return Response(envelope(exc.code, exc.message), status=400)
 
     response = drf_exception_handler(exc, context)
