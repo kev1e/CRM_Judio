@@ -11,6 +11,7 @@ scope, and department-scoped grants do not satisfy a COMPANY-level check.
 
 import re
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from uuid import UUID
 
 from django.db import IntegrityError, transaction
@@ -70,6 +71,62 @@ def require_permission(actor: Actor, code: str, *, at_least: Scope) -> Scope:
     return scope
 
 
+@dataclass(frozen=True, slots=True)
+class DepartmentScope:
+    """Where a permission applies: everywhere, or in a set of departments."""
+
+    company: bool
+    department_ids: frozenset[UUID] = frozenset()
+
+    def __bool__(self) -> bool:
+        return self.company or bool(self.department_ids)
+
+    def covers(self, department_id: UUID | None) -> bool:
+        return self.company or (department_id is not None and department_id in self.department_ids)
+
+    def covers_any(self, department_ids: Iterable[UUID]) -> bool:
+        return self.company or not self.department_ids.isdisjoint(department_ids)
+
+
+NO_SCOPE = DepartmentScope(company=False)
+
+
+def managed_department_ids(user: User) -> frozenset[UUID]:
+    """Active departments the user manages right now. Read on every check (D020)."""
+    from crm.organization.models import DepartmentManager
+
+    return frozenset(
+        DepartmentManager.objects.filter(
+            user_id=user.pk, user__is_active=True, department__is_active=True
+        ).values_list("department_id", flat=True)
+    )
+
+
+def department_scope(actor: Actor, code: str) -> DepartmentScope:
+    """Resolve the actor's grant of `code` to concrete departments. Deny by default."""
+    scope = scope_for(actor, code)
+    if scope is None or actor.user is None:
+        return NO_SCOPE
+    if scope is Scope.COMPANY:
+        return DepartmentScope(company=True)
+    if scope is Scope.MANAGED_DEPARTMENTS:
+        return DepartmentScope(company=False, department_ids=managed_department_ids(actor.user))
+    return NO_SCOPE
+
+
+def require_department_scope(actor: Actor, code: str) -> DepartmentScope:
+    """The actor's scope for `code`; refused when it covers nothing at all."""
+    scope = department_scope(actor, code)
+    if not scope:
+        raise PermissionDeniedError()
+    return scope
+
+
+def require_in_department(actor: Actor, code: str, department_id: UUID | None) -> None:
+    if not department_scope(actor, code).covers(department_id):
+        raise PermissionDeniedError()
+
+
 def bump_permissions_version(user_ids: Iterable[UUID]) -> int:
     """Mark everything issued for the users' previous permissions as stale (D020).
 
@@ -78,6 +135,26 @@ def bump_permissions_version(user_ids: Iterable[UUID]) -> int:
     return User.objects.filter(pk__in=list(user_ids)).update(
         permissions_version=F("permissions_version") + 1
     )
+
+
+def sync_system_role(*, actor: Actor, user: User, role_key: str, should_hold: bool) -> None:
+    """Give or take a built-in role that follows from another fact (for example
+    "manages at least one department"). Called by the service that owns the fact,
+    inside its transaction; that service has already authorized the actor."""
+    role = Role.objects.get(key=role_key, is_system=True)
+    if should_hold:
+        _link_role(actor=actor, user=user, role=role)
+        return
+    deleted, _ = UserRole.objects.filter(user_id=user.pk, role=role).delete()
+    if deleted:
+        bump_permissions_version([user.pk])
+        audit.record(
+            actor=actor,
+            action="role.revoked",
+            entity_type="user",
+            entity_id=str(user.pk),
+            metadata={"role": role.key},
+        )
 
 
 def is_administrator(user: User) -> bool:
