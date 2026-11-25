@@ -33,6 +33,10 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
             return Response(envelope(exc.code, exc.message), status=404)
         if exc.code == "task_changed":
             return Response(envelope(exc.code, exc.message), status=409)
+        if exc.code == "file_too_large":
+            return Response(envelope(exc.code, exc.message), status=413)
+        if exc.code == "storage_unavailable":
+            return Response(envelope(exc.code, exc.message), status=503)
         return Response(envelope(exc.code, exc.message), status=400)
 
     response = drf_exception_handler(exc, context)

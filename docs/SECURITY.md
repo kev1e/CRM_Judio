@@ -66,6 +66,14 @@ Password policy, session TTL, MFA challenge TTL, admin identity verification for
 - No mandatory antivirus scanner in initial version. Apply defense-in-depth regardless: safe browser rendering/download headers, no executable upload serving, ZIP bomb checks, path canonicalization, quarantine or rejection for unsafe/unknown content and least-privilege volume mount.
 - Do not assume compliant backup cadence or encryption/data region provider has been chosen; record exact product/tool/restore tests as implementation decisions before production.
 
+### Attachments as built (2026-11-26, D039)
+
+- A file is reachable only as `/api/v1/tasks/{task}/attachments/{file}`: the task's read rule is checked on every download, and a file ID is looked up inside that task only. The storage has no public or pre-signed addresses; object keys are opaque and never leave the API.
+- A download is always sent as `Content-Disposition: attachment` with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox` and `Cache-Control: no-store`, so an uploaded file is never rendered inside the CRM's origin. SVG and HTML are not accepted at all.
+- The type is decided from the content; the file name is reduced to a display name and never becomes a path or a key.
+- **Residual risk (accepted by Q16): there is no malware scan.** A well-formed PDF, Office document or archive may carry malicious content; legacy `.doc`/`.xls` may carry macros. Files are only stored and handed back as downloads.
+- S3 credentials come from the environment only and are never logged; storage errors are reported without provider detail.
+
 ## Approved Q24 — archive ACL safeguards
 - Protect archive listings, counts, details, search filter, exports, analytics, files, direct links and notifications with the same server-enforced record-level permissions as ordinary task access.
 - Archive is a read location, not a new permission grant; creator-only authorship never grants archive read.

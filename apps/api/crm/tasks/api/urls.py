@@ -1,6 +1,6 @@
 from django.urls import path
 
-from crm.tasks.api import views, workflow_views
+from crm.tasks.api import attachment_views, views, workflow_views
 
 urlpatterns = [
     path("task-statuses", views.StatusListView.as_view(), name="task-statuses"),
@@ -32,6 +32,16 @@ urlpatterns = [
         "tasks/<uuid:task_id>/comments/<uuid:comment_id>",
         views.TaskCommentView.as_view(),
         name="task-comment",
+    ),
+    path(
+        "tasks/<uuid:task_id>/attachments",
+        attachment_views.TaskAttachmentsView.as_view(),
+        name="task-attachments",
+    ),
+    path(
+        "tasks/<uuid:task_id>/attachments/<uuid:attachment_id>",
+        attachment_views.TaskAttachmentView.as_view(),
+        name="task-attachment",
     ),
     path("workflow/statuses", workflow_views.WorkflowView.as_view(), name="workflow"),
     path("workflow/order", workflow_views.WorkflowOrderView.as_view(), name="workflow-order"),

@@ -223,3 +223,24 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": env.str("LOG_LEVEL", default="INFO")},
 }
+
+# --- Attachments (Q16, D039) --------------------------------------------------
+# Production keeps attachment bytes in S3-compatible object storage ("s3").
+# "local" is a directory for development and tests.
+FILE_STORAGE: str = env.str("FILE_STORAGE", default="local")
+FILE_STORAGE_LOCAL_ROOT: str = env.str(
+    "FILE_STORAGE_LOCAL_ROOT", default=str(BASE_DIR / "var" / "files")
+)
+FILE_STORAGE_S3_ENDPOINT_URL: str = env.str("FILE_STORAGE_S3_ENDPOINT_URL", default="")
+FILE_STORAGE_S3_REGION: str = env.str("FILE_STORAGE_S3_REGION", default="")
+FILE_STORAGE_S3_BUCKET: str = env.str("FILE_STORAGE_S3_BUCKET", default="")
+FILE_STORAGE_S3_ACCESS_KEY_ID: str = env.str("FILE_STORAGE_S3_ACCESS_KEY_ID", default="")
+FILE_STORAGE_S3_SECRET_ACCESS_KEY: str = env.str("FILE_STORAGE_S3_SECRET_ACCESS_KEY", default="")
+if FILE_STORAGE not in {"local", "s3"}:
+    raise ImproperlyConfigured("FILE_STORAGE must be 'local' or 's3'.")
+# Q16: 100 MB per file.
+ATTACHMENT_MAX_BYTES: int = 100 * 1024 * 1024
+# Uploads are written to a temporary file, never held in memory.
+FILE_UPLOAD_HANDLERS = ["django.core.files.uploadhandler.TemporaryFileUploadHandler"]
+# Where an upload waits while it is checked; the system temporary directory if empty.
+FILE_UPLOAD_TEMP_DIR = env.str("FILE_UPLOAD_TEMP_DIR", default="") or None

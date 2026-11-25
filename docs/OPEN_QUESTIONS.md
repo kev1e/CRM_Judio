@@ -43,6 +43,13 @@ These are technical parameters or choices that the approved decisions leave open
 | D037 against D006: who submits templated requests | Not decided. As implemented, only managers create anything | Before S5 |
 | D038: restoring a deleted comment; whether its author may delete their own | Not built; the author cannot delete | Production |
 | D039: object-storage provider, its jurisdiction (Q25), encryption and backups (Q15) | **Needs the owner's decision.** Development and tests will use a local S3-compatible server | Before files go to production |
+| Who removes a file from a task (listed as still open under Q19) | The manager of the task's department (`task.attachment.delete`), by analogy with D038. A removed file is hidden; its bytes stay in the storage | Confirm with the owner |
+| Purging the bytes of removed files and of purged tasks (Q06) | Not built: nothing is ever erased from the storage | With the purge workflow |
+| Archive limits (Q16 demands a guard, not numbers) | At most 10,000 entries, 2 GiB unpacked, 200× compression (`crm/files/validation.py`) | Production |
+| Legacy `.doc` / `.xls` (Q16 says "Word, Excel") | Accepted by signature; unlike docx/xlsx they cannot be cheaply checked for macros. Residual risk recorded in `SECURITY.md` | Production |
+| Recording downloads in the audit log | Not recorded; uploads and removals are | Production |
+| Upload path through the web application | The web relay holds an upload in memory before passing it to the API (up to 101 MB per upload in progress). The HTTPS ingress of S8 should send `/api/` straight to the API | S8 |
+| Real object-storage provider | The S3 adapter is tested against an emulator only | Before files go to production |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

@@ -44,3 +44,28 @@ export async function callApi<T>(
     return { ok: false, code: "unavailable" };
   }
 }
+
+/** Uploads one file as `multipart/form-data`; the browser sets the boundary itself. */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApiResult<T>> {
+  const form = new FormData();
+  form.append("file", file);
+  try {
+    const response = await fetchImpl(path, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+      body: form,
+    });
+    const body: unknown = await response.json();
+    if (response.ok) {
+      return { ok: true, data: body as T };
+    }
+    return { ok: false, code: errorCode(body) ?? "unavailable" };
+  } catch {
+    return { ok: false, code: "unavailable" };
+  }
+}

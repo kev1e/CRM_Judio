@@ -4,6 +4,22 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type Attachment = {
+    id: string;
+    name: string;
+    byte_size: number;
+    content_type: string;
+    uploader: Named;
+    created_at: string;
+};
+
+export type AttachmentUploadRequest = {
+    /**
+     * PDF, Word, Excel, an image or a ZIP archive, up to 100 MB.
+     */
+    file: Blob | File;
+};
+
 export type BindingCode = {
     /**
      * One-time Telegram binding code. Shown once.
@@ -267,6 +283,8 @@ export type TaskActions = {
     deadline: boolean;
     checkpoints_use: boolean;
     checkpoints_manage: boolean;
+    attach: boolean;
+    attachment_delete: boolean;
     comment: boolean;
     comment_delete: boolean;
     priority: boolean;
@@ -337,6 +355,7 @@ export type TaskDetail = {
     created_at: string;
     completed_at: string | null;
     checkpoints: Array<Checkpoint>;
+    attachments: Array<Attachment>;
     comments: Array<Comment>;
     history: Array<HistoryEntry>;
     /**
@@ -882,6 +901,82 @@ export type TasksArchiveResponses = {
 };
 
 export type TasksArchiveResponse = TasksArchiveResponses[keyof TasksArchiveResponses];
+
+export type TasksAddAttachmentData = {
+    body: AttachmentUploadRequest;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/attachments';
+};
+
+export type TasksAddAttachmentErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+    413: Error;
+    503: Error;
+};
+
+export type TasksAddAttachmentError = TasksAddAttachmentErrors[keyof TasksAddAttachmentErrors];
+
+export type TasksAddAttachmentResponses = {
+    200: TaskDetail;
+};
+
+export type TasksAddAttachmentResponse = TasksAddAttachmentResponses[keyof TasksAddAttachmentResponses];
+
+export type TasksDeleteAttachmentData = {
+    body?: never;
+    path: {
+        attachment_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/attachments/{attachment_id}';
+};
+
+export type TasksDeleteAttachmentErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksDeleteAttachmentError = TasksDeleteAttachmentErrors[keyof TasksDeleteAttachmentErrors];
+
+export type TasksDeleteAttachmentResponses = {
+    200: TaskDetail;
+};
+
+export type TasksDeleteAttachmentResponse = TasksDeleteAttachmentResponses[keyof TasksDeleteAttachmentResponses];
+
+export type TasksDownloadAttachmentData = {
+    body?: never;
+    path: {
+        attachment_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/attachments/{attachment_id}';
+};
+
+export type TasksDownloadAttachmentErrors = {
+    403: Error;
+    404: Error;
+    503: Error;
+};
+
+export type TasksDownloadAttachmentError = TasksDownloadAttachmentErrors[keyof TasksDownloadAttachmentErrors];
+
+export type TasksDownloadAttachmentResponses = {
+    /**
+     * The file.
+     */
+    200: Blob | File;
+};
+
+export type TasksDownloadAttachmentResponse = TasksDownloadAttachmentResponses[keyof TasksDownloadAttachmentResponses];
 
 export type TasksAddCheckpointData = {
     body: CheckpointCreateRequest;
