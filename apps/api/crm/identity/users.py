@@ -6,6 +6,7 @@ get their department-scoped part with S2.
 """
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from django.db import transaction
 from django.db.models import QuerySet
@@ -16,9 +17,10 @@ from crm.access.models import Role, UserRole
 from crm.access.permissions import ADMINISTRATOR_ROLE_KEY, Scope
 from crm.audit import services as audit
 from crm.common.actors import Actor
-from crm.common.exceptions import DomainError
+from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.identity import enrollment, services, sessions
 from crm.identity.models import PasswordSetupToken, TelegramEnrollmentToken, User
+from crm.organization import services as organization
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,23 +30,42 @@ class ProvisionedUser:
 
 
 def list_users(*, actor: Actor) -> QuerySet[User]:
-    access.require_permission(actor, "user.read", at_least=Scope.COMPANY)
-    return User.objects.order_by("display_name", "crm_login")
+    """Accounts the actor may see: all of them, or the members of managed departments."""
+    scope = access.require_department_scope(actor, "user.read")
+    accounts = User.objects.order_by("display_name", "crm_login")
+    if scope.company:
+        return accounts
+    return accounts.filter(
+        department_memberships__department_id__in=scope.department_ids
+    ).distinct()
 
 
 def provision_user(
-    *, actor: Actor, crm_login: str, display_name: str, email: str | None = None
+    *,
+    actor: Actor,
+    crm_login: str,
+    display_name: str,
+    email: str | None = None,
+    department_id: UUID | None = None,
 ) -> ProvisionedUser:
     """Create an account without a password and a one-time Telegram binding code.
 
     The employee binds Telegram with the code and then chooses a password through
     the link the bot sends (D036). The new account holds no role.
+
+    `department_id` becomes the employee's primary department. An administrator
+    may leave it out and place the employee later; a manager must name one of the
+    departments they manage (D018).
     """
-    access.require_permission(actor, "user.create", at_least=Scope.COMPANY)
+    scope = access.require_department_scope(actor, "user.create")
+    if not scope.company and not scope.covers(department_id):
+        raise PermissionDeniedError()
     with transaction.atomic():
         user = services.create_user(
             actor=actor, crm_login=crm_login, display_name=display_name, email=email
         )
+        if department_id is not None:
+            organization.place_new_employee(actor=actor, user=user, department_id=department_id)
         token = enrollment.issue_token(actor=actor, user=user)
     return ProvisionedUser(user=user, binding_token=token)
 

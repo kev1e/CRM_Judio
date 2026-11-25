@@ -211,4 +211,14 @@ Notes:
 
 `identity_throttle_counter.kind` gained `setup_use` and `setup_issue`. The administrator role gained the `user.read` grant by a data migration.
 
+### S2 — organization
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `organization_department` | `id` UUIDv7, `name`, `is_active`, `created_at` | name unique ignoring case, not empty |
+| `organization_department_membership` | `id`, `user_id`, `department_id`, `is_primary`, `created_at` | one row per (user, department); at most one primary row per user |
+| `organization_department_manager` | `id`, `department_id`, `user_id`, `is_designated`, `created_at` | one row per (department, user); at most one designated row per department |
+
+Managing and belonging are separate tables on purpose. The built-in `department_manager` role and its grants are created by a data migration; the service links the role to exactly the users who manage at least one department.
+
 "Expired" is not a stored challenge state: it is a `pending` or `approved` row past `expires_at`. Neither the browser's attempt secret nor the session token is stored; rights are never read from the session row. Old rows of these three tables are not purged yet (S8).

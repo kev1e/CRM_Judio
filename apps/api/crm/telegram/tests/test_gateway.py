@@ -72,3 +72,18 @@ def test_bot_api_address_can_point_to_a_relay(settings: Settings) -> None:
     assert bot.session.api.api_url(token="T", method="getMe") == (
         "http://bot-api.internal:8081/botT/getMe"
     )
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://crm.example.com/set-password#t", True),
+        ("http://127.0.0.1:3000/set-password#t", True),
+        ("http://[::1]:3000/x", True),
+        ("http://localhost:3000/set-password#t", False),
+        ("http://crm/set-password", False),
+        ("not a url", False),
+    ],
+)
+def test_only_addresses_telegram_accepts_are_linkable(url: str, expected: bool) -> None:
+    assert gateway.is_linkable(url) is expected

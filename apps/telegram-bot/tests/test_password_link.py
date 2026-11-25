@@ -1,6 +1,7 @@
 """D036: the bot hands out the one-time link for choosing the first password."""
 
 import pytest
+from pytest_django.fixtures import Settings
 
 from crm.common.actors import Actor
 from crm.conftest import STRONG_PASSWORD, Employee, UserFactory
@@ -15,8 +16,13 @@ pytestmark = pytest.mark.django_db(transaction=True, serialized_rollback=True)
 TG_ID = 555000111
 
 
-def link_from(text: str) -> str:
-    return next(line for line in text.splitlines() if "/set-password#" in line)
+def link_from(message: SendMessage) -> str:
+    """The address on the message's button."""
+    ((button,),) = message.reply_markup.inline_keyboard  # type: ignore[union-attr]
+    assert button.text == texts.BUTTON_OPEN_SETUP
+    assert button.url is not None
+    assert "/set-password#" in button.url
+    return button.url
 
 
 def test_binding_a_passwordless_account_is_followed_by_the_link(
@@ -32,7 +38,7 @@ def test_binding_a_passwordless_account_is_followed_by_the_link(
     assert link_message.chat_id == TG_ID
     assert link_message.protect_content is True
     assert link_message.link_preview_options.is_disabled is True
-    raw_token = link_from(link_message.text).split("#", 1)[1]
+    raw_token = link_from(link_message).split("#", 1)[1]
     password_setup.set_initial_password(
         raw_token=raw_token, password=STRONG_PASSWORD, ip_address=None
     )
@@ -55,12 +61,12 @@ def test_no_link_when_the_account_already_has_a_password(
 def test_password_command_sends_a_fresh_link(make_user: UserFactory, admin_actor: Actor) -> None:
     code = enrollment.issue_token(actor=admin_actor, user=make_user("ivan.petrov"))
     first = feed(message_update(f"/start {code.value}", user_id=TG_ID))
-    old_token = link_from(first.of(SendMessage)[1].text).split("#", 1)[1]
+    old_token = link_from(first.of(SendMessage)[1]).split("#", 1)[1]
 
     session = feed(message_update("/password", user_id=TG_ID))
 
     (message,) = session.of(SendMessage)
-    new_token = link_from(message.text).split("#", 1)[1]
+    new_token = link_from(message).split("#", 1)[1]
     assert new_token != old_token
     with pytest.raises(password_setup.SetupLinkRejectedError):
         password_setup.set_initial_password(
@@ -87,3 +93,30 @@ def test_password_command_is_ignored_in_groups(make_user: UserFactory, admin_act
 
     assert session.calls == []
     assert PasswordSetupToken.objects.count() == before
+
+
+def test_link_is_a_button_and_the_address_is_not_repeated_in_the_text(
+    make_user: UserFactory, admin_actor: Actor, settings: Settings
+) -> None:
+    settings.WEB_PUBLIC_URL = "https://crm.example.com"
+    code = enrollment.issue_token(actor=admin_actor, user=make_user("ivan.petrov"))
+
+    session = feed(message_update(f"/start {code.value}", user_id=TG_ID))
+
+    message = session.of(SendMessage)[1]
+    assert link_from(message).startswith("https://crm.example.com/set-password#")
+    assert "set-password" not in message.text
+
+
+def test_address_telegram_would_refuse_is_written_out_instead(
+    make_user: UserFactory, admin_actor: Actor, settings: Settings
+) -> None:
+    # A button with a `localhost` address makes Telegram reject the whole message.
+    settings.WEB_PUBLIC_URL = "http://localhost:3000"
+    code = enrollment.issue_token(actor=admin_actor, user=make_user("ivan.petrov"))
+
+    session = feed(message_update(f"/start {code.value}", user_id=TG_ID))
+
+    message = session.of(SendMessage)[1]
+    assert message.reply_markup is None
+    assert "http://localhost:3000/set-password#" in message.text

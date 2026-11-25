@@ -38,7 +38,37 @@ def _user_body(user: User) -> dict[str, Any]:
         "telegram_bound": user.telegram_user_id is not None,
         "has_password": user.has_usable_password(),
         "created_at": user.created_at,
+        "departments": _departments_of(user),
     }
+
+
+def _departments_of(user: User) -> list[dict[str, Any]]:
+    managed = set(user.managed_departments.values_list("department_id", flat=True))
+    memberships = user.department_memberships.select_related("department").order_by(
+        "-is_primary", "department__name"
+    )
+    rows = [
+        {
+            "id": m.department_id,
+            "name": m.department.name,
+            "is_primary": m.is_primary,
+            "is_manager": m.department_id in managed,
+        }
+        for m in memberships
+    ]
+    member_of = {row["id"] for row in rows}
+    # Managing without belonging is possible: show those departments too.
+    for link in user.managed_departments.select_related("department").order_by("department__name"):
+        if link.department_id not in member_of:
+            rows.append(
+                {
+                    "id": link.department_id,
+                    "name": link.department.name,
+                    "is_primary": False,
+                    "is_manager": True,
+                }
+            )
+    return rows
 
 
 def _binding_body(token: enrollment.IssuedToken) -> dict[str, Any]:
@@ -87,6 +117,7 @@ class UserCollectionView(APIView):
             crm_login=serializer.validated_data["crm_login"],
             display_name=serializer.validated_data["display_name"],
             email=serializer.validated_data.get("email") or None,
+            department_id=serializer.validated_data.get("department_id"),
         )
         body = {
             "user": _user_body(provisioned.user),

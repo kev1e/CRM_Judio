@@ -19,10 +19,9 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from crm.access import services as access
-from crm.access.permissions import Scope
 from crm.audit import services as audit
 from crm.common.actors import Actor
-from crm.common.exceptions import DomainError
+from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.identity import throttling
 from crm.identity.models import TelegramEnrollmentToken, ThrottleKind, User
 from crm.identity.throttling import Subject
@@ -91,10 +90,12 @@ def _issue(*, actor: Actor, user: User, action: str) -> IssuedToken:
 def issue_token(*, actor: Actor, user: User) -> IssuedToken:
     """Issue a binding token for an account that is not bound yet.
 
-    Allowed to whoever may provision accounts (Q11). Until departments exist (S2)
-    that means the company-wide `user.create` grant.
+    Allowed to whoever may provision accounts (Q11): company-wide, or a manager
+    for an employee who belongs to a department they manage.
     """
-    access.require_permission(actor, "user.create", at_least=Scope.COMPANY)
+    scope = access.require_department_scope(actor, "user.create")
+    if not scope.covers_any(user.department_memberships.values_list("department_id", flat=True)):
+        raise PermissionDeniedError()
     with transaction.atomic():
         return _issue(actor=actor, user=user, action="telegram.enrollment_issued")
 

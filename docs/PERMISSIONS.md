@@ -151,6 +151,8 @@ Permission catalogue so far (codes are added together with the feature that chec
 | Code | Scopes it can be granted in | Custom roles may hold it |
 |---|---|---|
 | `user.create` | managed departments, company | Yes |
+| `department.read` | managed departments, company | Yes |
+| `department.manage` | company | No — built-in roles only |
 | `user.read` | managed departments, company | Yes |
 | `user.update` | company | Yes |
 | `user.deactivate` | company | Yes |
@@ -169,3 +171,10 @@ Rules enforced by the service and covered by tests:
 - Every role creation, grant change, assignment and revocation is audited and bumps `permissions_version` of the affected users in the same transaction.
 
 Not implemented yet: departments and the resolution of the `MANAGED_DEPARTMENTS` scope against concrete departments (S2), task permissions (S3), the superuser role (S2/S3), the HTTP API and screens for role administration (S2).
+
+## Implementation status (S2) — how scopes resolve
+
+- `MANAGED_DEPARTMENTS` for a user is the set of **active** departments that the **active** user manages (`organization_department_manager`), read from the database on every check. Belonging to a department gives no rights at all.
+- Built-in role `department_manager` (held automatically while a user manages at least one department): `user.read`, `user.create`, `department.read`, `audit.read`, all in `MANAGED_DEPARTMENTS`. Task permissions join it in S3.
+- With that role a manager: sees the managed departments and the accounts of their members; creates an employee only with a managed department as the primary one; issues binding codes only for members of managed departments. A manager cannot change memberships, managers or primary departments (`department.manage` is administrator-only), cannot deactivate accounts and cannot give roles.
+- An object outside the caller's reach is answered as not found, so its existence is not revealed.

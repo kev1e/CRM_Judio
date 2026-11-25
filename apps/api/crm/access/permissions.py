@@ -65,6 +65,17 @@ _ALL = (
         system_role_only=True,
     ),
     PermissionDef(
+        "department.read",
+        "See departments, their members and managers.",
+        _DEPARTMENT_OR_COMPANY,
+    ),
+    PermissionDef(
+        "department.manage",
+        "Create and close departments, change members, managers and primary departments.",
+        _COMPANY_ONLY,
+        system_role_only=True,
+    ),
+    PermissionDef(
         "role.manage",
         "Create roles and change their grants.",
         _COMPANY_ONLY,
@@ -87,6 +98,13 @@ _ALL = (
 REGISTRY: dict[str, PermissionDef] = {p.code: p for p in _ALL}
 
 ADMINISTRATOR_ROLE_KEY = "administrator"
+DEPARTMENT_MANAGER_ROLE_KEY = "department_manager"
+
+# What managing a department allows, inside the managed departments only. The role
+# is built in and is held exactly by the users who manage at least one department.
+DEPARTMENT_MANAGER_GRANTS: dict[str, Scope] = dict.fromkeys(
+    ("audit.read", "department.read", "user.create", "user.read"), Scope.MANAGED_DEPARTMENTS
+)
 
 # Configuration rights only. Deliberately no task permission: being an administrator
 # does not make task contents visible (D003).

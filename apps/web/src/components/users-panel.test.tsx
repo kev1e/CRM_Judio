@@ -19,6 +19,7 @@ function account(overrides: Partial<User>): User {
     telegram_bound: true,
     has_password: true,
     created_at: "2026-11-25T10:00:00Z",
+    departments: [],
     ...overrides,
   };
 }
@@ -119,6 +120,7 @@ describe("UsersPanel", () => {
       crm_login: "ivan",
       display_name: "Иван Новиков",
       email: null,
+      department_id: null,
     });
     expect(screen.getByLabelText("Имя и фамилия")).toHaveValue("");
 

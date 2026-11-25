@@ -22,6 +22,8 @@ const ERROR_KEYS = [
   "cannot_deactivate_self",
   "last_administrator",
   "permission_denied",
+  "department_closed",
+  "department_not_found",
   "unavailable",
 ] as const;
 type ErrorKey = (typeof ERROR_KEYS)[number];
@@ -31,6 +33,7 @@ function toErrorKey(code: string): ErrorKey {
 }
 
 type Permissions = { create: boolean; deactivate: boolean };
+type DepartmentOption = { id: string; name: string };
 type ShownCode = { name: string; binding: BindingCode };
 
 const fieldClass =
@@ -42,10 +45,16 @@ export function UsersPanel({
   initialUsers,
   permissions,
   currentUserId,
+  departments = [],
+  departmentRequired = false,
 }: {
   initialUsers: User[];
   permissions: Permissions;
   currentUserId: string;
+  /** Departments a new employee may be placed into. */
+  departments?: DepartmentOption[];
+  /** A manager must place the employee into one of their departments. */
+  departmentRequired?: boolean;
 }) {
   const t = useTranslations("users");
   const format = useFormatter();
@@ -87,6 +96,7 @@ export function UsersPanel({
           crm_login: String(data.get("crm_login") ?? "").trim(),
           display_name: displayName,
           email: String(data.get("email") ?? "").trim() || null,
+          department_id: String(data.get("department_id") ?? "") || null,
         },
       });
       if (!result.ok) {
@@ -213,6 +223,24 @@ export function UsersPanel({
                 className={fieldClass}
               />
             </label>
+            {departments.length > 0 ? (
+              <label className="flex flex-col gap-1 text-sm font-medium sm:col-span-2">
+                {t("departmentLabel")}
+                <select
+                  name="department_id"
+                  required={departmentRequired}
+                  defaultValue={departmentRequired ? departments[0]?.id : ""}
+                  className={fieldClass}
+                >
+                  {departmentRequired ? null : <option value="">{t("departmentNone")}</option>}
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
           <button
             type="submit"
@@ -228,7 +256,7 @@ export function UsersPanel({
         <p className="text-muted-foreground">{t("empty")}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
+          <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th scope="col" className="py-2 pr-4 font-medium">
@@ -236,6 +264,9 @@ export function UsersPanel({
                 </th>
                 <th scope="col" className="py-2 pr-4 font-medium">
                   {t("columns.login")}
+                </th>
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  {t("columns.departments")}
                 </th>
                 <th scope="col" className="py-2 pr-4 font-medium">
                   {t("columns.state")}
@@ -252,6 +283,32 @@ export function UsersPanel({
                     {user.display_name}
                   </th>
                   <td className="py-3 pr-4">{user.crm_login}</td>
+                  <td className="py-3 pr-4">
+                    {user.departments.length === 0 ? (
+                      <span className="text-muted-foreground">{t("noDepartment")}</span>
+                    ) : (
+                      <ul className="flex flex-col gap-1">
+                        {user.departments.map((department) => (
+                          <li key={department.id}>
+                            {department.name}
+                            {department.is_primary || department.is_manager ? (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                (
+                                {[
+                                  department.is_primary ? t("primaryMark") : null,
+                                  department.is_manager ? t("managerMark") : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                                )
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                   <td className="py-3 pr-4">
                     <ul className="flex flex-col gap-1">
                       <li>{user.is_active ? t("state.active") : t("state.inactive")}</li>

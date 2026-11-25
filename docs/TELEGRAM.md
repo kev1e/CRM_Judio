@@ -83,6 +83,7 @@ Built and tested:
 - The bot subscribes only to `message` and `callback_query` updates. With Telegram's default privacy mode it does not receive ordinary group messages; nothing from a chat is stored or mirrored.
 
 - **First password (D036)**: after a successful binding of an account without a password the bot sends a one-time link to the CRM page that sets it; `/password` in a private chat sends a fresh link, and answers generically to anybody who is not entitled to one. Both are ignored in groups.
+- Links are sent as an inline URL button, which is always clickable. Checked against the Bot API on 2026-11-25: Telegram does not turn an address with a dot-less host (`localhost`) into a link and rejects a button with such an address; IP addresses and real domains are accepted. For such an address the bot writes it out as text instead, and the local default of `WEB_PUBLIC_URL` is `http://127.0.0.1:3000`.
 - `TELEGRAM_API_BASE_URL` lets the worker and the bot use a self-hosted Bot API server or a relay.
 
 How to run it:

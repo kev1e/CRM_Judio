@@ -35,6 +35,22 @@ export type CurrentUser = {
  */
 export type DeliveryEnum = 'pending' | 'sent' | 'failed';
 
+export type Department = {
+    id: string;
+    name: string;
+    is_active: boolean;
+    members: Array<Member>;
+    managers: Array<Manager>;
+};
+
+export type DepartmentCreateRequest = {
+    name: string;
+};
+
+export type DepartmentList = {
+    results: Array<Department>;
+};
+
 export type Error = {
     error: ErrorBody;
 };
@@ -71,6 +87,19 @@ export type LoginStarted = {
     expires_in: number;
 };
 
+export type Manager = {
+    id: string;
+    crm_login: string;
+    display_name: string;
+    is_active: boolean;
+    is_designated: boolean;
+};
+
+export type ManagerAddRequest = {
+    user_id: string;
+    is_designated?: boolean;
+};
+
 export type Me = {
     user: CurrentUser;
     session: SessionInfo;
@@ -82,10 +111,28 @@ export type Me = {
     };
 };
 
+export type Member = {
+    id: string;
+    crm_login: string;
+    display_name: string;
+    is_active: boolean;
+    is_primary: boolean;
+};
+
+export type MemberAddRequest = {
+    user_id: string;
+    is_primary?: boolean;
+};
+
 export type NullEnum = never;
 
 export type PasswordSetupRequestRequest = {
     token: string;
+};
+
+export type PatchedDepartmentUpdateRequest = {
+    name?: string;
+    is_active?: boolean;
 };
 
 export type Readiness = {
@@ -126,17 +173,26 @@ export type User = {
     telegram_bound: boolean;
     has_password: boolean;
     created_at: string;
+    departments: Array<UserDepartment>;
 };
 
 export type UserCreateRequestRequest = {
     crm_login: string;
     display_name: string;
     email?: string | string | null;
+    department_id?: string | null;
 };
 
 export type UserCreated = {
     user: User;
     binding: BindingCode;
+};
+
+export type UserDepartment = {
+    id: string;
+    name: string;
+    is_primary: boolean;
+    is_manager: boolean;
 };
 
 export type UserList = {
@@ -243,6 +299,162 @@ export type AuthPasswordSetupResponses = {
 };
 
 export type AuthPasswordSetupResponse = AuthPasswordSetupResponses[keyof AuthPasswordSetupResponses];
+
+export type DepartmentsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/departments';
+};
+
+export type DepartmentsListErrors = {
+    403: Error;
+};
+
+export type DepartmentsListError = DepartmentsListErrors[keyof DepartmentsListErrors];
+
+export type DepartmentsListResponses = {
+    200: DepartmentList;
+};
+
+export type DepartmentsListResponse = DepartmentsListResponses[keyof DepartmentsListResponses];
+
+export type DepartmentsCreateData = {
+    body: DepartmentCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/departments';
+};
+
+export type DepartmentsCreateErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type DepartmentsCreateError = DepartmentsCreateErrors[keyof DepartmentsCreateErrors];
+
+export type DepartmentsCreateResponses = {
+    201: Department;
+};
+
+export type DepartmentsCreateResponse = DepartmentsCreateResponses[keyof DepartmentsCreateResponses];
+
+export type DepartmentsUpdateData = {
+    body?: PatchedDepartmentUpdateRequest;
+    path: {
+        department_id: string;
+    };
+    query?: never;
+    url: '/api/v1/departments/{department_id}';
+};
+
+export type DepartmentsUpdateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type DepartmentsUpdateError = DepartmentsUpdateErrors[keyof DepartmentsUpdateErrors];
+
+export type DepartmentsUpdateResponses = {
+    200: Department;
+};
+
+export type DepartmentsUpdateResponse = DepartmentsUpdateResponses[keyof DepartmentsUpdateResponses];
+
+export type DepartmentsAddManagerData = {
+    body: ManagerAddRequest;
+    path: {
+        department_id: string;
+    };
+    query?: never;
+    url: '/api/v1/departments/{department_id}/managers';
+};
+
+export type DepartmentsAddManagerErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type DepartmentsAddManagerError = DepartmentsAddManagerErrors[keyof DepartmentsAddManagerErrors];
+
+export type DepartmentsAddManagerResponses = {
+    200: Department;
+};
+
+export type DepartmentsAddManagerResponse = DepartmentsAddManagerResponses[keyof DepartmentsAddManagerResponses];
+
+export type DepartmentsRemoveManagerData = {
+    body?: never;
+    path: {
+        department_id: string;
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/departments/{department_id}/managers/{user_id}';
+};
+
+export type DepartmentsRemoveManagerErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type DepartmentsRemoveManagerError = DepartmentsRemoveManagerErrors[keyof DepartmentsRemoveManagerErrors];
+
+export type DepartmentsRemoveManagerResponses = {
+    200: Department;
+};
+
+export type DepartmentsRemoveManagerResponse = DepartmentsRemoveManagerResponses[keyof DepartmentsRemoveManagerResponses];
+
+export type DepartmentsAddMemberData = {
+    body: MemberAddRequest;
+    path: {
+        department_id: string;
+    };
+    query?: never;
+    url: '/api/v1/departments/{department_id}/members';
+};
+
+export type DepartmentsAddMemberErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type DepartmentsAddMemberError = DepartmentsAddMemberErrors[keyof DepartmentsAddMemberErrors];
+
+export type DepartmentsAddMemberResponses = {
+    200: Department;
+};
+
+export type DepartmentsAddMemberResponse = DepartmentsAddMemberResponses[keyof DepartmentsAddMemberResponses];
+
+export type DepartmentsRemoveMemberData = {
+    body?: never;
+    path: {
+        department_id: string;
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/departments/{department_id}/members/{user_id}';
+};
+
+export type DepartmentsRemoveMemberErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type DepartmentsRemoveMemberError = DepartmentsRemoveMemberErrors[keyof DepartmentsRemoveMemberErrors];
+
+export type DepartmentsRemoveMemberResponses = {
+    200: Department;
+};
+
+export type DepartmentsRemoveMemberResponse = DepartmentsRemoveMemberResponses[keyof DepartmentsRemoveMemberResponses];
 
 export type HealthData = {
     body?: never;

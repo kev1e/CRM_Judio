@@ -122,6 +122,281 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/departments:
+    get:
+      operationId: departments_list
+      tags:
+      - departments
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    post:
+      operationId: departments_create
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/departments/{department_id}:
+    patch:
+      operationId: departments_update
+      parameters:
+      - in: path
+        name: department_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/departments/{department_id}/managers:
+    post:
+      operationId: departments_add_manager
+      parameters:
+      - in: path
+        name: department_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagerAddRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/departments/{department_id}/managers/{user_id}:
+    delete:
+      operationId: departments_remove_manager
+      parameters:
+      - in: path
+        name: department_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/departments/{department_id}/members:
+    post:
+      operationId: departments_add_member
+      parameters:
+      - in: path
+        name: department_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberAddRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/departments/{department_id}/members/{user_id}:
+    delete:
+      operationId: departments_remove_member
+      parameters:
+      - in: path
+        name: department_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/health:
     get:
       operationId: health
@@ -382,6 +657,48 @@ components:
         * `pending` - pending
         * `sent` - sent
         * `failed` - failed
+    Department:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_active:
+          type: boolean
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        managers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Manager'
+      required:
+      - id
+      - is_active
+      - managers
+      - members
+      - name
+    DepartmentCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+      required:
+      - name
+    DepartmentList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+      required:
+      - results
     Error:
       type: object
       properties:
@@ -455,6 +772,37 @@ components:
       required:
       - expires_at
       - expires_in
+    Manager:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        crm_login:
+          type: string
+        display_name:
+          type: string
+        is_active:
+          type: boolean
+        is_designated:
+          type: boolean
+      required:
+      - crm_login
+      - display_name
+      - id
+      - is_active
+      - is_designated
+    ManagerAddRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        is_designated:
+          type: boolean
+          default: false
+      required:
+      - user_id
     Me:
       type: object
       properties:
@@ -479,6 +827,37 @@ components:
       - permissions
       - session
       - user
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        crm_login:
+          type: string
+        display_name:
+          type: string
+        is_active:
+          type: boolean
+        is_primary:
+          type: boolean
+      required:
+      - crm_login
+      - display_name
+      - id
+      - is_active
+      - is_primary
+    MemberAddRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        is_primary:
+          type: boolean
+          default: false
+      required:
+      - user_id
     NullEnum:
       enum:
       - null
@@ -497,6 +876,15 @@ components:
       required:
       - password
       - token
+    PatchedDepartmentUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        is_active:
+          type: boolean
     Readiness:
       type: object
       properties:
@@ -570,9 +958,14 @@ components:
         created_at:
           type: string
           format: date-time
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDepartment'
       required:
       - created_at
       - crm_login
+      - departments
       - display_name
       - email
       - has_password
@@ -598,6 +991,10 @@ components:
             maxLength: 254
           - type: string
             maxLength: 0
+        department_id:
+          type: string
+          format: uuid
+          nullable: true
       required:
       - crm_login
       - display_name
@@ -611,6 +1008,23 @@ components:
       required:
       - binding
       - user
+    UserDepartment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_primary:
+          type: boolean
+        is_manager:
+          type: boolean
+      required:
+      - id
+      - is_manager
+      - is_primary
+      - name
     UserList:
       type: object
       properties:

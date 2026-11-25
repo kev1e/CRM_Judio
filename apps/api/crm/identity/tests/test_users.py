@@ -360,6 +360,7 @@ def test_administrator_lists_accounts_without_secrets(
         "telegram_bound": True,
         "has_password": True,
         "created_at": rows["anna.petrova"]["created_at"],
+        "departments": [],
     }
     body = response.content.decode()
     assert "argon2" not in body
