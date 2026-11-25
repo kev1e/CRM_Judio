@@ -276,4 +276,21 @@ Backend: `apps/api/crm/identity/tests/test_auth.py`, `test_auth_api.py`, `test_t
 
 Verified by hand on 2026-11-25 in a real browser against a locally started API, worker and web server (Telegram replaced by the recording gateway, the approval given through the domain service): wrong password → approval → session cookie (`__Host-`, HttpOnly, Secure, not visible to page scripts) → reload → logout → denial. **Not automated yet:** this full path in the E2E suite (it needs a way to seed an account and to approve inside the Compose stack), and any run against the real Telegram API.
 
+### S1.4 — accounts and the first password (D036)
+
+Backend: `apps/api/crm/identity/tests/test_users.py`, `test_password_setup.py`. Bot: `apps/telegram-bot/tests/test_password_link.py`. Web: `users-panel.test.tsx`, `set-password-form.test.tsx`, `api-client.test.ts`.
+
+| Requirement | Covered |
+|---|---|
+| D018 provisioning | Administrator creates a passwordless account with a binding code; duplicate or malformed login, bad email and empty name are refused and create nothing; extra fields in the request (password, roles, Telegram ID, active flag) are ignored |
+| Negative authorization | An employee without rights, a system actor and a CLI actor are refused for listing, creating, new code, deactivation and reactivation, in the service and over HTTP (403); anonymous callers get 401; a department-scoped grant is not enough before departments exist; a holder of `user.create` cannot hand out roles |
+| D036 | Link issued only for a bound, active account without a password; single use; expiry; a replaced link; a weak password does not burn the link; an existing password can never be replaced; no session is opened; rate limits for requesting and for guessing links; the whole path provision → bind → set password → login → approval ends in a session |
+| Deactivation | Session cut on the next request (service and HTTP); login refused; pending codes and links revoked and not restored by reactivation; self-deactivation and deactivation of the last administrator refused; reactivation keeps roles, password and binding |
+| Bot | Link sent after binding a passwordless account, not for an account with a password; `/password` sends a fresh link and voids the old one; generic answer to others; ignored in groups |
+| Web | Token read from the fragment and removed from the address bar; mismatch caught before any request; server refusals explained; Users screen shows state and only applicable actions, hides what the viewer may not do, confirms deactivation |
+
+Verified by hand on 2026-11-25 in a real browser against a local stack (Telegram replaced by the recording gateway): administrator signs in → creates an employee → code shown once → binding → link → weak password refused → password saved → reused link refused → employee signs in, sees no Users link and gets 404 on `/users` → administrator deactivates → the employee's next page load lands on the login page.
+
+Real Telegram, 2026-11-25: the bot process, started with the owner's token, connected to the Bot API, received a real update from a Telegram account and answered it. **Not yet observed with a real Telegram account:** binding by `/start <code>`, the login prompt with its buttons, and the password link — these need the owner to act in Telegram while the stack is running.
+
 Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.

@@ -24,7 +24,7 @@ Delivery slices (engineering order; the scope above is unchanged):
 | S1.2a | Telegram enrollment, domain part (Q11): one-time binding code stored as a hash, atomic binding of the numeric Telegram ID, refusal and audit of replayed, altered, expired or misdirected codes, binding code for the first administrator from the CLI | Done (2026-11-20) |
 | S1.2b | The aiogram bot process (`apps/telegram-bot`, long polling) that receives `/start <code>` in a private chat and calls the binding service | Done (2026-11-25). Webhook mode with the secret-token check waits for the HTTPS ingress (S6/S8) |
 | S1.3 | Login (Q13): password check, 3-minute single-use bot approval, 12-hour sessions with immediate revocation, progressive throttling, login screen | Done (2026-11-25). Throttle thresholds are provisional; trying it against real Telegram needs a bot token from the owner |
-| S1.4 | User provisioning and deactivation through the API and CRM screens (administrator; managers once S2 departments exist) | Planned |
+| S1.4 | User provisioning and deactivation through the API and CRM screens (administrator; managers once S2 departments exist); the employee's own first password (D036) | Done (2026-11-25) for the administrator. Managers' department-scoped part and the hand-over of tasks on deactivation arrive with S2 and S3 |
 | S1.5 | Administrator-only email verification (Q28) and the recovery workflow of REC-01 | Planned; the items REC-01 leaves OPEN are not implemented |
 | S1.6 | Reserve emergency administrator account (REC-02) and the emergency CLI of D032-B1 | Blocked on the OPEN procedure details; only marking and audit groundwork until they are approved |
 

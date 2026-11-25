@@ -82,10 +82,13 @@ Built and tested:
 - **Login prompt delivery**: the Celery task `identity.deliver_login_challenge` sends the prompt through `crm.telegram.gateway` (plain text, forwarding protected). It re-reads the challenge, the account and the binding before sending; retries a temporary failure three times, then marks the delivery failed so the login fails closed.
 - The bot subscribes only to `message` and `callback_query` updates. With Telegram's default privacy mode it does not receive ordinary group messages; nothing from a chat is stored or mirrored.
 
+- **First password (D036)**: after a successful binding of an account without a password the bot sends a one-time link to the CRM page that sets it; `/password` in a private chat sends a fresh link, and answers generically to anybody who is not entitled to one. Both are ignored in groups.
+- `TELEGRAM_API_BASE_URL` lets the worker and the bot use a self-hosted Bot API server or a relay.
+
 How to run it:
 
 1. Create a bot with @BotFather and put its token into `.env` as `TELEGRAM_BOT_TOKEN` (never into Git).
 2. `docker compose --profile telegram up --build --wait`, or on the host `pnpm --filter @crm/telegram-bot run dev` next to the API and the worker.
 3. The employee opens the bot and sends `/start <code>`; a link `https://t.me/<bot>?start=<code>` does the same.
 
-Not built yet: webhook mode with the secret-token check (arrives with the HTTPS ingress; long polling needs no public address), the group allowlist (Q22), request wizards and the Mini App (S6), notifications and digests (S6/S8). The tests feed real updates through the dispatcher with a recording session; **the bot has not been run against the real Telegram API yet** — that needs a token from the owner.
+Not built yet: webhook mode with the secret-token check (arrives with the HTTPS ingress; long polling needs no public address), the group allowlist (Q22), request wizards and the Mini App (S6), notifications and digests (S6/S8). The tests feed real updates through the dispatcher with a recording session; On 2026-11-25 the bot process was started with the owner's token against the real Telegram API (through a local relay, because the development sandbox reaches the internet only through an HTTPS proxy): `getMe` and long polling work. See `TEST_PLAN.md` for which user-facing steps were observed with a real Telegram account.
