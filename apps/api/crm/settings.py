@@ -77,6 +77,7 @@ AUTH_PASSWORD_VALIDATORS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "crm.common.middleware.OriginCheckMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -122,6 +123,32 @@ TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES: int = env.int(
 if TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES < 1:
     raise ImproperlyConfigured("TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES must be at least 1.")
 
+# Token of the CRM bot from BotFather. Empty means "no bot": the API still starts,
+# but nobody can sign in, because a login needs approval in Telegram.
+TELEGRAM_BOT_TOKEN: str = env.str("TELEGRAM_BOT_TOKEN", default="")
+# The transport used for outbound messages; tests replace it with a fake.
+TELEGRAM_GATEWAY: str = env.str("TELEGRAM_GATEWAY", default="crm.telegram.gateway.AiogramGateway")
+
+# --- Sessions and browser access --------------------------------------------
+
+# Origins of the CRM web interface. A browser request that changes state must
+# come from one of them (CSRF protection, see crm.common.middleware).
+WEB_ORIGINS: list[str] = [
+    origin.rstrip("/")
+    for origin in env.list(
+        "WEB_ORIGINS", default=["http://localhost:3000", "http://127.0.0.1:3000"]
+    )
+]
+# Send the session cookie over HTTPS only. Browsers accept Secure cookies on
+# http://localhost and http://127.0.0.1, so local development keeps the default.
+SESSION_COOKIE_SECURE: bool = env.bool("SESSION_COOKIE_SECURE", default=True)
+# How many reverse proxies in front of the API append to X-Forwarded-For
+# (0: the header is ignored and the peer address is used). A wrong value lets a
+# client forge its address, which weakens login throttling.
+TRUSTED_PROXY_HOPS: int = env.int("TRUSTED_PROXY_HOPS", default=0)
+if TRUSTED_PROXY_HOPS < 0:
+    raise ImproperlyConfigured("TRUSTED_PROXY_HOPS must not be negative.")
+
 # --- Internationalisation ---------------------------------------------------
 
 LANGUAGE_CODE = "ru"
@@ -138,9 +165,9 @@ SECURE_REFERRER_POLICY = "same-origin"
 # --- API --------------------------------------------------------------------
 
 REST_FRAMEWORK = {
-    # S0 exposes only unauthenticated health endpoints. Authentication and the
-    # deny-by-default permission classes arrive with the identity module (S1).
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    # Deny by default: a view is reachable without a session only when it says so.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["crm.identity.api.authentication.SessionAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],

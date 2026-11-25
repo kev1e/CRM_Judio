@@ -1,4 +1,5 @@
-# One image for every Python process: API (gunicorn), worker (Celery) and migrations.
+# One image for every Python process: API (gunicorn), worker (Celery), the Telegram
+# bot and migrations.
 # Build context: repository root.
 ARG PYTHON_VERSION=3.14.10
 
@@ -17,10 +18,12 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
+COPY apps/telegram-bot/pyproject.toml apps/telegram-bot/pyproject.toml
 RUN uv sync --locked --no-dev --all-packages --no-install-workspace
 
 COPY apps/api apps/api
 COPY apps/worker apps/worker
+COPY apps/telegram-bot apps/telegram-bot
 RUN uv sync --locked --no-dev --all-packages --no-editable
 
 

@@ -10,6 +10,29 @@ export type ClientOptions = {
  */
 export type CheckResultEnum = 'ok' | 'fail';
 
+export type CurrentUser = {
+    id: string;
+    crm_login: string;
+    display_name: string;
+};
+
+/**
+ * * `pending` - pending
+ * * `sent` - sent
+ * * `failed` - failed
+ */
+export type DeliveryEnum = 'pending' | 'sent' | 'failed';
+
+export type Error = {
+    error: ErrorBody;
+};
+
+export type ErrorBody = {
+    code: string;
+    message: string;
+    details: unknown;
+};
+
 export type Health = {
     status: HealthStatusEnum;
 };
@@ -18,6 +41,36 @@ export type Health = {
  * * `ok` - ok
  */
 export type HealthStatusEnum = 'ok';
+
+export type LoginProgress = {
+    state: StateEnum;
+    delivery: DeliveryEnum | NullEnum | null;
+};
+
+export type LoginRequestRequest = {
+    login: string;
+};
+
+export type LoginStarted = {
+    expires_at: string;
+    /**
+     * Seconds until the attempt expires.
+     */
+    expires_in: number;
+};
+
+export type Me = {
+    user: CurrentUser;
+    session: SessionInfo;
+    /**
+     * Permission code -> widest scope currently granted.
+     */
+    permissions: {
+        [key: string]: 'own' | 'managed_departments' | 'company';
+    };
+};
+
+export type NullEnum = never;
 
 export type Readiness = {
     status: ReadinessStatusEnum;
@@ -34,6 +87,93 @@ export type ReadinessChecks = {
  * * `unavailable` - unavailable
  */
 export type ReadinessStatusEnum = 'ok' | 'unavailable';
+
+export type SessionInfo = {
+    expires_at: string;
+};
+
+/**
+ * * `pending` - pending
+ * * `denied` - denied
+ * * `expired` - expired
+ * * `invalid` - invalid
+ * * `authenticated` - authenticated
+ */
+export type StateEnum = 'pending' | 'denied' | 'expired' | 'invalid' | 'authenticated';
+
+export type LoginRequestRequestWritable = {
+    login: string;
+    password: string;
+};
+
+export type AuthLoginData = {
+    body: LoginRequestRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login';
+};
+
+export type AuthLoginErrors = {
+    401: Error;
+    409: Error;
+    429: Error;
+};
+
+export type AuthLoginError = AuthLoginErrors[keyof AuthLoginErrors];
+
+export type AuthLoginResponses = {
+    200: LoginStarted;
+};
+
+export type AuthLoginResponse = AuthLoginResponses[keyof AuthLoginResponses];
+
+export type AuthLoginCompleteData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login/complete';
+};
+
+export type AuthLoginCompleteResponses = {
+    200: LoginProgress;
+};
+
+export type AuthLoginCompleteResponse = AuthLoginCompleteResponses[keyof AuthLoginCompleteResponses];
+
+export type AuthLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout';
+};
+
+export type AuthLogoutResponses = {
+    /**
+     * No response body
+     */
+    204: void;
+};
+
+export type AuthLogoutResponse = AuthLogoutResponses[keyof AuthLogoutResponses];
+
+export type AuthMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me';
+};
+
+export type AuthMeErrors = {
+    401: Error;
+};
+
+export type AuthMeError = AuthMeErrors[keyof AuthMeErrors];
+
+export type AuthMeResponses = {
+    200: Me;
+};
+
+export type AuthMeResponse = AuthMeResponses[keyof AuthMeResponses];
 
 export type HealthData = {
     body?: never;

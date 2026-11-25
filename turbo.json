@@ -18,6 +18,10 @@
     "API_INTERNAL_URL",
     "API_SCHEMA_ENABLED",
     "LOG_LEVEL",
+    "TELEGRAM_*",
+    "WEB_ORIGINS",
+    "SESSION_COOKIE_SECURE",
+    "TRUSTED_PROXY_HOPS",
     "UV_*",
     "VIRTUAL_ENV"
   ],

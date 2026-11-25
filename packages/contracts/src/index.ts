@@ -6,4 +6,8 @@ export type * from "./generated/types.gen";
 export const API_PATHS = {
   health: "/api/v1/health",
   ready: "/api/v1/ready",
+  login: "/api/v1/auth/login",
+  loginComplete: "/api/v1/auth/login/complete",
+  me: "/api/v1/auth/me",
+  logout: "/api/v1/auth/logout",
 } as const satisfies Record<string, `/api/v${number}/${string}`>;

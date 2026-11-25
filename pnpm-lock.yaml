@@ -187,6 +187,12 @@ importers:
 
   apps/api: {}
 
+  apps/telegram-bot:
+    dependencies:
+      '@crm/api':
+        specifier: workspace:*
+        version: link:../api
+
   apps/web:
     dependencies:
       '@crm/contracts':

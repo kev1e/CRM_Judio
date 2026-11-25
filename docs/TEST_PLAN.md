@@ -255,4 +255,25 @@ Which of the scenarios above are executable today. Everything not listed here is
 | Q11 audit | Every refusal is audited with its reason; the sender always receives the same generic answer |
 | First administrator | The CLI prints a binding code once; a new one can be issued from the CLI only for an administrator and only until an administrator has bound Telegram |
 
-Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: the bot transport and MFA, sessions and their 12-hour limit, throttling, audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.
+### S1.2b and S1.3 — bot and sign-in
+
+Backend: `apps/api/crm/identity/tests/test_auth.py`, `test_auth_api.py`, `test_throttling.py`, `test_tasks.py`, `apps/api/crm/telegram/tests`, `apps/api/crm/common/tests`. Bot: `apps/telegram-bot/tests` (real updates through the aiogram dispatcher, Bot API calls recorded). Web: `apps/web/src/**/*.test.ts(x)`. Browser: `e2e/tests/smoke.spec.ts`.
+
+| Requirement | Covered |
+|---|---|
+| Q13 challenge | 180-second lifetime (service and database); approval only from the bound numeric Telegram ID; another employee's or an unknown Telegram account refused; no double decision; no decision after expiry, after cancellation, after the binding changed, for a deactivated account; denial ends the attempt |
+| Q13 single use | An approval opens exactly one session; a replay, a wrong or missing attempt secret, another browser and an expired approval get nothing; second session for one challenge refused by the database |
+| Q13 sessions | 12-hour absolute limit (service and database), not prolonged by use; forged token refused; logout, deactivation and password change end the session at once; another user's sessions are untouched |
+| D020 | Rights granted and revoked during an open session show up on the next request without a new login |
+| Q13 throttling | Progressive delay after repeated wrong passwords; never permanent; counter starts over after a quiet period and after a successful password; unknown logins throttled like real ones; changing the address does not give unlimited guesses; a stranger's failures elsewhere do not block the owner; one address trying many logins is delayed; Telegram prompts and wrong binding codes are rate-limited |
+| No enumeration / no leaks | Wrong password, unknown login, no password, deactivated account answer identically; secrets appear in no response body, `repr` or audit event; the unknown login is not written down |
+| Q30 | The Telegram username is not a login; the CRM login is case-insensitive |
+| Telegram outage | A queue failure, a temporary Telegram failure (after retries) and a refusal by Telegram all make the login fail closed; an already open session keeps working |
+| CSRF | State-changing requests from a foreign origin, and cookie-bearing requests without an origin, are refused, including login and logout |
+| Q11 bot transport | `/start <code>` binds the sender's ID; text typed by the user cannot name an account; wrong and used codes get one generic answer; a code in a group is ignored silently and stays valid; ordinary messages are neither handled nor recorded |
+| Web | Login form states (errors, waiting, approval, denial, expiry, delivery failure, cancel, temporary server error), POST-only form, relay to the API without client-supplied address headers, outage is not shown as "signed out" |
+| Browser (E2E) | Anonymous visitor is redirected to the login page; generic error for wrong credentials; keyboard-only submit; theme; phone width; 401 and origin refusal through the web origin |
+
+Verified by hand on 2026-11-25 in a real browser against a locally started API, worker and web server (Telegram replaced by the recording gateway, the approval given through the domain service): wrong password → approval → session cookie (`__Host-`, HttpOnly, Secure, not visible to page scripts) → reload → logout → denial. **Not automated yet:** this full path in the E2E suite (it needs a way to seed an account and to approve inside the Compose stack), and any run against the real Telegram API.
+
+Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.

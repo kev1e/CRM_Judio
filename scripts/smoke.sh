@@ -12,7 +12,7 @@ echo "1/3 API readiness"
 curl --fail --silent --show-error "${API_URL}/api/v1/ready" | grep -q '"status":"ok"'
 
 echo "2/3 Web page"
-curl --fail --silent --show-error "${WEB_URL}/" | grep -q 'lang="ru"'
+curl --fail --silent --show-error "${WEB_URL}/login" | grep -q 'lang="ru"'
 
 echo "3/3 Worker executes a task"
 component="smoke-$(date +%s)"

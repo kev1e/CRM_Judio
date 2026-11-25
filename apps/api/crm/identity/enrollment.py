@@ -23,7 +23,9 @@ from crm.access.permissions import Scope
 from crm.audit import services as audit
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError
-from crm.identity.models import TelegramEnrollmentToken, User
+from crm.identity import throttling
+from crm.identity.models import TelegramEnrollmentToken, ThrottleKind, User
+from crm.identity.throttling import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +115,16 @@ def issue_first_administrator_token(*, operator: str, crm_login: str) -> IssuedT
         return _issue(actor=actor, user=user, action="telegram.enrollment_issued")
 
 
+def _enrollment_subject(telegram_user_id: int) -> Subject:
+    return Subject(ThrottleKind.ENROLLMENT, str(telegram_user_id))
+
+
 def _reject(
     reason: str, *, telegram_user_id: int, user: User | None = None
 ) -> EnrollmentRejectedError:
     """Record a refused attempt. Runs outside the failed transaction so it is kept."""
+    if reason != "throttled":
+        throttling.register_failure([_enrollment_subject(telegram_user_id)])
     audit.record(
         actor=BOT_ACTOR,
         action="telegram.enrollment_rejected",
@@ -152,6 +160,9 @@ def redeem_token(
     if not chat_is_private:
         # A token typed into a group is visible to others: burn nothing, accept nothing.
         raise _reject("not_private_chat", telegram_user_id=telegram_user_id)
+    # Q13: repeated wrong codes from one Telegram account wait progressively longer.
+    if throttling.retry_after([_enrollment_subject(telegram_user_id)]):
+        raise _reject("throttled", telegram_user_id=telegram_user_id)
 
     target: User | None = None
     reason: str | None = None

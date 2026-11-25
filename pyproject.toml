@@ -2,7 +2,7 @@
 # JavaScript/TypeScript is managed by pnpm — see package.json.
 
 [tool.uv.workspace]
-members = ["apps/api", "apps/worker"]
+members = ["apps/api", "apps/worker", "apps/telegram-bot"]
 
 [tool.uv]
 required-version = ">=0.13.7,<0.14"
@@ -49,7 +49,7 @@ ignore = [
 "**/migrations/**" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["crm", "crm_worker"]
+known-first-party = ["crm", "crm_bot", "crm_worker"]
 
 [tool.mypy]
 python_version = "3.14"

@@ -40,7 +40,7 @@ jobs:
       - name: Formatting (Prettier)
         run: pnpm exec prettier --check .
       - name: Lint, typecheck, unit/component tests, build
-        run: pnpm exec turbo run lint typecheck test build --filter=!@crm/api --filter=!@crm/worker
+        run: pnpm exec turbo run lint typecheck test build --filter=!@crm/api --filter=!@crm/worker --filter=!@crm/telegram-bot
       - name: Generated contract types are up to date
         run: |
           pnpm run contracts:generate
@@ -83,6 +83,7 @@ jobs:
         run: |
           cd apps/api && uv run --locked --all-packages mypy .
           cd ../worker && uv run --locked --all-packages mypy .
+          cd ../telegram-bot && uv run --locked --all-packages mypy .
       - name: Django system check
         working-directory: apps/api
         run: uv run --locked --all-packages python manage.py check
@@ -97,6 +98,9 @@ jobs:
         run: uv run --locked --all-packages pytest
       - name: Worker tests (real Celery worker)
         working-directory: apps/worker
+        run: uv run --locked --all-packages pytest
+      - name: Telegram bot tests (updates through the real dispatcher)
+        working-directory: apps/telegram-bot
         run: uv run --locked --all-packages pytest
 
   backend-python-315:
@@ -138,6 +142,9 @@ jobs:
         run: uv run --locked --all-packages pytest
       - name: Worker tests
         working-directory: apps/worker
+        run: uv run --locked --all-packages pytest
+      - name: Telegram bot tests
+        working-directory: apps/telegram-bot
         run: uv run --locked --all-packages pytest
 
   e2e:

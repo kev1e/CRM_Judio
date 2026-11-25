@@ -265,3 +265,10 @@ Affected documents: `CLAUDE.md`, `README.md`, `prompts/00-bootstrap.md`, `ARCHIT
 - REC-01: simple recovery — administrator compares HR data and obtains the recorded manager's confirmation; only the administrator resets access, with audit. REC-02: a dedicated reserve administrator account for emergencies, not for daily use; the details of its guarded procedure stay OPEN.
 - S0 was merged into `main` (fast-forward) at the owner's instruction.
 - The owner asked to continue development and to settle the remaining questions after the first version of the CRM. Unapproved items therefore stay OPEN in `OPEN_QUESTIONS.md`; where code needs a value that is not approved, it is a clearly labelled provisional setting, never a silent business rule.
+
+### 2026-11-25 — S1.2b and S1.3 implemented (no new product decision)
+
+- The owner asked to go straight to development with the v2.5 bundle; it is the bundle already merged on 2026-11-20, so work continued with the next roadmap slices instead of repeating the S0 readiness review.
+- Built: the aiogram bot process (S1.2b) and sign-in with Telegram approval, sessions and throttling (S1.3). Approved rules implemented as written: Q13 (180-second single-use approval bound to the attempt and to the numeric Telegram ID, 12-hour absolute sessions, progressive throttling without permanent lockout, fail-closed during a Telegram outage), Q30, D020, D032.
+- Engineering choices that are **not** product decisions and are listed as provisional in `OPEN_QUESTIONS.md`: throttle thresholds; a password change ends the user's sessions; long polling for the bot until an HTTPS ingress exists; cookie-based sessions with an origin check; the web application relays `/api/v1/*` to the API.
+- Still needs the owner: a bot token from @BotFather to try the flow against real Telegram; how a newly provisioned employee gets a password (before S1.4).

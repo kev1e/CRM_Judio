@@ -71,8 +71,21 @@
 - Telegram transport failure does not stop unrelated CRM/API operations. Keep pending/failure status for monitoring and troubleshooting.
 - Still OPEN: retry count/backoff intervals, timezone choice when a user has not configured one, precise schedule defaults and permitted digest opt-outs. These must not be treated as approved product defaults.
 
-## Implementation status (S1.2a)
+## Implementation status (S1.2a, S1.2b, S1.3)
 
-Built and tested: the binding service `crm.identity.enrollment` — `issue_token` (authorized, audited), `redeem_token` (called by the bot with the sender's numeric ID and the chat type) and the CLI path for the first administrator. See `SECURITY.md` for the guarantees.
+Built and tested:
 
-Not built yet: the aiogram process (`apps/telegram-bot`), which will be a thin adapter: on `/start <code>` in a private chat it calls `redeem_token` and answers with a fixed success or failure text. It waits for aiogram 3.32.0 to leave the dependency quarantine (see `ROADMAP.md`, S1.2b). A real bot token from BotFather will be needed to try it against Telegram; it goes into `.env` only.
+- **Binding service** `crm.identity.enrollment` — `issue_token` (authorized, audited), `redeem_token` (called by the bot with the sender's numeric ID and the chat type), the CLI path for the first administrator, progressive delay for repeated wrong codes from one Telegram account.
+- **Bot process** `apps/telegram-bot` (`python -m crm_bot`, aiogram, long polling). A thin adapter with two handlers:
+  - `/start <code>` in a private chat calls `redeem_token`, answers with a fixed success or failure text and deletes the message that contained the code. Plain `/start` explains what to send. In a group the bot calls the service only so that the attempt is audited, and says nothing; the code stays valid.
+  - The «Подтвердить вход» / «Отклонить» buttons of a login prompt call `crm.identity.auth.decide_challenge` with the ID of the account that pressed them, answer with the outcome and remove the buttons.
+- **Login prompt delivery**: the Celery task `identity.deliver_login_challenge` sends the prompt through `crm.telegram.gateway` (plain text, forwarding protected). It re-reads the challenge, the account and the binding before sending; retries a temporary failure three times, then marks the delivery failed so the login fails closed.
+- The bot subscribes only to `message` and `callback_query` updates. With Telegram's default privacy mode it does not receive ordinary group messages; nothing from a chat is stored or mirrored.
+
+How to run it:
+
+1. Create a bot with @BotFather and put its token into `.env` as `TELEGRAM_BOT_TOKEN` (never into Git).
+2. `docker compose --profile telegram up --build --wait`, or on the host `pnpm --filter @crm/telegram-bot run dev` next to the API and the worker.
+3. The employee opens the bot and sends `/start <code>`; a link `https://t.me/<bot>?start=<code>` does the same.
+
+Not built yet: webhook mode with the secret-token check (arrives with the HTTPS ingress; long polling needs no public address), the group allowlist (Q22), request wizards and the Mini App (S6), notifications and digests (S6/S8). The tests feed real updates through the dispatcher with a recording session; **the bot has not been run against the real Telegram API yet** — that needs a token from the owner.
