@@ -1,4 +1,8 @@
 {
   "extends": "@crm/config/tsconfig.base.json",
+  "compilerOptions": {
+    // The generated types of file uploads refer to the browser's `Blob` and `File`.
+    "lib": ["ES2023", "DOM"]
+  },
   "include": ["src", "openapi-ts.config.ts"]
 }
