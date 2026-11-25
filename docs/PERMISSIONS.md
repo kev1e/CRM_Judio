@@ -151,6 +151,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | Code | Scopes it can be granted in | Custom roles may hold it |
 |---|---|---|
 | `user.create` | managed departments, company | Yes |
+| `user.read` | managed departments, company | Yes |
 | `user.update` | company | Yes |
 | `user.deactivate` | company | Yes |
 | `user.email.verify` | company | **No** — administrator only (Q28) |

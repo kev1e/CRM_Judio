@@ -44,6 +44,45 @@ class MeSerializer(serializers.Serializer[Any]):
     )
 
 
+class PasswordSetupRequestSerializer(serializers.Serializer[Any]):
+    token = serializers.CharField(max_length=128, trim_whitespace=True)
+    password = serializers.CharField(max_length=1024, trim_whitespace=False, write_only=True)
+
+
+class UserSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    crm_login = serializers.CharField()
+    display_name = serializers.CharField()
+    email = serializers.EmailField(allow_null=True)
+    is_active = serializers.BooleanField()
+    telegram_bound = serializers.BooleanField()
+    has_password = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+
+
+class UserListSerializer(serializers.Serializer[Any]):
+    results = UserSerializer(many=True)
+
+
+class UserCreateRequestSerializer(serializers.Serializer[Any]):
+    crm_login = serializers.CharField(max_length=64, trim_whitespace=True)
+    display_name = serializers.CharField(max_length=150, trim_whitespace=True)
+    email = serializers.EmailField(
+        max_length=254, required=False, allow_null=True, allow_blank=True
+    )
+
+
+class BindingCodeSerializer(serializers.Serializer[Any]):
+    code = serializers.CharField(help_text="One-time Telegram binding code. Shown once.")
+    expires_at = serializers.DateTimeField()
+    command = serializers.CharField(help_text="What the employee sends to the bot.")
+
+
+class UserCreatedSerializer(serializers.Serializer[Any]):
+    user = UserSerializer()
+    binding = BindingCodeSerializer()
+
+
 class ErrorBodySerializer(serializers.Serializer[Any]):
     code = serializers.CharField()
     message = serializers.CharField()

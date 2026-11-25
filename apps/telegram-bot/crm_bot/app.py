@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.types import ErrorEvent
 
 from crm.telegram import texts
@@ -31,7 +31,3 @@ def build_dispatcher() -> Dispatcher:
     dispatcher.include_router(build_router())
     dispatcher.errors.register(on_error)
     return dispatcher
-
-
-def build_bot(token: str) -> Bot:
-    return Bot(token=token)

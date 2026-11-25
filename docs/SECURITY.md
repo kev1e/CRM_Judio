@@ -141,3 +141,14 @@ Residual risks and limits of this slice:
 - No TLS/HSTS inside the stack yet (S8). The session cookie is nevertheless always `Secure`.
 - Expired sessions, challenges and throttle counters are not purged yet; they are inert rows. A cleanup job belongs to S8.
 - A prompt may be delivered twice if a worker crashes between sending and recording it; both messages act on the same single-use challenge.
+
+## Implementation status (S1.4) — accounts and the first password
+
+- **Provisioning.** Only a holder of company-wide `user.create` can create an account. The account has no password and no role; the request body cannot set a password, a role, the Telegram ID or the active flag (mass assignment is tested). The binding code is returned once, in a response that is never cached, and is not readable afterwards.
+- **First password (D036).** The link is 256 random bits, stored as a SHA-256 hash, single-use, valid 30 minutes (provisional), one live link per account. It is issued only to the numeric Telegram ID bound to an active account that has no password, so it can never replace an existing password. The token travels in the URL fragment (not sent to servers, absent from access logs and Referer), is removed from the address bar when read, and the page sends no Referer. The bot message is protected from forwarding and has no link preview. Setting the password signs nobody in. Weak passwords are refused without burning the link. Wrong links are delayed per address, link requests per Telegram account; every refusal is audited with its reason and answered generically.
+- **Trust note.** Whoever holds the binding code and the Telegram account that redeems it chooses the password: the binding code must reach the employee personally. This is inherent in D036 and Q11.
+- **Deactivation.** Ends sessions and waiting login attempts, revokes pending binding codes and password links, bumps the permission version, in one transaction; applies to open sessions on their next request. Nobody can deactivate themselves; the last active administrator cannot be deactivated (also against a concurrent role revocation, by locking the administrator role). Reactivation restores nothing that was revoked.
+- **Visibility.** The account list needs `user.read`; without it the API answers 403 and the Users page does not exist (404). The list never contains password hashes or Telegram IDs. An unknown account ID is answered only after the caller's right to see accounts is established.
+- **Bot API address.** `TELEGRAM_API_BASE_URL` may point to a relay; that host sees the bot token and all messages and must be under the company's control.
+
+Not built: editing accounts, role assignment from the interface, the hand-over of tasks on deactivation (S3), recovery (S1.5).

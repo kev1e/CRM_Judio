@@ -51,6 +51,8 @@ POLICIES: dict[ThrottleKind, Policy] = {
     ThrottleKind.SOURCE: Policy(20, 5, 15 * 60, 30 * 60),
     ThrottleKind.MFA: Policy(3, 30, 15 * 60, 30 * 60),
     ThrottleKind.ENROLLMENT: Policy(5, 30, 15 * 60, 30 * 60),
+    ThrottleKind.SETUP_LINK_USE: Policy(5, 30, 15 * 60, 30 * 60),
+    ThrottleKind.SETUP_LINK_ISSUE: Policy(3, 60, 15 * 60, 30 * 60),
 }
 
 

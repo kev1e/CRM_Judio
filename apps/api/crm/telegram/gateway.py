@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import Protocol, cast
 from uuid import UUID
 
-from aiogram import Bot
 from aiogram.exceptions import (
     TelegramAPIError,
     TelegramBadRequest,
@@ -23,6 +22,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 from crm.telegram import callbacks, texts
+from crm.telegram.client import build_bot
 
 REQUEST_TIMEOUT_SECONDS = 10
 
@@ -78,7 +78,7 @@ class AiogramGateway:
         if not token:
             raise TelegramRefusedError("TELEGRAM_BOT_TOKEN is not set.")
         try:
-            bot = Bot(token=token)
+            bot = build_bot(token)
         except TokenValidationError as exc:
             raise TelegramRefusedError("TELEGRAM_BOT_TOKEN is not a bot token.") from exc
         try:

@@ -203,4 +203,12 @@ Notes:
 | `identity_session` | `id` UUIDv7, `user_id`, `challenge_id`, `token_hash` (SHA-256 hex), `permissions_version` (informational), `ip_address`, `user_agent`, `created_at`, `expires_at`, `revoked_at`, `revoked_reason` | one session per challenge; `expires_at` ≤ `created_at` + 12 h; hash unique and format-checked; revocation time and reason set together |
 | `identity_throttle_counter` | `id`, `kind` (`login_source`/`login`/`source`/`mfa`/`enrollment`), `subject_digest` (HMAC-SHA-256 of the subject), `failures`, `last_failure_at`, `blocked_until` | one row per (kind, subject) |
 
+### S1.4 — first password
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `identity_password_setup_token` | `id` UUIDv7, `user_id`, `token_hash` (SHA-256 hex), `created_at`, `expires_at`, `used_at`, `revoked_at` | `token_hash` unique and format-checked; at most one pending row per user; a row cannot be both used and revoked |
+
+`identity_throttle_counter.kind` gained `setup_use` and `setup_issue`. The administrator role gained the `user.read` grant by a data migration.
+
 "Expired" is not a stored challenge state: it is a `pending` or `approved` row past `expires_at`. Neither the browser's attempt secret nor the session token is stored; rights are never read from the session row. Old rows of these three tables are not purged yet (S8).

@@ -143,6 +143,45 @@ class TelegramEnrollmentToken(models.Model):
         return f"enrollment:{self.pk}"
 
 
+class PasswordSetupToken(models.Model):
+    """A one-time, expiring ticket that lets an employee choose their own password
+    (D036): sent by the bot to the Telegram account that has just been bound.
+
+    Only the SHA-256 of the token is stored. A user has at most one pending token.
+    """
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="password_setup_tokens"
+    )
+    token_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(db_default=Now())
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "identity_password_setup_token"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=Q(used_at__isnull=True, revoked_at__isnull=True),
+                name="identity_password_setup_one_pending_per_user",
+            ),
+            models.CheckConstraint(
+                condition=Q(used_at__isnull=True) | Q(revoked_at__isnull=True),
+                name="identity_password_setup_used_xor_revoked",
+            ),
+            models.CheckConstraint(
+                condition=Q(token_hash__regex=r"^[0-9a-f]{64}$"),  # noqa: S106 - a format, not a secret
+                name="identity_password_setup_hash_format",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"password-setup:{self.pk}"
+
+
 class LoginChallengeStatus(models.TextChoices):
     PENDING = "pending"
     APPROVED = "approved"
@@ -292,6 +331,8 @@ class ThrottleKind(models.TextChoices):
     SOURCE = "source"  # one address, any login
     MFA = "mfa"  # Telegram prompts sent for one account
     ENROLLMENT = "enrollment"  # binding codes tried by one Telegram account
+    SETUP_LINK_USE = "setup_use"  # first-password links tried from one address
+    SETUP_LINK_ISSUE = "setup_issue"  # first-password links requested for one account
 
 
 class ThrottleCounter(models.Model):

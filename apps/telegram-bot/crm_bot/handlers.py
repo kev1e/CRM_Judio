@@ -11,10 +11,10 @@ from functools import partial
 from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.exceptions import TelegramAPIError
-from aiogram.filters import CommandObject, CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.types import CallbackQuery, LinkPreviewOptions, Message
 
-from crm.identity import auth, enrollment
+from crm.identity import auth, enrollment, password_setup
 from crm.telegram import callbacks, texts
 from crm_bot import domain
 
@@ -56,6 +56,35 @@ async def start(message: Message, command: CommandObject) -> None:
                 await message.delete()
 
     await message.answer(texts.ENROLLMENT_DONE)
+    await send_password_link(message, sender.id, silent_if_not_needed=True)
+
+
+async def send_password_link(
+    message: Message, telegram_user_id: int, *, silent_if_not_needed: bool
+) -> None:
+    """Send the one-time link for choosing the first password (D036), if the
+    account bound to this Telegram ID still needs one."""
+    token = await domain.call(
+        partial(password_setup.issue_for_telegram_account, telegram_user_id=telegram_user_id)
+    )
+    if token is None:
+        if not silent_if_not_needed:
+            await message.answer(texts.SETUP_LINK_NOT_AVAILABLE)
+        return
+    await message.answer(
+        texts.password_link(url=password_setup.setup_url(token), expires_at=token.expires_at),
+        # The link is a credential: no preview fetch, no forwarding or saving.
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
+        protect_content=True,
+    )
+
+
+async def password(message: Message) -> None:
+    """`/password`: a new link if the previous one expired. Private chats only."""
+    sender = message.from_user
+    if sender is None or sender.is_bot or message.chat.type != ChatType.PRIVATE:
+        return
+    await send_password_link(message, sender.id, silent_if_not_needed=False)
 
 
 async def login_decision(callback: CallbackQuery) -> None:
@@ -89,5 +118,6 @@ async def login_decision(callback: CallbackQuery) -> None:
 def build_router() -> Router:
     router = Router(name="crm")
     router.message.register(start, CommandStart())
+    router.message.register(password, Command("password"))
     router.callback_query.register(login_decision, F.data.startswith("login:"))
     return router

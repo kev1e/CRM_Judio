@@ -35,6 +35,14 @@ export default async function HomePage() {
               {t("greeting", { name: session.me.user.display_name })}
             </h1>
             <p className="text-muted-foreground">{t("description")}</p>
+            {session.me.permissions["user.read"] ? (
+              <nav>
+                {}
+                <a href="/users" className="underline underline-offset-4">
+                  {t("users")}
+                </a>
+              </nav>
+            ) : null}
           </>
         ) : (
           <h1 className="text-2xl font-semibold tracking-tight">{t("serverUnavailable")}</h1>

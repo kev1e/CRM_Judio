@@ -4,6 +4,18 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type BindingCode = {
+    /**
+     * One-time Telegram binding code. Shown once.
+     */
+    code: string;
+    expires_at: string;
+    /**
+     * What the employee sends to the bot.
+     */
+    command: string;
+};
+
 /**
  * * `ok` - ok
  * * `fail` - fail
@@ -72,6 +84,10 @@ export type Me = {
 
 export type NullEnum = never;
 
+export type PasswordSetupRequestRequest = {
+    token: string;
+};
+
 export type Readiness = {
     status: ReadinessStatusEnum;
     checks: ReadinessChecks;
@@ -101,8 +117,39 @@ export type SessionInfo = {
  */
 export type StateEnum = 'pending' | 'denied' | 'expired' | 'invalid' | 'authenticated';
 
+export type User = {
+    id: string;
+    crm_login: string;
+    display_name: string;
+    email: string | null;
+    is_active: boolean;
+    telegram_bound: boolean;
+    has_password: boolean;
+    created_at: string;
+};
+
+export type UserCreateRequestRequest = {
+    crm_login: string;
+    display_name: string;
+    email?: string | string | null;
+};
+
+export type UserCreated = {
+    user: User;
+    binding: BindingCode;
+};
+
+export type UserList = {
+    results: Array<User>;
+};
+
 export type LoginRequestRequestWritable = {
     login: string;
+    password: string;
+};
+
+export type PasswordSetupRequestRequestWritable = {
+    token: string;
     password: string;
 };
 
@@ -175,6 +222,28 @@ export type AuthMeResponses = {
 
 export type AuthMeResponse = AuthMeResponses[keyof AuthMeResponses];
 
+export type AuthPasswordSetupData = {
+    body: PasswordSetupRequestRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password/setup';
+};
+
+export type AuthPasswordSetupErrors = {
+    400: Error;
+};
+
+export type AuthPasswordSetupError = AuthPasswordSetupErrors[keyof AuthPasswordSetupErrors];
+
+export type AuthPasswordSetupResponses = {
+    /**
+     * No response body
+     */
+    204: void;
+};
+
+export type AuthPasswordSetupResponse = AuthPasswordSetupResponses[keyof AuthPasswordSetupResponses];
+
 export type HealthData = {
     body?: never;
     path?: never;
@@ -206,3 +275,111 @@ export type ReadyResponses = {
 };
 
 export type ReadyResponse = ReadyResponses[keyof ReadyResponses];
+
+export type UsersListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users';
+};
+
+export type UsersListErrors = {
+    403: Error;
+};
+
+export type UsersListError = UsersListErrors[keyof UsersListErrors];
+
+export type UsersListResponses = {
+    200: UserList;
+};
+
+export type UsersListResponse = UsersListResponses[keyof UsersListResponses];
+
+export type UsersCreateData = {
+    body: UserCreateRequestRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users';
+};
+
+export type UsersCreateErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type UsersCreateError = UsersCreateErrors[keyof UsersCreateErrors];
+
+export type UsersCreateResponses = {
+    201: UserCreated;
+};
+
+export type UsersCreateResponse = UsersCreateResponses[keyof UsersCreateResponses];
+
+export type UsersBindingCodeData = {
+    body?: never;
+    path: {
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/binding-code';
+};
+
+export type UsersBindingCodeErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type UsersBindingCodeError = UsersBindingCodeErrors[keyof UsersBindingCodeErrors];
+
+export type UsersBindingCodeResponses = {
+    200: BindingCode;
+};
+
+export type UsersBindingCodeResponse = UsersBindingCodeResponses[keyof UsersBindingCodeResponses];
+
+export type UsersDeactivateData = {
+    body?: never;
+    path: {
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/deactivate';
+};
+
+export type UsersDeactivateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type UsersDeactivateError = UsersDeactivateErrors[keyof UsersDeactivateErrors];
+
+export type UsersDeactivateResponses = {
+    200: User;
+};
+
+export type UsersDeactivateResponse = UsersDeactivateResponses[keyof UsersDeactivateResponses];
+
+export type UsersReactivateData = {
+    body?: never;
+    path: {
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/reactivate';
+};
+
+export type UsersReactivateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type UsersReactivateError = UsersReactivateErrors[keyof UsersReactivateErrors];
+
+export type UsersReactivateResponses = {
+    200: User;
+};
+
+export type UsersReactivateResponse = UsersReactivateResponses[keyof UsersReactivateResponses];

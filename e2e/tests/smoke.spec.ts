@@ -82,6 +82,31 @@ test.describe("sign-in page", () => {
   });
 });
 
+test.describe("pages that need an account", () => {
+  test("the Users screen sends an anonymous visitor to the login page", async ({ page }) => {
+    await page.goto("/users");
+
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("the password page without a link explains what to do", async ({ page }) => {
+    await page.goto("/set-password");
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ссылка недействительна");
+    await expect(page.getByRole("button", { name: "Сохранить пароль" })).toHaveCount(0);
+  });
+
+  test("a made-up password link is refused and leaves the address bar", async ({ page }) => {
+    await page.goto("/set-password#made-up-token");
+    await expect(page).toHaveURL(/\/set-password$/);
+    await page.getByLabel("Новый пароль").fill("violet-harbor-lamp-88");
+    await page.getByLabel("Пароль ещё раз").fill("violet-harbor-lamp-88");
+    await page.getByRole("button", { name: "Сохранить пароль" }).click();
+
+    await expect(page.locator("p[role=alert]")).toContainText("Ссылка больше не действует.");
+  });
+});
+
 test.describe("api through the web origin", () => {
   test("refuses requests without a session", async ({ request }) => {
     const response = await request.get("/api/v1/auth/me");

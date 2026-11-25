@@ -101,7 +101,7 @@ Rules:
 
 ## Key modules and their responsibilities
 
-Implemented so far as Django apps in `apps/api/crm`: `system` (probes), `identity` (users, password policy, Telegram binding, sign-in, sessions, throttling), `access` (roles, scoped grants, the authorization service), `audit` (append-only events). Shared building blocks are in `crm/common`: `Actor` (who performs an operation — a user, a system component or a CLI operator), `DomainError`/`PermissionDeniedError`, UUIDv7 identifiers and the error envelope.
+Implemented so far as Django apps in `apps/api/crm`: `system` (probes), `identity` (users, password policy, Telegram binding, sign-in, sessions, throttling, provisioning and deactivation, first password), `access` (roles, scoped grants, the authorization service), `audit` (append-only events). Shared building blocks are in `crm/common`: `Actor` (who performs an operation — a user, a system component or a CLI operator), `DomainError`/`PermissionDeniedError`, UUIDv7 identifiers and the error envelope.
 
 - **Identity/Session:** passwords, sessions, user lifecycle, Telegram binding, MFA challenges and recovery workflows.
 - **Organization/RBAC:** departments, memberships, managed departments, roles/grants, scoped policy evaluator, immediate invalidation.

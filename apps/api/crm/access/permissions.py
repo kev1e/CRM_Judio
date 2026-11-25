@@ -45,6 +45,11 @@ _ALL = (
         "Create employee accounts (D018: administrators; managers within managed departments).",
         _DEPARTMENT_OR_COMPANY,
     ),
+    PermissionDef(
+        "user.read",
+        "See the list of employee accounts and their state.",
+        _DEPARTMENT_OR_COMPANY,
+    ),
     PermissionDef("user.update", "Edit employee account details.", _COMPANY_ONLY),
     PermissionDef("user.deactivate", "Deactivate and reactivate accounts.", _COMPANY_ONLY),
     PermissionDef(

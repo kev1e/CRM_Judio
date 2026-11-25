@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from crm.access import services as access
 from crm.common.actors import Actor
 from crm.common.http import client_ip, user_agent
-from crm.identity import auth, sessions
+from crm.identity import auth, password_setup, sessions
 from crm.identity.api import cookies
 from crm.identity.api.serializers import (
     ErrorSerializer,
@@ -20,6 +20,7 @@ from crm.identity.api.serializers import (
     LoginRequestSerializer,
     LoginStartedSerializer,
     MeSerializer,
+    PasswordSetupRequestSerializer,
 )
 from crm.identity.models import Session, User
 
@@ -177,3 +178,30 @@ class LogoutView(APIView):
         cookies.clear_session(response)
         cookies.clear_attempt(response)
         return _never_cache(response)
+
+
+class PasswordSetupView(APIView):
+    """The employee sets their first password with the one-time link from the bot.
+
+    Does not sign anybody in: the normal login with approval in Telegram follows.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(
+        operation_id="auth_password_setup",
+        request=PasswordSetupRequestSerializer,
+        responses={204: None, 400: ErrorSerializer},
+        tags=["auth"],
+    )
+    def post(self, request: Request) -> Response:
+        serializer = PasswordSetupRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # DomainError (bad link, weak password) becomes a 400 with its code.
+        password_setup.set_initial_password(
+            raw_token=serializer.validated_data["token"],
+            password=serializer.validated_data["password"],
+            ip_address=client_ip(request),
+        )
+        return _never_cache(Response(status=status.HTTP_204_NO_CONTENT))
