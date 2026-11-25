@@ -15,7 +15,7 @@ from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, LinkPreviewOptions, Message
 
 from crm.identity import auth, enrollment, password_setup
-from crm.telegram import callbacks, texts
+from crm.telegram import callbacks, gateway, texts
 from crm_bot import domain
 
 logger = logging.getLogger(__name__)
@@ -71,8 +71,15 @@ async def send_password_link(
         if not silent_if_not_needed:
             await message.answer(texts.SETUP_LINK_NOT_AVAILABLE)
         return
+    url = password_setup.setup_url(token)
+    # A button is always clickable; an address typed into the text is clickable
+    # only if Telegram recognises it. `localhost` is neither: write it out.
+    as_button = gateway.is_linkable(url)
     await message.answer(
-        texts.password_link(url=password_setup.setup_url(token), expires_at=token.expires_at),
+        texts.password_link(url=url, expires_at=token.expires_at, as_button=as_button),
+        reply_markup=(
+            gateway.link_keyboard(text=texts.BUTTON_OPEN_SETUP, url=url) if as_button else None
+        ),
         # The link is a credential: no preview fetch, no forwarding or saving.
         link_preview_options=LinkPreviewOptions(is_disabled=True),
         protect_content=True,

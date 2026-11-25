@@ -33,16 +33,23 @@ LOGIN_NOT_VALID = "Запрос на вход уже недействителе�
 TEMPORARY_FAILURE = "Не удалось выполнить действие. Попробуйте ещё раз."
 
 
-def password_link(*, url: str, expires_at: datetime) -> str:
-    return "\n".join(
-        [
-            "Осталось задать пароль для входа в CRM. Откройте ссылку и придумайте пароль:",
-            url,
-            "",
-            f"Ссылка одноразовая и действует до {expires_at:%H:%M} UTC. "
-            "Никому её не пересылайте. Если срок истёк, отправьте /password.",
-        ]
-    )
+BUTTON_OPEN_SETUP = "Задать пароль"
+
+
+def password_link(*, url: str, expires_at: datetime, as_button: bool) -> str:
+    """`as_button`: the link is attached as a button, so the address is not repeated
+    in the text. Otherwise the address itself is written out."""
+    lines = ["Осталось задать пароль для входа в CRM."]
+    if as_button:
+        lines.append("Нажмите кнопку под этим сообщением и придумайте пароль.")
+    else:
+        lines += ["Откройте ссылку и придумайте пароль:", url]
+    lines += [
+        "",
+        f"Ссылка одноразовая и действует до {expires_at:%H:%M} UTC. "
+        "Никому её не пересылайте. Если срок истёк, отправьте /password.",
+    ]
+    return "\n".join(lines)
 
 
 def login_prompt(

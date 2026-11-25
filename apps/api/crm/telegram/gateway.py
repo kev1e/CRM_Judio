@@ -8,6 +8,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, cast
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from aiogram.exceptions import (
@@ -67,6 +68,21 @@ def login_keyboard(challenge_id: UUID) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def is_linkable(url: str) -> bool:
+    """Whether Telegram accepts the address as a link.
+
+    Telegram refuses host names without a dot (`localhost`): such a URL is neither
+    made clickable in a message nor allowed on a button. IP addresses and real
+    domains are fine.
+    """
+    host = urlsplit(url).hostname or ""
+    return "." in host or ":" in host
+
+
+def link_keyboard(*, text: str, url: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=text, url=url)]])
 
 
 class AiogramGateway:
