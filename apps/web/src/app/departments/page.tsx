@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
+import { AppShell } from "@/components/app-shell";
 import { DepartmentsPanel } from "@/components/departments-panel";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { getApiInternalUrl } from "@/lib/env";
 import { fetchCurrentSession } from "@/lib/session";
 
@@ -42,15 +42,8 @@ export default async function DepartmentsPage() {
   const users = canManage ? await fetchJson<UserList>(API_PATHS.users, cookieHeader) : null;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-6 px-4 py-6">
-      <header className="flex items-center justify-between gap-2">
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full load re-checks the session */}
-        <a href="/" className="underline underline-offset-4">
-          {t("back")}
-        </a>
-        <ThemeToggle />
-      </header>
-      <main className="flex flex-col gap-6">
+    <AppShell me={session.me} active="departments">
+      <main className="mx-auto flex max-w-4xl flex-col gap-6 p-4">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
         <DepartmentsPanel
           initialDepartments={list.results}
@@ -60,6 +53,6 @@ export default async function DepartmentsPage() {
             .map(({ id, display_name, crm_login }) => ({ id, display_name, crm_login }))}
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

@@ -1,59 +1,71 @@
+import { API_PATHS, type StatusList, type TaskList } from "@crm/contracts";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { ApiStatus } from "@/components/api-status";
-import { LogoutButton } from "@/components/logout-button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppShell } from "@/components/app-shell";
+import { TaskBoard } from "@/components/task-board";
 import { fetchApiState } from "@/lib/api-state";
+import { getApiInternalUrl } from "@/lib/env";
 import { fetchCurrentSession } from "@/lib/session";
+import { toBoardView } from "@/lib/tasks";
 
-// The session and the API state are read on every request, never at build time.
+// The session and the tasks are read on every request, never at build time.
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+async function fetchJson<T>(path: string, cookieHeader: string): Promise<T | null> {
+  try {
+    const response = await fetch(new URL(path, getApiInternalUrl()), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json", Cookie: cookieHeader },
+    });
+    return response.ok ? ((await response.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; task?: string }>;
+}) {
   const t = await getTranslations("home");
-  const session = await fetchCurrentSession((await cookies()).toString());
+  const cookieHeader = (await cookies()).toString();
+  const session = await fetchCurrentSession(cookieHeader);
   if (session.state === "anonymous") {
     redirect("/login");
   }
-  const apiState = await fetchApiState();
+  if (session.state === "unavailable") {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center gap-4 px-4">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("serverUnavailable")}</h1>
+        <ApiStatus state={await fetchApiState()} />
+      </main>
+    );
+  }
+
+  const params = await searchParams;
+  const view = toBoardView(params.view);
+  // The API returns only what this viewer may see; the page adds nothing to that.
+  const [statuses, tasks] = await Promise.all([
+    fetchJson<StatusList>(API_PATHS.taskStatuses, cookieHeader),
+    fetchJson<TaskList>(`${API_PATHS.tasks}?view=${view}`, cookieHeader),
+  ]);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 py-6">
-      <header className="flex items-center justify-between gap-2">
-        <span className="text-lg font-semibold">{t("title")}</span>
-        <div className="flex items-center gap-2">
-          {session.state === "authenticated" ? <LogoutButton /> : null}
-          <ThemeToggle />
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col justify-center gap-4 py-12">
-        {session.state === "authenticated" ? (
-          <>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {t("greeting", { name: session.me.user.display_name })}
-            </h1>
-            <p className="text-muted-foreground">{t("description")}</p>
-            {session.me.permissions["user.read"] ? (
-              <nav className="flex gap-4">
-                {}
-                <a href="/users" className="underline underline-offset-4">
-                  {t("users")}
-                </a>
-                {session.me.permissions["department.read"] ? (
-                  <a href="/departments" className="underline underline-offset-4">
-                    {t("departments")}
-                  </a>
-                ) : null}
-              </nav>
-            ) : null}
-          </>
-        ) : (
-          <h1 className="text-2xl font-semibold tracking-tight">{t("serverUnavailable")}</h1>
-        )}
-        <ApiStatus state={apiState} />
-      </main>
-    </div>
+    <AppShell me={session.me} active={view}>
+      <TaskBoard
+        key={view}
+        view={view}
+        statuses={statuses?.results ?? []}
+        initialCards={tasks?.results ?? []}
+        initialTaskId={params.task && UUID.test(params.task) ? params.task : undefined}
+      />
+    </AppShell>
   );
 }
