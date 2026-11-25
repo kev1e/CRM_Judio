@@ -291,6 +291,19 @@ Backend: `apps/api/crm/identity/tests/test_users.py`, `test_password_setup.py`. 
 
 Verified by hand on 2026-11-25 in a real browser against a local stack (Telegram replaced by the recording gateway): administrator signs in → creates an employee → code shown once → binding → link → weak password refused → password saved → reused link refused → employee signs in, sees no Users link and gets 404 on `/users` → administrator deactivates → the employee's next page load lands on the login page.
 
+### S2 — organization (`apps/api/crm/organization/tests`, `departments-panel.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| Q01 | First department becomes primary; later ones do not; primary moves only by an explicit audited action; it cannot be left while other memberships exist; one primary per employee enforced by the database |
+| Q08 | First manager is designated; designation moves only explicitly; the designated manager cannot be removed while other managers exist; one designated per department enforced by the database |
+| Role separation | Only an administrator changes departments, memberships, managers and primary departments — refused for the department's own manager, an ordinary employee, system and CLI actors; belonging gives no rights; the manager role appears and disappears with the fact of managing |
+| Scope | A manager's reach is exactly the managed departments: other departments and their people are invisible (404 over HTTP), employees can be created only in a managed department, binding codes only for own people; no deactivation, no role assignment |
+| D020 | Removing the manager, closing the department or deactivating the manager removes the reach on the next check and bumps the permission version |
+| Web | Departments screen: lists members and managers, read-only without the right, create, add, remove, refusal messages, closed department |
+
+Verified by hand in a browser on 2026-11-25: create a department, add a member and a manager, refusal to close a primary department, new employee placed into a department from the Users screen.
+
 Real Telegram, 2026-11-25, with the owner's bot token and the owner's Telegram account against a throwaway database: the bot connected to the Bot API; `/start <code>` from a deep link bound the account; the login prompt was delivered by the worker; pressing «Подтвердить вход» approved the challenge and the waiting browser session was opened (audit trail: `telegram.bound` → `auth.challenge_created` → `auth.challenge_approved` → `auth.login_succeeded`, 19 seconds end to end). **Not yet observed with a real Telegram account:** the «Отклонить» button and the password link of D036 (the test account already had a password).
 
 Not covered yet from the Q10–Q14, Q28–Q29 and REC lists: audit reading scopes, email verification workflow, recovery workflow, the emergency account, superuser read scope.
