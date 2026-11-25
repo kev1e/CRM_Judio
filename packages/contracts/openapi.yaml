@@ -1148,6 +1148,216 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/workflow/order:
+    post:
+      operationId: workflow_reorder
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowOrderRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/workflow/statuses:
+    get:
+      operationId: workflow_read
+      tags:
+      - workflow
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    post:
+      operationId: workflow_create_status
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowStatusCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/workflow/statuses/{status_id}:
+    patch:
+      operationId: workflow_update_status
+      parameters:
+      - in: path
+        name: status_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowStatusUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/workflow/statuses/{status_id}/restore:
+    post:
+      operationId: workflow_restore_status
+      parameters:
+      - in: path
+        name: status_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workflow
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/workflow/statuses/{status_id}/retire:
+    post:
+      operationId: workflow_retire_status
+      parameters:
+      - in: path
+        name: status_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowRetireRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
 components:
   schemas:
     BindingCode:
@@ -1523,6 +1733,19 @@ components:
         assignee_id:
           type: string
           format: uuid
+    PatchedWorkflowStatusUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        next_status_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
     PriorityEnum:
       enum:
       - low
@@ -1961,6 +2184,79 @@ components:
             $ref: '#/components/schemas/User'
       required:
       - results
+    Workflow:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStatus'
+      required:
+      - results
+    WorkflowOrderRequest:
+      type: object
+      properties:
+        status_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+      required:
+      - status_ids
+    WorkflowRetireRequest:
+      type: object
+      properties:
+        replacement_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required when tasks use the status. Never chosen automatically.
+    WorkflowStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        position:
+          type: integer
+        next_status_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Statuses a task may be moved to from this one.
+        is_active:
+          type: boolean
+          description: False for a retired status.
+        task_count:
+          type: integer
+          description: 'How many tasks have this status now. A number only: no task
+            is shown.'
+      required:
+      - category
+      - id
+      - is_active
+      - name
+      - next_status_ids
+      - position
+      - task_count
+    WorkflowStatusCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+      required:
+      - category
+      - name
   securitySchemes:
     sessionCookie:
       type: apiKey

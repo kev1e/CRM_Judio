@@ -321,6 +321,21 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S3 — status administration (`apps/api/crm/tasks/tests/test_workflow.py`, `workflow-panel.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| D005 role separation | Only `workflow.manage` (administrator) reads or changes the configuration; a department manager and an employee are refused for every operation in the service and over HTTP (403), nothing is audited for them; the board's own list of statuses stays readable |
+| D003 | Configuring shows a task count only; the administrator still cannot open a task |
+| Q09 retirement | A status in use is not retired without an explicit replacement; tasks move to the chosen status with a version bump and a history entry each; untouched tasks keep their version; earlier events keep the old status ID; the audit event keeps the old name and category |
+| Q09 unsafe mapping (provisional rule) | Open → completed, open → cancelled and cancelled → open are refused and change nothing; completed → completed keeps completion time and archive |
+| Q05 | A completed task whose previous status was retired reopens into the replacement |
+| Guards | Replacement must be another active status; the last "new" status stays; duplicate, empty and over-long names; unknown category; a move to itself, out of a completed status, into or from a retired status; order must list every active status once |
+| Rollback | A retired status returns to the board with its moves; tasks are not moved back |
+| Web | Type, count and moves per status; no moves out of a completed status; add, rename, reorder, tick a move, retire with a same-kind replacement only, retire unused, return, refusal message |
+
+Verified by hand in a browser on 2026-11-25: add a status, allow moves, move the column (the board shows it in the new place), retire and see it under "Убранные статусы", phone width.
+
 Verified by hand in a browser on 2026-11-25: drag a card to another column, drag to "Готово" (archived, notice shown), open a task by link, tick a checkpoint, edit title and priority, create a task for another employee, "Все задачи", Archive, phone width.
 
 Real Telegram, 2026-11-25, with the owner's bot token and the owner's Telegram account against a throwaway database: the bot connected to the Bot API; `/start <code>` from a deep link bound the account; the login prompt was delivered by the worker; pressing «Подтвердить вход» approved the challenge and the waiting browser session was opened (audit trail: `telegram.bound` → `auth.challenge_created` → `auth.challenge_approved` → `auth.login_succeeded`, 19 seconds end to end). **Not yet observed with a real Telegram account:** the «Отклонить» button and the password link of D036 (the test account already had a password).

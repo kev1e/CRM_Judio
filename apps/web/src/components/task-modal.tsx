@@ -30,6 +30,7 @@ const HISTORY_KEYS = [
   "priority_changed",
   "reassigned",
   "status_changed",
+  "status_remapped",
   "completed",
   "archived",
   "reopened",

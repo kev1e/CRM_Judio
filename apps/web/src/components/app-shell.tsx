@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { LogoutButton } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-export type NavKey = "mine" | "all" | "archive" | "trash" | "users" | "departments";
+export type NavKey = "mine" | "all" | "archive" | "trash" | "users" | "departments" | "workflow";
 
 const linkClass =
   "block rounded-md px-3 py-2 text-sm whitespace-nowrap hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -33,6 +33,7 @@ export async function AppShell({
     { key: "trash", href: "/?view=trash", show: Boolean(permissions["task.delete"]) },
     { key: "users", href: "/users", show: Boolean(permissions["user.read"]) },
     { key: "departments", href: "/departments", show: Boolean(permissions["department.read"]) },
+    { key: "workflow", href: "/statuses", show: Boolean(permissions["workflow.manage"]) },
   ];
 
   return (

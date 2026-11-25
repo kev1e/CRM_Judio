@@ -129,3 +129,39 @@ class CheckpointCreateSerializer(serializers.Serializer[Any]):
 
 class CheckpointUpdateSerializer(serializers.Serializer[Any]):
     is_done = serializers.BooleanField()
+
+
+class WorkflowStatusSerializer(StatusSerializer):
+    is_active = serializers.BooleanField(help_text="False for a retired status.")
+    task_count = serializers.IntegerField(
+        help_text="How many tasks have this status now. A number only: no task is shown."
+    )
+
+
+class WorkflowSerializer(serializers.Serializer[Any]):
+    results = WorkflowStatusSerializer(many=True)
+
+
+class WorkflowStatusCreateSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField(max_length=80, trim_whitespace=True)
+    category = serializers.ChoiceField(choices=StatusCategory.choices)
+
+
+class WorkflowStatusUpdateSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField(max_length=80, trim_whitespace=True, required=False)
+    next_status_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, max_length=100
+    )
+
+
+class WorkflowOrderSerializer(serializers.Serializer[Any]):
+    status_ids = serializers.ListField(child=serializers.UUIDField(), max_length=100)
+
+
+class WorkflowRetireSerializer(serializers.Serializer[Any]):
+    replacement_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Required when tasks use the status. Never chosen automatically.",
+    )

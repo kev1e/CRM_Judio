@@ -184,6 +184,11 @@ export type PatchedTaskUpdateRequest = {
     assignee_id?: string;
 };
 
+export type PatchedWorkflowStatusUpdateRequest = {
+    name?: string;
+    next_status_ids?: Array<string>;
+};
+
 /**
  * * `low` - Low
  * * `normal` - Normal
@@ -365,6 +370,45 @@ export type UserDepartment = {
 
 export type UserList = {
     results: Array<User>;
+};
+
+export type Workflow = {
+    results: Array<WorkflowStatus>;
+};
+
+export type WorkflowOrderRequest = {
+    status_ids: Array<string>;
+};
+
+export type WorkflowRetireRequest = {
+    /**
+     * Required when tasks use the status. Never chosen automatically.
+     */
+    replacement_id?: string | null;
+};
+
+export type WorkflowStatus = {
+    id: string;
+    name: string;
+    category: CategoryEnum;
+    position: number;
+    /**
+     * Statuses a task may be moved to from this one.
+     */
+    next_status_ids: Array<string>;
+    /**
+     * False for a retired status.
+     */
+    is_active: boolean;
+    /**
+     * How many tasks have this status now. A number only: no task is shown.
+     */
+    task_count: number;
+};
+
+export type WorkflowStatusCreateRequest = {
+    name: string;
+    category: CategoryEnum;
 };
 
 export type LoginRequestRequestWritable = {
@@ -1086,3 +1130,131 @@ export type UsersReactivateResponses = {
 };
 
 export type UsersReactivateResponse = UsersReactivateResponses[keyof UsersReactivateResponses];
+
+export type WorkflowReorderData = {
+    body: WorkflowOrderRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflow/order';
+};
+
+export type WorkflowReorderErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type WorkflowReorderError = WorkflowReorderErrors[keyof WorkflowReorderErrors];
+
+export type WorkflowReorderResponses = {
+    200: Workflow;
+};
+
+export type WorkflowReorderResponse = WorkflowReorderResponses[keyof WorkflowReorderResponses];
+
+export type WorkflowReadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflow/statuses';
+};
+
+export type WorkflowReadErrors = {
+    403: Error;
+};
+
+export type WorkflowReadError = WorkflowReadErrors[keyof WorkflowReadErrors];
+
+export type WorkflowReadResponses = {
+    200: Workflow;
+};
+
+export type WorkflowReadResponse = WorkflowReadResponses[keyof WorkflowReadResponses];
+
+export type WorkflowCreateStatusData = {
+    body: WorkflowStatusCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflow/statuses';
+};
+
+export type WorkflowCreateStatusErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type WorkflowCreateStatusError = WorkflowCreateStatusErrors[keyof WorkflowCreateStatusErrors];
+
+export type WorkflowCreateStatusResponses = {
+    201: Workflow;
+};
+
+export type WorkflowCreateStatusResponse = WorkflowCreateStatusResponses[keyof WorkflowCreateStatusResponses];
+
+export type WorkflowUpdateStatusData = {
+    body?: PatchedWorkflowStatusUpdateRequest;
+    path: {
+        status_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflow/statuses/{status_id}';
+};
+
+export type WorkflowUpdateStatusErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type WorkflowUpdateStatusError = WorkflowUpdateStatusErrors[keyof WorkflowUpdateStatusErrors];
+
+export type WorkflowUpdateStatusResponses = {
+    200: Workflow;
+};
+
+export type WorkflowUpdateStatusResponse = WorkflowUpdateStatusResponses[keyof WorkflowUpdateStatusResponses];
+
+export type WorkflowRestoreStatusData = {
+    body?: never;
+    path: {
+        status_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflow/statuses/{status_id}/restore';
+};
+
+export type WorkflowRestoreStatusErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type WorkflowRestoreStatusError = WorkflowRestoreStatusErrors[keyof WorkflowRestoreStatusErrors];
+
+export type WorkflowRestoreStatusResponses = {
+    200: Workflow;
+};
+
+export type WorkflowRestoreStatusResponse = WorkflowRestoreStatusResponses[keyof WorkflowRestoreStatusResponses];
+
+export type WorkflowRetireStatusData = {
+    body?: WorkflowRetireRequest;
+    path: {
+        status_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflow/statuses/{status_id}/retire';
+};
+
+export type WorkflowRetireStatusErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type WorkflowRetireStatusError = WorkflowRetireStatusErrors[keyof WorkflowRetireStatusErrors];
+
+export type WorkflowRetireStatusResponses = {
+    200: Workflow;
+};
+
+export type WorkflowRetireStatusResponse = WorkflowRetireStatusResponses[keyof WorkflowRetireStatusResponses];
