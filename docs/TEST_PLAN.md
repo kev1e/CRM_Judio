@@ -321,6 +321,25 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S4 — projects and invitations (`apps/api/crm/projects/tests`, `projects-panel.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| D018 direct add | A manager adds an employee of a managed department at once; no invitation is created |
+| D018 invitation | An employee of another department is only invited: no membership, the project stays invisible to them, the invitation appears for their manager and for nobody else |
+| Approval | The manager of the department of participation approves; membership appears only then, with the decision recorded; a second decision is refused |
+| Who cannot decide | The requester, the invited employee, a colleague, the administrator and the superuser without the grant get "not found"; a manager who stopped managing the department cannot decide |
+| Q29 | A superuser approves only with the separate company-wide grant |
+| Q10 | The department of participation must be one of the employee's own (naming the requester's department does not skip the approval); membership and account are checked again at the decision |
+| Decline / cancel | Decline grants nothing and keeps the reason out of the audit log; only the requesting side cancels; closing a project cancels waiting invitations |
+| **D003 exit criterion** | Fellow participants from the same and from another department, and the other department's manager, see the project and still cannot open or list a task |
+| Visibility and control | Participants and the owning department's managers see a project; others, the administrator included, do not; only the owning department's managers change it |
+| Roles | The administrator role holds no project permission; the manager role holds both in the database |
+| HTTP | The whole flow with four accounts, 403/404 for the wrong people, session required |
+| Web | Create, direct add, "only invited" notice, approval inbox, decline, read-only for a participant, refusal message |
+
+Verified by hand in a browser on 2026-11-26 with three accounts: create a project, add an own employee, invite another department's employee (who sees nothing), the other manager approves from the inbox, the employee then sees the project and still no tasks; phone width.
+
 ### S4 — files (`crm/files/tests`, `crm/tasks/tests/test_attachments.py`, `task-board.test.tsx`, `modal.test.tsx`, `api-proxy.test.ts`)
 
 | Requirement | Covered |

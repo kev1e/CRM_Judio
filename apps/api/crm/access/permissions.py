@@ -134,6 +134,17 @@ _ALL = (
         _COMPANY_ONLY,
         system_role_only=True,
     ),
+    PermissionDef(
+        "project.manage",
+        "Create and close projects of a department, add its own employees, invite others (D018).",
+        _DEPARTMENT_OR_COMPANY,
+    ),
+    PermissionDef(
+        "project.invitation.approve",
+        "Decide invitations of a department's employees into other departments' projects "
+        "(D018, Q10; a superuser only with this separate grant, Q29).",
+        _DEPARTMENT_OR_COMPANY,
+    ),
     *_TASK,
 )
 
@@ -150,15 +161,18 @@ DEPARTMENT_MANAGER_GRANTS: dict[str, Scope] = dict.fromkeys(
         "department.read",
         "user.create",
         "user.read",
+        "project.manage",
+        "project.invitation.approve",
         *(p.code for p in _TASK),
     ),
     Scope.MANAGED_DEPARTMENTS,
 )
 
 # Configuration rights only. Deliberately no task permission: being an administrator
-# does not make task contents visible (D003).
+# does not make task contents visible (D003). Nor a project permission: running
+# projects is the managers' business and needs an explicit grant for anybody else.
 ADMINISTRATOR_GRANTS: dict[str, Scope] = {
-    p.code: Scope.COMPANY for p in _ALL if not p.code.startswith("task.")
+    p.code: Scope.COMPANY for p in _ALL if not p.code.startswith(("task.", "project."))
 }
 
 # What every active employee may do without any role (D002, Q19): work with the

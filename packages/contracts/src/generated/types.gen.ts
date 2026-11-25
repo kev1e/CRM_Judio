@@ -32,6 +32,16 @@ export type BindingCode = {
     command: string;
 };
 
+export type Candidate = {
+    id: string;
+    name: string;
+    departments: Array<Named>;
+};
+
+export type CandidateList = {
+    results: Array<Candidate>;
+};
+
 /**
  * * `new` - New
  * * `active` - Active
@@ -76,6 +86,10 @@ export type CurrentUser = {
     id: string;
     crm_login: string;
     display_name: string;
+};
+
+export type DeclineRequest = {
+    reason?: string;
 };
 
 /**
@@ -191,6 +205,25 @@ export type Options = {
     results: Array<Named>;
 };
 
+/**
+ * * `added` - added
+ * * `invited` - invited
+ */
+export type OutcomeEnum = 'added' | 'invited';
+
+export type ParticipantAddRequest = {
+    user_id: string;
+    /**
+     * One of the employee's departments: the one they take part from.
+     */
+    department_id: string;
+};
+
+export type ParticipantAdded = {
+    outcome: OutcomeEnum;
+    project: Project;
+};
+
 export type PasswordSetupRequestRequest = {
     token: string;
 };
@@ -204,6 +237,11 @@ export type PatchedCommentWriteRequest = {
 };
 
 export type PatchedDepartmentUpdateRequest = {
+    name?: string;
+    is_active?: boolean;
+};
+
+export type PatchedProjectUpdateRequest = {
     name?: string;
     is_active?: boolean;
 };
@@ -232,6 +270,58 @@ export type PatchedWorkflowStatusUpdateRequest = {
  * * `urgent` - Urgent
  */
 export type PriorityEnum = 'low' | 'normal' | 'high' | 'urgent';
+
+export type Project = {
+    id: string;
+    name: string;
+    department: Named;
+    is_active: boolean;
+    members: Array<ProjectMember>;
+    /**
+     * Shown only to somebody who runs the project.
+     */
+    pending_invitations: Array<ProjectInvitation>;
+    /**
+     * A hint for the interface. Every operation is checked again by the server.
+     */
+    can_manage: boolean;
+};
+
+export type ProjectCreateRequest = {
+    name: string;
+    department_id: string;
+};
+
+export type ProjectInvitation = {
+    id: string;
+    project: Named;
+    project_department: Named;
+    user: Named;
+    /**
+     * The department whose manager decides.
+     */
+    department: Named;
+    requested_by: Named;
+    created_at: string;
+};
+
+export type ProjectList = {
+    results: Array<Project>;
+    invitations_to_decide: Array<ProjectInvitation>;
+    can_create: boolean;
+};
+
+export type ProjectMember = {
+    user: Named;
+    /**
+     * The department the person takes part from.
+     */
+    department: Named;
+    /**
+     * False when the account is deactivated.
+     */
+    is_active: boolean;
+};
 
 export type Readiness = {
     status: ReadinessStatusEnum;
@@ -722,6 +812,207 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type ProjectCandidatesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/project-candidates';
+};
+
+export type ProjectCandidatesErrors = {
+    403: Error;
+};
+
+export type ProjectCandidatesError = ProjectCandidatesErrors[keyof ProjectCandidatesErrors];
+
+export type ProjectCandidatesResponses = {
+    200: CandidateList;
+};
+
+export type ProjectCandidatesResponse = ProjectCandidatesResponses[keyof ProjectCandidatesResponses];
+
+export type ProjectInvitationsApproveData = {
+    body?: never;
+    path: {
+        invitation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/project-invitations/{invitation_id}/approve';
+};
+
+export type ProjectInvitationsApproveErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectInvitationsApproveError = ProjectInvitationsApproveErrors[keyof ProjectInvitationsApproveErrors];
+
+export type ProjectInvitationsApproveResponses = {
+    /**
+     * No response body
+     */
+    204: void;
+};
+
+export type ProjectInvitationsApproveResponse = ProjectInvitationsApproveResponses[keyof ProjectInvitationsApproveResponses];
+
+export type ProjectInvitationsCancelData = {
+    body?: never;
+    path: {
+        invitation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/project-invitations/{invitation_id}/cancel';
+};
+
+export type ProjectInvitationsCancelErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectInvitationsCancelError = ProjectInvitationsCancelErrors[keyof ProjectInvitationsCancelErrors];
+
+export type ProjectInvitationsCancelResponses = {
+    /**
+     * No response body
+     */
+    204: void;
+};
+
+export type ProjectInvitationsCancelResponse = ProjectInvitationsCancelResponses[keyof ProjectInvitationsCancelResponses];
+
+export type ProjectInvitationsDeclineData = {
+    body?: DeclineRequest;
+    path: {
+        invitation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/project-invitations/{invitation_id}/decline';
+};
+
+export type ProjectInvitationsDeclineErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectInvitationsDeclineError = ProjectInvitationsDeclineErrors[keyof ProjectInvitationsDeclineErrors];
+
+export type ProjectInvitationsDeclineResponses = {
+    /**
+     * No response body
+     */
+    204: void;
+};
+
+export type ProjectInvitationsDeclineResponse = ProjectInvitationsDeclineResponses[keyof ProjectInvitationsDeclineResponses];
+
+export type ProjectsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/projects';
+};
+
+export type ProjectsListResponses = {
+    200: ProjectList;
+};
+
+export type ProjectsListResponse = ProjectsListResponses[keyof ProjectsListResponses];
+
+export type ProjectsCreateData = {
+    body: ProjectCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/projects';
+};
+
+export type ProjectsCreateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsCreateError = ProjectsCreateErrors[keyof ProjectsCreateErrors];
+
+export type ProjectsCreateResponses = {
+    201: Project;
+};
+
+export type ProjectsCreateResponse = ProjectsCreateResponses[keyof ProjectsCreateResponses];
+
+export type ProjectsUpdateData = {
+    body?: PatchedProjectUpdateRequest;
+    path: {
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}';
+};
+
+export type ProjectsUpdateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsUpdateError = ProjectsUpdateErrors[keyof ProjectsUpdateErrors];
+
+export type ProjectsUpdateResponses = {
+    200: Project;
+};
+
+export type ProjectsUpdateResponse = ProjectsUpdateResponses[keyof ProjectsUpdateResponses];
+
+export type ProjectsAddParticipantData = {
+    body: ParticipantAddRequest;
+    path: {
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/members';
+};
+
+export type ProjectsAddParticipantErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsAddParticipantError = ProjectsAddParticipantErrors[keyof ProjectsAddParticipantErrors];
+
+export type ProjectsAddParticipantResponses = {
+    200: ParticipantAdded;
+};
+
+export type ProjectsAddParticipantResponse = ProjectsAddParticipantResponses[keyof ProjectsAddParticipantResponses];
+
+export type ProjectsRemoveParticipantData = {
+    body?: never;
+    path: {
+        project_id: string;
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/members/{user_id}';
+};
+
+export type ProjectsRemoveParticipantErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsRemoveParticipantError = ProjectsRemoveParticipantErrors[keyof ProjectsRemoveParticipantErrors];
+
+export type ProjectsRemoveParticipantResponses = {
+    200: Project;
+};
+
+export type ProjectsRemoveParticipantResponse = ProjectsRemoveParticipantResponses[keyof ProjectsRemoveParticipantResponses];
 
 export type ReadyData = {
     body?: never;

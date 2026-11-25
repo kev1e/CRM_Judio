@@ -50,6 +50,12 @@ These are technical parameters or choices that the approved decisions leave open
 | Recording downloads in the audit log | Not recorded; uploads and removals are | Production |
 | Upload path through the web application | The web relay holds an upload in memory before passing it to the API (up to 101 MB per upload in progress). The HTTPS ingress of S8 should send `/api/` straight to the API | S8 |
 | Real object-storage provider | The S3 adapter is tested against an emulator only | Before files go to production |
+| Who creates and runs a project (the PRD names who adds participants, not who creates projects) | A manager, for a department they manage; that department "owns" the project and its managers rename, close, add, invite and remove | Confirm with the owner |
+| Who sees a project | Its participants, the managers of its department, the managers of a department somebody takes part from, and a company-wide `project.manage`. Nobody else, the administrator included | Production |
+| List of employees for inviting | Somebody who runs a project sees every active employee's name and departments | Production |
+| An employee's own consent to an invitation; leaving a project | Not asked: the manager decides (as specified). An employee cannot leave by themselves | Production |
+| A participant who leaves the department of participation or is deactivated | Stays listed (marked as deactivated); not removed automatically | Production |
+| Which project a task may belong to | Not built yet | Next slice |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

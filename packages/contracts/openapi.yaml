@@ -413,6 +413,323 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/v1/project-candidates:
+    get:
+      operationId: project_candidates
+      description: Employees who can be added or invited, with their departments (names
+        only).
+      tags:
+      - projects
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/project-invitations/{invitation_id}/approve:
+    post:
+      operationId: project_invitations_approve
+      parameters:
+      - in: path
+        name: invitation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - sessionCookie: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/project-invitations/{invitation_id}/cancel:
+    post:
+      operationId: project_invitations_cancel
+      parameters:
+      - in: path
+        name: invitation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - sessionCookie: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/project-invitations/{invitation_id}/decline:
+    post:
+      operationId: project_invitations_decline
+      parameters:
+      - in: path
+        name: invitation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclineRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/projects:
+    get:
+      operationId: projects_list
+      tags:
+      - projects
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+          description: ''
+    post:
+      operationId: projects_create
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/projects/{project_id}:
+    patch:
+      operationId: projects_update
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/projects/{project_id}/members:
+    post:
+      operationId: projects_add_participant
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipantAddRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantAdded'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/projects/{project_id}/members/{user_id}:
+    delete:
+      operationId: projects_remove_participant
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/ready:
     get:
       operationId: ready
@@ -1695,6 +2012,31 @@ components:
       - code
       - command
       - expires_at
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Named'
+      required:
+      - departments
+      - id
+      - name
+    CandidateList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidate'
+      required:
+      - results
     CategoryEnum:
       enum:
       - new
@@ -1788,6 +2130,13 @@ components:
       - crm_login
       - display_name
       - id
+    DeclineRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
     DeliveryEnum:
       enum:
       - pending
@@ -2036,6 +2385,38 @@ components:
             $ref: '#/components/schemas/Named'
       required:
       - results
+    OutcomeEnum:
+      enum:
+      - added
+      - invited
+      type: string
+      description: |-
+        * `added` - added
+        * `invited` - invited
+    ParticipantAddRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        department_id:
+          type: string
+          format: uuid
+          description: 'One of the employee''s departments: the one they take part
+            from.'
+      required:
+      - department_id
+      - user_id
+    ParticipantAdded:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+        project:
+          $ref: '#/components/schemas/Project'
+      required:
+      - outcome
+      - project
     PasswordSetupRequestRequest:
       type: object
       properties:
@@ -2064,6 +2445,15 @@ components:
           minLength: 1
           maxLength: 5000
     PatchedDepartmentUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        is_active:
+          type: boolean
+    PatchedProjectUpdateRequest:
       type: object
       properties:
         name:
@@ -2120,6 +2510,114 @@ components:
         * `normal` - Normal
         * `high` - High
         * `urgent` - Urgent
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        department:
+          $ref: '#/components/schemas/Named'
+        is_active:
+          type: boolean
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+        pending_invitations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectInvitation'
+          description: Shown only to somebody who runs the project.
+        can_manage:
+          type: boolean
+          description: A hint for the interface. Every operation is checked again
+            by the server.
+      required:
+      - can_manage
+      - department
+      - id
+      - is_active
+      - members
+      - name
+      - pending_invitations
+    ProjectCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        department_id:
+          type: string
+          format: uuid
+      required:
+      - department_id
+      - name
+    ProjectInvitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project:
+          $ref: '#/components/schemas/Named'
+        project_department:
+          $ref: '#/components/schemas/Named'
+        user:
+          $ref: '#/components/schemas/Named'
+        department:
+          allOf:
+          - $ref: '#/components/schemas/Named'
+          description: The department whose manager decides.
+        requested_by:
+          $ref: '#/components/schemas/Named'
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - department
+      - id
+      - project
+      - project_department
+      - requested_by
+      - user
+    ProjectList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        invitations_to_decide:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectInvitation'
+        can_create:
+          type: boolean
+      required:
+      - can_create
+      - invitations_to_decide
+      - results
+    ProjectMember:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/Named'
+        department:
+          allOf:
+          - $ref: '#/components/schemas/Named'
+          description: The department the person takes part from.
+        is_active:
+          type: boolean
+          description: False when the account is deactivated.
+      required:
+      - department
+      - is_active
+      - user
     Readiness:
       type: object
       properties:
