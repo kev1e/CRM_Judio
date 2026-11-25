@@ -29,6 +29,12 @@ These are technical parameters or choices that the approved decisions leave open
 | Lifetime of the password-setup link (D036 fixes the mechanism, not the number) | 30 minutes, setting `PASSWORD_SETUP_TOKEN_TTL_MINUTES`; `/password` sends a new one | Production |
 | What reactivating an account restores (the permission exists, the details are not specified) | Roles, password and Telegram binding as they were; revoked sessions, codes and links do not come back | Production |
 | Whether an account may exist without any department (Q01 says every active employee has exactly one primary department) | Allowed and shown as "Отдел не назначен": the first administrator exists before any department does. As soon as an employee has a department, exactly one is primary. Decide before S3 whether tasks may be assigned to an employee without a department | S3 |
+| Whom a task may be assigned to, and by whom (PRD: "employees available under assignment policy" — the policy itself is not specified) | **Needs the owner's decision.** Provisional: any employee may address a task to any open department; the assignee must be an active member of that department. An employee without a department therefore cannot be assigned tasks | Production |
+| What may be done with an archived or deleted task | Read-only until reopened or restored | Production |
+| Who may see the trash | Only those who may restore from it (`task.delete`) | Production |
+| Cancelled tasks | Stay on the board in their column; never archived automatically; a manager may archive them by hand | Production |
+| Hand-over when the primary department has no other designated manager (Q08 names a designated superuser as the fallback) | The deactivation is refused with an explanation; a designated superuser is not modelled yet | S3 follow-up |
+| Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |
 | Closing a department | Refused while it is somebody's primary department; managers of a closed department lose their reach in it. What happens to its tasks is decided with S3 | S3 |

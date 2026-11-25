@@ -178,3 +178,26 @@ Not implemented yet: departments and the resolution of the `MANAGED_DEPARTMENTS`
 - Built-in role `department_manager` (held automatically while a user manages at least one department): `user.read`, `user.create`, `department.read`, `audit.read`, all in `MANAGED_DEPARTMENTS`. Task permissions join it in S3.
 - With that role a manager: sees the managed departments and the accounts of their members; creates an employee only with a managed department as the primary one; issues binding codes only for members of managed departments. A manager cannot change memberships, managers or primary departments (`department.manage` is administrator-only), cannot deactivate accounts and cannot give roles.
 - An object outside the caller's reach is answered as not found, so its existence is not revealed.
+
+## Implementation status (S3) — task permissions
+
+Catalogue (`task.*`), with cumulative scopes: `own` = tasks assigned to the user; `managed_departments` = those plus tasks whose responsible department the user manages; `company` = every task.
+
+| Permission | Every employee (no role) | Department manager | Superuser role | Administrator role |
+|---|---|---|---|---|
+| `task.read` | own | managed | **company** | — |
+| `task.create` | yes | yes | — | — |
+| `task.update` (title, description) | own | managed | — | — |
+| `task.status` (incl. completion) | own | managed | — | — |
+| `task.deadline` | own | managed | — | — |
+| `task.checkpoints.use` (add, tick) | own | managed | — | — |
+| `task.checkpoints.manage` (remove) | — | managed | — | — |
+| `task.priority` | — | managed | — | — |
+| `task.reassign` | — | managed | — | — |
+| `task.archive` (manual archive, reopen) | — | managed | — | — |
+| `task.delete` (trash, restore) | — | managed | — | — |
+
+- "—" for the superuser and administrator roles means the role adds nothing; as employees they still have the first column for their own tasks. A superuser acts on other people's tasks only through an additional custom role that grants the specific `task.*` permission (Q29).
+- Every operation requires both `task.read` on the task and its own permission; an action grant without read access finds nothing.
+- Authorship, department membership and (later) project membership give no access (Q02).
+- A task the caller cannot read is answered as not found.
