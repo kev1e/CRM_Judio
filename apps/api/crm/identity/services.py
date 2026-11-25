@@ -19,6 +19,7 @@ from django.db import IntegrityError, transaction
 from crm.audit import services as audit
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError
+from crm.identity import sessions
 from crm.identity.models import CRM_LOGIN_REGEX, User
 
 _LOGIN_RE = re.compile(CRM_LOGIN_REGEX)
@@ -104,7 +105,11 @@ def create_user(
 
 
 def set_password(*, actor: Actor, user: User, raw_password: str) -> None:
-    """Replace the password. Authorization is the caller's duty (see `create_user`)."""
+    """Replace the password. Authorization is the caller's duty (see `create_user`).
+
+    Every session opened with the old password ends, and login attempts that are
+    still waiting for approval are cancelled.
+    """
     check_password_policy(raw_password, user)
     with transaction.atomic():
         locked = User.objects.select_for_update().get(pk=user.pk)
@@ -116,4 +121,5 @@ def set_password(*, actor: Actor, user: User, raw_password: str) -> None:
             entity_type="user",
             entity_id=str(user.pk),
         )
+        sessions.revoke_all_for_user(actor=actor, user=locked, reason="password_changed")
     user.password = locked.password

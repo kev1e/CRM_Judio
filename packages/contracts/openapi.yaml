@@ -4,6 +4,97 @@ info:
   version: 0.0.0
   description: Internal corporate CRM — HTTP API.
 paths:
+  /api/v1/auth/login:
+    post:
+      operationId: auth_login
+      description: 'Step 1: check the login and password, ask for approval in Telegram.'
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginStarted'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/auth/login/complete:
+    post:
+      operationId: auth_login_complete
+      description: |-
+        Step 2, polled by the browser that started the attempt: where the approval
+        stands; once approved, opens the session.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginProgress'
+          description: ''
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout
+      description: |-
+        Ends the current session. Answers 204 even without a session, so that a
+        stale cookie is always removed.
+      tags:
+      - auth
+      security:
+      - sessionCookie: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/me:
+    get:
+      operationId: auth_me
+      description: Who is signed in and what they may do right now.
+      tags:
+      - auth
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/health:
     get:
       operationId: health
@@ -11,6 +102,7 @@ paths:
       tags:
       - system
       security:
+      - sessionCookie: []
       - {}
       responses:
         '200':
@@ -27,6 +119,7 @@ paths:
       tags:
       - system
       security:
+      - sessionCookie: []
       - {}
       responses:
         '200':
@@ -51,6 +144,50 @@ components:
       description: |-
         * `ok` - ok
         * `fail` - fail
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        crm_login:
+          type: string
+        display_name:
+          type: string
+      required:
+      - crm_login
+      - display_name
+      - id
+    DeliveryEnum:
+      enum:
+      - pending
+      - sent
+      - failed
+      type: string
+      description: |-
+        * `pending` - pending
+        * `sent` - sent
+        * `failed` - failed
+    Error:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+      required:
+      - error
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          nullable: true
+      required:
+      - code
+      - details
+      - message
     Health:
       type: object
       properties:
@@ -63,6 +200,74 @@ components:
       - ok
       type: string
       description: '* `ok` - ok'
+    LoginProgress:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/StateEnum'
+        delivery:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/DeliveryEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - delivery
+      - state
+    LoginRequestRequest:
+      type: object
+      properties:
+        login:
+          type: string
+          minLength: 1
+          maxLength: 64
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 1024
+      required:
+      - login
+      - password
+    LoginStarted:
+      type: object
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+        expires_in:
+          type: integer
+          minimum: 0
+          description: Seconds until the attempt expires.
+      required:
+      - expires_at
+      - expires_in
+    Me:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/CurrentUser'
+        session:
+          $ref: '#/components/schemas/SessionInfo'
+        permissions:
+          type: object
+          additionalProperties:
+            enum:
+            - own
+            - managed_departments
+            - company
+            type: string
+            description: |-
+              * `own` - own
+              * `managed_departments` - managed_departments
+              * `company` - company
+          description: Permission code -> widest scope currently granted.
+      required:
+      - permissions
+      - session
+      - user
+    NullEnum:
+      enum:
+      - null
     Readiness:
       type: object
       properties:
@@ -91,3 +296,30 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    SessionInfo:
+      type: object
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - expires_at
+    StateEnum:
+      enum:
+      - pending
+      - denied
+      - expired
+      - invalid
+      - authenticated
+      type: string
+      description: |-
+        * `pending` - pending
+        * `denied` - denied
+        * `expired` - expired
+        * `invalid` - invalid
+        * `authenticated` - authenticated
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: crm_session

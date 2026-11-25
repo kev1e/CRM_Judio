@@ -34,7 +34,12 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
     elif isinstance(exc, exceptions.APIException):
         detail = exc.detail
         code = detail.code if isinstance(detail, exceptions.ErrorDetail) else exc.default_code
-        response.data = envelope(str(code), str(detail))
+        details = None
+        retry_after = getattr(exc, "retry_after", None)
+        if isinstance(retry_after, int):
+            details = {"retry_after": retry_after}
+            response["Retry-After"] = str(retry_after)
+        response.data = envelope(str(code), str(detail), details)
     elif response.status_code == 404:
         response.data = envelope("not_found", "Not found.")
     elif response.status_code == 403:

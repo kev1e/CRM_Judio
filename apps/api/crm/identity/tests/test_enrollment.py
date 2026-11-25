@@ -341,3 +341,30 @@ def test_two_telegram_accounts_redeeming_one_token_at_once_bind_only_one() -> No
     user.refresh_from_db()
     assert user.telegram_user_id in {TG_ID, TG_ID + 1}
     assert User.objects.filter(telegram_user_id__isnull=False).count() == 1
+
+
+def test_repeated_wrong_codes_from_one_telegram_account_are_delayed(
+    make_user: UserFactory, admin_actor: Actor
+) -> None:
+    # Q13: progressive delay instead of a lockout; the real code still works later.
+    from crm.identity import throttling
+    from crm.identity.models import ThrottleKind
+    from crm.identity.throttling import POLICIES, Subject
+
+    token = enrollment.issue_token(actor=admin_actor, user=make_user())
+    free = POLICIES[ThrottleKind.ENROLLMENT].free_failures
+    for _ in range(free + 1):
+        _assert_rejected("unknown_token", "guess")
+
+    # Even the right code is refused while the delay lasts, and it is not burnt.
+    with pytest.raises(enrollment.EnrollmentRejectedError) as error:
+        _redeem(token.value)
+    assert error.value.reason == "throttled"
+    assert error.value.code == "enrollment_rejected"
+
+    # Another Telegram account is not affected.
+    other = enrollment.issue_token(actor=admin_actor, user=make_user())
+    assert _redeem(other.value, telegram_user_id=TG_ID + 1).telegram_user_id == TG_ID + 1
+
+    throttling.reset([Subject(ThrottleKind.ENROLLMENT, str(TG_ID))])
+    assert _redeem(token.value).telegram_user_id == TG_ID

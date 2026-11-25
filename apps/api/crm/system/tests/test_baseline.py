@@ -23,7 +23,10 @@ def test_schema_contains_only_own_tables() -> None:
         "access_user_role",
         "audit_event",
         "django_migrations",
+        "identity_login_challenge",
+        "identity_session",
         "identity_telegram_enrollment_token",
+        "identity_throttle_counter",
         "identity_user",
         "system_heartbeat",
     ]
