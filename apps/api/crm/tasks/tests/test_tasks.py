@@ -35,7 +35,9 @@ pytestmark = pytest.mark.django_db
 @dataclass
 class World:
     """Two departments. Sales: manager Olga, employees Anna and Boris.
-    Support: manager Pavel, employee Vera. Zoya holds the superuser role."""
+    Support: manager Pavel, employee Vera. Zoya holds the superuser role.
+    Vera also holds a custom role that lets her create tasks for any department
+    without seeing them (used for Q02)."""
 
     admin: Actor
     sales: Department
@@ -71,6 +73,11 @@ def world(admin_actor: Actor, make_employee: EmployeeFactory) -> World:
     access.assign_role(
         actor=admin_actor, user=people["zoya"].user, role=Role.objects.get(key="superuser")
     )
+    dispatcher = access.create_role(actor=admin_actor, key="dispatcher", name="Постановка задач")
+    access.set_role_grants(
+        actor=admin_actor, role=dispatcher, grants={"task.create": Scope.COMPANY}
+    )
+    access.assign_role(actor=admin_actor, user=people["vera"].user, role=dispatcher)
     actors = {name: Actor.for_user(employee.user) for name, employee in people.items()}
     return World(admin=admin_actor, sales=sales, support=support, **actors)
 
@@ -202,7 +209,7 @@ def test_rights_change_at_once_when_the_manager_is_removed(world: World) -> None
 # --- Creating ---------------------------------------------------------------
 
 
-def test_any_employee_creates_a_task_that_is_assigned_at_once(world: World) -> None:
+def test_created_task_is_assigned_at_once(world: World) -> None:
     due = timezone.now() + timedelta(days=3)
 
     task = services.create_task(
@@ -241,7 +248,7 @@ def test_any_employee_creates_a_task_that_is_assigned_at_once(world: World) -> N
 )
 def test_invalid_tasks_are_refused(world: World, overrides: dict[str, object], code: str) -> None:
     params: dict[str, object] = {
-        "actor": world.anna,
+        "actor": world.vera,
         "title": "Задача",
         "department_id": world.sales.pk,
         "assignee_id": uid(world.boris),
@@ -270,6 +277,76 @@ def test_assignee_must_be_an_active_member_of_the_responsible_department(world: 
         make_task(world, assignee=world.boris)
 
 
+# --- D037: who creates tasks and for whom -----------------------------------
+
+
+def test_only_a_manager_creates_tasks(world: World) -> None:
+    assert "task.create" not in BASELINE_GRANTS
+    assert DEPARTMENT_MANAGER_GRANTS["task.create"] is Scope.MANAGED_DEPARTMENTS
+    # An employee cannot create a task, not even for themselves; nor can the
+    # administrator or the read-only superuser.
+    for actor in (world.anna, world.admin, world.zoya):
+        with pytest.raises(PermissionDeniedError):
+            make_task(world, author=actor)
+        with pytest.raises(PermissionDeniedError):
+            services.assignable_departments(actor)
+        with pytest.raises(PermissionDeniedError):
+            services.eligible_assignees(actor, world.sales.pk)
+    assert not Task.objects.exists()
+
+
+def test_manager_creates_tasks_only_for_a_managed_department(world: World) -> None:
+    assert list(services.assignable_departments(world.olga)) == [world.sales]
+    with pytest.raises(PermissionDeniedError):
+        services.create_task(
+            actor=world.olga, title="X", department_id=world.support.pk, assignee_id=uid(world.vera)
+        )
+    with pytest.raises(PermissionDeniedError):
+        services.eligible_assignees(world.olga, world.support.pk)
+    assert not Task.objects.exists()
+
+
+def test_assignee_is_an_employee_or_a_manager_of_the_department(world: World) -> None:
+    # Pavel manages Support without belonging to it.
+    assert world.pavel.user is not None
+    org.remove_member(
+        actor=world.admin, department_id=world.support.pk, user_id=world.pavel.user.pk
+    )
+    logins = [u.crm_login for u in services.eligible_assignees(world.pavel, world.support.pk)]
+    assert sorted(logins) == ["pavel", "vera", "zoya"]
+
+    to_self = services.create_task(
+        actor=world.pavel,
+        title="Себе",
+        department_id=world.support.pk,
+        assignee_id=uid(world.pavel),
+    )
+    to_employee = services.create_task(
+        actor=world.pavel, title="Вере", department_id=world.support.pk, assignee_id=uid(world.vera)
+    )
+    assert to_self.assignee == world.pavel.user
+    assert to_employee.assignee == world.vera.user
+    # A manager of another department is not eligible.
+    with pytest.raises(DomainError) as error:
+        services.create_task(
+            actor=world.pavel,
+            title="X",
+            department_id=world.support.pk,
+            assignee_id=uid(world.olga),
+        )
+    assert error.value.code == "assignee_not_eligible"
+
+
+def test_employee_who_lost_the_manager_role_cannot_create_any_more(world: World) -> None:
+    make_task(world, author=world.olga)
+    org.add_manager(
+        actor=world.admin, department_id=world.sales.pk, user_id=uid(world.boris), designated=True
+    )
+    org.remove_manager(actor=world.admin, department_id=world.sales.pk, user_id=uid(world.olga))
+    with pytest.raises(PermissionDeniedError):
+        make_task(world, author=world.olga)
+
+
 def test_non_employees_cannot_create_tasks(world: World) -> None:
     for actor in (Actor.system("worker"), Actor.cli("os:root")):
         with pytest.raises(PermissionDeniedError):
@@ -282,11 +359,11 @@ def test_task_cannot_be_addressed_to_a_closed_department(world: World) -> None:
 
     with pytest.raises(DomainError) as error:
         services.create_task(
-            actor=world.anna, title="X", department_id=empty.pk, assignee_id=uid(world.anna)
+            actor=world.vera, title="X", department_id=empty.pk, assignee_id=uid(world.anna)
         )
 
     assert error.value.code == "department_not_found"
-    assert empty not in services.assignable_departments(world.anna)
+    assert empty not in services.assignable_departments(world.vera)
 
 
 def test_eligible_assignees_are_the_active_members(world: World) -> None:
@@ -405,6 +482,7 @@ def test_interface_hints_match_what_the_services_allow(world: World) -> None:
         "task.checkpoints.use": True,
         "task.checkpoints.manage": False,
         "task.comment": True,
+        "task.comment.delete": False,
         "task.priority": False,
         "task.reassign": False,
         "task.archive": False,

@@ -208,6 +208,11 @@ class Comment(models.Model):
     revision = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(db_default=Now())
     edited_at = models.DateTimeField(null=True, blank=True)
+    # D038: a deleted comment is hidden, not erased.
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
 
     class Meta:
         db_table = "tasks_comment"
@@ -218,6 +223,13 @@ class Comment(models.Model):
                 condition=Q(revision=1, edited_at__isnull=True)
                 | Q(revision__gt=1, edited_at__isnull=False),
                 name="tasks_comment_edit_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(deleted_at__isnull=True, deleted_by__isnull=True)
+                    | Q(deleted_at__isnull=False, deleted_by__isnull=False)
+                ),
+                name="tasks_comment_deletion_consistent",
             ),
         ]
 

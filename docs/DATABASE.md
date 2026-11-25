@@ -230,10 +230,10 @@ Managing and belonging are separate tables on purpose. The built-in `department_
 | `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
 | `tasks_checkpoint` | `id`, `task_id`, `label`, `position`, `is_done`, `done_by_id`, `done_at`, `created_at` | done state, author and time set together |
 
-| `tasks_comment` | `id`, `task_id`, `author_id`, `body`, `revision`, `created_at`, `edited_at` | body not empty; `revision = 1` ⇔ never edited |
+| `tasks_comment` | `id`, `task_id`, `author_id`, `body`, `revision`, `created_at`, `edited_at`, `deleted_at`, `deleted_by_id` | body not empty; `revision = 1` ⇔ never edited; deletion time and author set together |
 | `tasks_comment_revision` | `id`, `comment_id`, `revision`, `body`, `written_at`, `replaced_at`, `replaced_by_id` | one row per comment and revision; rows are only added |
 
-A comment's text lives only in these two tables: the audit log records that a comment was added or edited, never what it said. There is no `deleted_at` yet because deleting comments is not specified.
+A comment's text lives only in these two tables: the audit log records that a comment was added or edited, never what it said. A deleted comment (D038) keeps its row and is hidden from every reader.
 
 The single assignee is a column of the task (Q03); a separate assignee table comes only if several assignees are ever approved. The history of a task is the audit log filtered by the task; titles and descriptions are never copied into it. Default statuses and moves are created by a data migration and are configuration, not code. A status is never deleted: retiring sets `is_active = false`, moves the tasks that use it (including `status_before_completion_id`) to the replacement the administrator chose, and keeps the row and its moves so that old audit events stay resolvable and the status can be returned.
 

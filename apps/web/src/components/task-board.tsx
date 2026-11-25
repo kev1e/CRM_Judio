@@ -112,7 +112,10 @@ export function TaskBoard({
   statuses,
   initialCards,
   initialTaskId,
+  canCreate = false,
 }: {
+  /** Whether to offer "Новая задача" (D037: managers). The API checks again. */
+  canCreate?: boolean;
   view: BoardView;
   statuses: Status[];
   initialCards: TaskCard[];
@@ -199,7 +202,7 @@ export function TaskBoard({
     <div className="flex min-h-dvh flex-col gap-4 p-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t(`titles.${view}`)}</h1>
-        {isBoard ? (
+        {isBoard && canCreate ? (
           <button
             type="button"
             onClick={() => setCreating(true)}
@@ -236,7 +239,11 @@ export function TaskBoard({
           <p className="text-muted-foreground">{t("noStatuses")}</p>
         ) : (
           <>
-            {cards.length === 0 ? <p className="text-muted-foreground">{t("emptyBoard")}</p> : null}
+            {cards.length === 0 ? (
+              <p className="text-muted-foreground">
+                {t(canCreate ? "emptyBoard" : "emptyBoardReadOnly")}
+              </p>
+            ) : null}
             <DndContext
               sensors={sensors}
               onDragStart={(event) =>

@@ -19,7 +19,7 @@ from datetime import datetime
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Max, QuerySet
+from django.db.models import Max, Q, QuerySet
 from django.utils import timezone
 
 from crm.access import services as access
@@ -100,20 +100,24 @@ def _clean_title(raw: str) -> str:
     return title
 
 
+def _eligible_users(department_id: UUID) -> QuerySet[User]:
+    """D037: a task of a department is assigned to one of its active people —
+    an employee who belongs to it or a manager who manages it."""
+    return User.objects.filter(
+        Q(department_memberships__department_id=department_id)
+        | Q(managed_departments__department_id=department_id),
+        is_active=True,
+    ).distinct()
+
+
 def _eligible_assignee(department: Department, assignee_id: UUID) -> User:
-    """PROVISIONAL assignment policy (docs/OPEN_QUESTIONS.md): a task of a
-    department is assigned to an active employee who belongs to that department."""
-    membership = (
-        DepartmentMembership.objects.select_related("user")
-        .filter(department=department, user_id=assignee_id, user__is_active=True)
-        .first()
-    )
-    if membership is None:
+    user = _eligible_users(department.pk).filter(pk=assignee_id).first()
+    if user is None:
         raise DomainError(
             "assignee_not_eligible",
-            "The assignee must be an active employee of the responsible department.",
+            "The assignee must be an active employee or manager of the responsible department.",
         )
-    return membership.user
+    return user
 
 
 # --- Reading ----------------------------------------------------------------
@@ -173,19 +177,26 @@ def get_task(actor: Actor, task_id: UUID) -> Task:
 
 
 def assignable_departments(actor: Actor) -> QuerySet[Department]:
-    """Departments a new task may be addressed to: every open department."""
-    access.require_permission(actor, "task.create", at_least=Scope.OWN)
-    return Department.objects.filter(is_active=True).order_by("name")
+    """Departments the actor may create tasks for (D037): the managed ones, or
+    every open department for a company-wide grant."""
+    scope = access.require_department_scope(actor, "task.create")
+    departments = Department.objects.filter(is_active=True).order_by("name")
+    if scope.company:
+        return departments
+    return departments.filter(pk__in=scope.department_ids)
 
 
 def eligible_assignees(actor: Actor, department_id: UUID) -> QuerySet[User]:
-    """Whom a task of this department may be assigned to (names only)."""
-    access.require_permission(actor, "task.create", at_least=Scope.OWN)
-    return User.objects.filter(
-        is_active=True,
-        department_memberships__department_id=department_id,
-        department_memberships__department__is_active=True,
-    ).order_by("display_name")
+    """Whom a task of this department may be assigned to (names only). Asked by
+    whoever creates tasks for the department or reassigns them in it."""
+    if not (
+        access.department_scope(actor, "task.create").covers(department_id)
+        or access.department_scope(actor, "task.reassign").covers(department_id)
+    ):
+        raise PermissionDeniedError()
+    if not Department.objects.filter(pk=department_id, is_active=True).exists():
+        return User.objects.none()
+    return _eligible_users(department_id).order_by("display_name")
 
 
 # --- Creating ---------------------------------------------------------------
@@ -203,7 +214,8 @@ def create_task(
     task_type: str = TaskType.TASK,
 ) -> Task:
     """Create a task that is assigned at once, without anybody's approval (D006)."""
-    access.require_permission(actor, "task.create", at_least=Scope.OWN)
+    # D037: a manager creates tasks, and only for a department they manage.
+    access.require_in_department(actor, "task.create", department_id)
     if actor.user is None:
         raise PermissionDeniedError()
     clean_title = _clean_title(title)
@@ -533,11 +545,22 @@ def _clean_comment(raw: str) -> str:
     return body
 
 
+def _live_comment(task: Task, comment_id: UUID) -> Comment:
+    comment = (
+        Comment.objects.select_for_update()
+        .filter(pk=comment_id, task=task, deleted_at__isnull=True)
+        .first()
+    )
+    if comment is None:
+        raise DomainError("comment_not_found", "No such comment.")
+    return comment
+
+
 def comments(actor: Actor, task: Task) -> QuerySet[Comment]:
     """Comments of a task the actor may see. Everybody who sees the task reads them."""
     if not policy.allowed(actor, policy.READ, task):
         return Comment.objects.none()
-    return task.comments.select_related("author")
+    return task.comments.filter(deleted_at__isnull=True).select_related("author")
 
 
 def add_comment(*, actor: Actor, task_id: UUID, body: str) -> Comment:
@@ -559,16 +582,14 @@ def edit_comment(*, actor: Actor, task_id: UUID, comment_id: UUID, body: str) ->
     """Only the author edits a comment, and only while they still may comment on
     the task. The previous text is kept as a revision.
 
-    PROVISIONAL (docs/OPEN_QUESTIONS.md): no time limit for editing.
+    D038: there is no time limit for editing.
     """
     clean = _clean_comment(body)
     with transaction.atomic():
         task = _locked(actor, task_id)
         policy.require(actor, "task.comment", task)
         _require_editable(task)
-        comment = Comment.objects.select_for_update().filter(pk=comment_id, task=task).first()
-        if comment is None:
-            raise DomainError("comment_not_found", "No such comment.")
+        comment = _live_comment(task, comment_id)
         if actor.user is None or comment.author_id != actor.user.pk:
             raise PermissionDeniedError()
         if clean == comment.body:
@@ -594,6 +615,28 @@ def edit_comment(*, actor: Actor, task_id: UUID, comment_id: UUID, body: str) ->
             revision=comment.revision,
         )
     return comment
+
+
+def delete_comment(*, actor: Actor, task_id: UUID, comment_id: UUID) -> None:
+    """D038: the manager of the task's department removes a comment — anybody's.
+    The author alone cannot. The row stays in the database, hidden from everybody."""
+    with transaction.atomic():
+        task = _locked(actor, task_id)
+        policy.require(actor, "task.comment.delete", task)
+        _require_editable(task)
+        comment = _live_comment(task, comment_id)
+        if actor.user is None:  # unreachable: only a user holds a task permission
+            raise PermissionDeniedError()
+        comment.deleted_at = timezone.now()
+        comment.deleted_by = actor.user
+        comment.save(update_fields=["deleted_at", "deleted_by"])
+        _log(
+            actor,
+            "task.comment_deleted",
+            task,
+            comment_id=str(comment.pk),
+            author_id=str(comment.author_id),
+        )
 
 
 def hand_over_open_tasks(*, actor: Actor, user: User) -> int:

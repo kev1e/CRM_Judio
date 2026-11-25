@@ -5,6 +5,8 @@ from uuid import uuid4
 import pytest
 from rest_framework.test import APIClient
 
+from crm.access import services as access
+from crm.access.permissions import Scope
 from crm.common.actors import Actor
 from crm.conftest import STRONG_PASSWORD, Employee, EmployeeFactory
 from crm.identity import auth
@@ -51,6 +53,12 @@ def team(
     for name in ("olga", "anna", "boris"):
         org.add_member(actor=admin_actor, department_id=sales.pk, user_id=people[name].user.pk)
     org.add_manager(actor=admin_actor, department_id=sales.pk, user_id=people["olga"].user.pk)
+    # Vera may create tasks for any department without seeing them (for Q02).
+    dispatcher = access.create_role(actor=admin_actor, key="dispatcher", name="Постановка задач")
+    access.set_role_grants(
+        actor=admin_actor, role=dispatcher, grants={"task.create": Scope.COMPANY}
+    )
+    access.assign_role(actor=admin_actor, user=people["vera"].user, role=dispatcher)
     return people
 
 
@@ -136,6 +144,7 @@ def test_card_and_detail_carry_what_the_board_needs(
         "checkpoints_use": True,
         "checkpoints_manage": False,
         "comment": True,
+        "comment_delete": False,
         "priority": False,
         "reassign": False,
         "archive": False,
@@ -258,7 +267,7 @@ def test_choices_for_a_new_task(team: dict[str, Employee], sales: Department) ->
 def test_invalid_task_is_refused_with_a_stable_code(
     team: dict[str, Employee], sales: Department
 ) -> None:
-    anna = sign_in(team["anna"])
+    anna = sign_in(team["olga"])
 
     outsider = new_task(anna, sales, team["vera"])
     assert (outsider.status_code, outsider.json()["error"]["code"]) == (
@@ -267,4 +276,15 @@ def test_invalid_task_is_refused_with_a_stable_code(
     )
     blank = call(anna, "post", "/api/v1/tasks", {"title": "  ", "department_id": str(sales.pk)})
     assert blank.status_code == 400
+    assert not Task.objects.exists()
+
+
+def test_employee_cannot_create_a_task(team: dict[str, Employee], sales: Department) -> None:
+    # D037: creating tasks is the manager's.
+    anna = sign_in(team["anna"])
+
+    assert new_task(anna, sales, team["anna"]).status_code == 403
+    assert anna.get("/api/v1/task-departments").status_code == 403
+    assert anna.get(f"/api/v1/task-assignees?department_id={sales.pk}").status_code == 403
+    assert "task.create" not in anna.get("/api/v1/auth/me").json()["permissions"]
     assert not Task.objects.exists()

@@ -46,12 +46,19 @@ _ANY_SCOPE = frozenset({Scope.OWN, Scope.MANAGED_DEPARTMENTS, Scope.COMPANY})
 # manages; COMPANY — every task. A wider scope includes the narrower ones.
 _TASK = (
     PermissionDef("task.read", "See tasks.", _ANY_SCOPE),
-    PermissionDef("task.create", "Create tasks and requests.", _ANY_SCOPE),
+    PermissionDef(
+        "task.create",
+        "Create tasks (D037: a manager, for a managed department).",
+        _DEPARTMENT_OR_COMPANY,
+    ),
     PermissionDef("task.update", "Edit a task's title and description.", _ANY_SCOPE),
     PermissionDef("task.status", "Move a task between statuses, including completion.", _ANY_SCOPE),
     PermissionDef("task.deadline", "Change a task's deadline.", _ANY_SCOPE),
     PermissionDef("task.checkpoints.use", "Add checkpoints and tick them.", _ANY_SCOPE),
     PermissionDef("task.comment", "Comment on a task and edit one's own comments.", _ANY_SCOPE),
+    PermissionDef(
+        "task.comment.delete", "Delete anybody's comment on a task (D038).", _DEPARTMENT_OR_COMPANY
+    ),
     PermissionDef(
         "task.checkpoints.manage", "Rename and remove checkpoints.", _DEPARTMENT_OR_COMPANY
     ),
@@ -153,11 +160,10 @@ ADMINISTRATOR_GRANTS: dict[str, Scope] = {
 }
 
 # What every active employee may do without any role (D002, Q19): work with the
-# tasks assigned to them and create tasks for others.
+# tasks assigned to them. Creating tasks is the manager's (D037).
 BASELINE_GRANTS: dict[str, Scope] = dict.fromkeys(
     (
         "task.read",
-        "task.create",
         "task.update",
         "task.status",
         "task.deadline",

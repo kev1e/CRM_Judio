@@ -66,6 +66,7 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
       checkpoints_use: true,
       checkpoints_manage: false,
       comment: true,
+      comment_delete: false,
       priority: false,
       reassign: false,
       archive: false,
@@ -289,6 +290,37 @@ describe("TaskBoard", () => {
     expect(init?.method).toBe("PATCH");
   });
 
+  it("offers a new task only to somebody who may create one", () => {
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} />);
+
+    expect(screen.queryByRole("button", { name: "Новая задача" })).toBeNull();
+    expect(screen.getByText(/Задачи ставит руководитель отдела/)).toBeInTheDocument();
+  });
+
+  it("lets a manager delete a comment after a confirmation", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const dialog = await openTask(
+      detail({ comments: [theirs], actions: { ...detail().actions, comment_delete: true } }),
+    );
+    fetchMock.mockResolvedValue(Response.json(detail()));
+
+    await user.click(dialog.getByRole("button", { name: "Удалить" }));
+
+    expect(confirm).toHaveBeenCalled();
+    expect(await dialog.findByText("Комментариев пока нет.")).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("/api/v1/tasks/t-1/comments/m-2");
+    expect(init?.method).toBe("DELETE");
+    confirm.mockRestore();
+  });
+
+  it("shows no delete button to somebody who may not delete", async () => {
+    const dialog = await openTask(detail({ comments: [mine, theirs] }));
+
+    expect(dialog.queryByRole("button", { name: "Удалить" })).toBeNull();
+  });
+
   it("shows comments read-only to somebody who may not comment", async () => {
     const dialog = await openTask(
       detail({ comments: [mine], actions: { ...detail().actions, comment: false } }),
@@ -323,7 +355,7 @@ describe("TaskBoard", () => {
         Response.json({ id: "t-2", title: "Счёт для клиента", task: null }, { status: 201 }),
       )
       .mockResolvedValue(Response.json({ results: [] }));
-    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} />);
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} canCreate />);
 
     await user.click(screen.getByRole("button", { name: "Новая задача" }));
     const dialog = within(await screen.findByRole("dialog", { name: "Новая задача" }));

@@ -321,6 +321,16 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### D037 — who creates tasks (`test_tasks.py`, `test_tasks_api.py`, `task-board.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| Manager only | An employee (also for themselves), the administrator and the read-only superuser cannot create a task or ask for the lists of departments and assignees (403 over HTTP); `task.create` is absent from an employee's permissions |
+| Managed department only | A manager is refused for another department and is offered only the managed ones |
+| Assignee | An employee of the department or a manager of it, including a manager who is not a member and the creator themselves; a manager of another department is refused |
+| Revocation | A manager who stops managing the department cannot create tasks on the next call |
+| Web | "Новая задача" is offered only with the right; an employee's empty board says who creates tasks |
+
 ### S4 — comments (`apps/api/crm/tasks/tests/test_comments.py`, `task-board.test.tsx`)
 
 | Requirement | Covered |
@@ -333,6 +343,7 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Access revocation | After reassignment the former assignee neither edits nor reads their comment |
 | Q24 / read-only | Archived and deleted tasks take no new comments or edits; the archive keeps comments readable under the same rules |
 | Audit | Adding and editing are recorded with the comment ID; the text appears in no audit event |
+| D038 deletion | The manager deletes anybody's comment: it disappears for every reader, the row stays with who and when, the audit event carries no text; the author, the superuser and everybody who cannot see the task are refused; a deleted comment cannot be edited or deleted again; no deletion in an archived task; delete button only for the manager, with a confirmation |
 | HTTP | Round trip, 403 for somebody else's comment, 404 for outsiders and unknown IDs, 400 for an empty text, session required |
 | Web | Send and clear the field, edit only one's own, read-only without the right |
 

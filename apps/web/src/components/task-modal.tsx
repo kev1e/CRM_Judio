@@ -44,6 +44,7 @@ const HISTORY_KEYS = [
   "checkpoint_removed",
   "comment_added",
   "comment_edited",
+  "comment_deleted",
 ] as const;
 type HistoryKey = (typeof HISTORY_KEYS)[number] | "other";
 
@@ -538,19 +539,35 @@ export function TaskModal({
                       <span className="font-medium text-foreground">{comment.author.name}</span>
                       <span>{dateTime(comment.created_at)}</span>
                       {comment.edited_at ? <span>· {t("commentEdited")}</span> : null}
-                      {comment.is_own &&
-                      task.actions.comment &&
-                      !locked &&
-                      editingComment !== comment.id ? (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => setEditingComment(comment.id)}
-                          className="ml-auto rounded px-2 underline hover:bg-muted"
-                        >
-                          {t("commentEdit")}
-                        </button>
-                      ) : null}
+                      <span className="ml-auto flex gap-1">
+                        {comment.is_own &&
+                        task.actions.comment &&
+                        !locked &&
+                        editingComment !== comment.id ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setEditingComment(comment.id)}
+                            className="rounded px-2 underline hover:bg-muted"
+                          >
+                            {t("commentEdit")}
+                          </button>
+                        ) : null}
+                        {task.actions.comment_delete && !locked ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              if (window.confirm(t("confirmCommentDelete"))) {
+                                void run(`${base}/comments/${comment.id}`, "DELETE");
+                              }
+                            }}
+                            className="rounded px-2 underline hover:bg-muted"
+                          >
+                            {t("commentDelete")}
+                          </button>
+                        ) : null}
+                      </span>
                     </div>
                     {editingComment === comment.id ? (
                       <form
