@@ -16,6 +16,7 @@ x-backend: &backend
     REDIS_URL: redis://redis:6379/0
     # Empty token: the stack runs, but nobody can sign in (a login needs the bot).
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-https://api.telegram.org}
     WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}

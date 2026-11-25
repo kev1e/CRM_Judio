@@ -126,6 +126,13 @@ if TELEGRAM_ENROLLMENT_TOKEN_TTL_MINUTES < 1:
 # Token of the CRM bot from BotFather. Empty means "no bot": the API still starts,
 # but nobody can sign in, because a login needs approval in Telegram.
 TELEGRAM_BOT_TOKEN: str = env.str("TELEGRAM_BOT_TOKEN", default="")
+# Address of the Bot API. Change it only to a self-hosted Bot API server or a relay
+# under the company's control: that host sees the bot token and every message.
+TELEGRAM_API_BASE_URL: str = env.str(
+    "TELEGRAM_API_BASE_URL", default="https://api.telegram.org"
+).rstrip("/")
+if not TELEGRAM_API_BASE_URL.startswith(("https://", "http://")):
+    raise ImproperlyConfigured("TELEGRAM_API_BASE_URL must be an http(s) URL.")
 # The transport used for outbound messages; tests replace it with a fake.
 TELEGRAM_GATEWAY: str = env.str("TELEGRAM_GATEWAY", default="crm.telegram.gateway.AiogramGateway")
 
@@ -139,6 +146,15 @@ WEB_ORIGINS: list[str] = [
         "WEB_ORIGINS", default=["http://localhost:3000", "http://127.0.0.1:3000"]
     )
 ]
+# The address employees open the CRM at; used in links the bot sends.
+WEB_PUBLIC_URL: str = env.str("WEB_PUBLIC_URL", default=WEB_ORIGINS[0]).rstrip("/")
+if WEB_PUBLIC_URL not in WEB_ORIGINS:
+    raise ImproperlyConfigured("WEB_PUBLIC_URL must be one of WEB_ORIGINS.")
+# PROVISIONAL (docs/OPEN_QUESTIONS.md): how long a password-setup link is valid.
+PASSWORD_SETUP_TOKEN_TTL_MINUTES: int = env.int("PASSWORD_SETUP_TOKEN_TTL_MINUTES", default=30)
+if PASSWORD_SETUP_TOKEN_TTL_MINUTES < 1:
+    raise ImproperlyConfigured("PASSWORD_SETUP_TOKEN_TTL_MINUTES must be at least 1.")
+
 # Send the session cookie over HTTPS only. Browsers accept Secure cookies on
 # http://localhost and http://127.0.0.1, so local development keeps the default.
 SESSION_COOKIE_SECURE: bool = env.bool("SESSION_COOKIE_SECURE", default=True)

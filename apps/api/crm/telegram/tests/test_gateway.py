@@ -52,3 +52,23 @@ def test_prompt_text_names_the_account_and_the_source() -> None:
     assert "12:30:45 UTC" in text
     # Client-supplied text is shown as is; the message is sent without a parse mode.
     assert "<b>Mozilla</b>" in text
+
+
+def test_bot_talks_to_telegram_by_default(settings: Settings) -> None:
+    from crm.telegram.client import build_bot
+
+    bot = build_bot("42:TEST-TOKEN-NOT-REAL")
+
+    assert bot.session.api.base.startswith("https://api.telegram.org/")
+
+
+def test_bot_api_address_can_point_to_a_relay(settings: Settings) -> None:
+    from crm.telegram.client import build_bot
+
+    settings.TELEGRAM_API_BASE_URL = "http://bot-api.internal:8081"
+
+    bot = build_bot("42:TEST-TOKEN-NOT-REAL")
+
+    assert bot.session.api.api_url(token="T", method="getMe") == (
+        "http://bot-api.internal:8081/botT/getMe"
+    )

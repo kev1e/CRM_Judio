@@ -19,7 +19,8 @@ def main() -> None:
 
     from django.conf import settings
 
-    from crm_bot.app import ALLOWED_UPDATES, build_bot, build_dispatcher
+    from crm.telegram.client import build_bot
+    from crm_bot.app import ALLOWED_UPDATES, build_dispatcher
 
     logger = logging.getLogger("crm_bot")
     token: str = settings.TELEGRAM_BOT_TOKEN
