@@ -192,3 +192,61 @@ class Checkpoint(models.Model):
 
     def __str__(self) -> str:
         return f"checkpoint:{self.pk}"
+
+
+class Comment(models.Model):
+    """A comment on a task. Its author never changes; an edit replaces `body`
+    and keeps the previous text as a revision (Q19)."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="task_comments"
+    )
+    body = models.TextField()
+    # 1 for a comment that was never edited.
+    revision = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(db_default=Now())
+    edited_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tasks_comment"
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(condition=~Q(body=""), name="tasks_comment_body_not_empty"),
+            models.CheckConstraint(
+                condition=Q(revision=1, edited_at__isnull=True)
+                | Q(revision__gt=1, edited_at__isnull=False),
+                name="tasks_comment_edit_consistent",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"comment:{self.pk}"
+
+
+class CommentRevision(models.Model):
+    """The text a comment had before an edit. Rows are only ever added."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="revisions")
+    revision = models.PositiveIntegerField()
+    body = models.TextField()
+    # When this text was written (the comment's creation or the previous edit).
+    written_at = models.DateTimeField()
+    replaced_at = models.DateTimeField()
+    replaced_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "tasks_comment_revision"
+        ordering = ["comment", "revision"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["comment", "revision"], name="tasks_comment_revision_unique"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"comment:{self.comment_id}#{self.revision}"

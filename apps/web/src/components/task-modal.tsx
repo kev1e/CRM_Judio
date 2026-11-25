@@ -19,6 +19,8 @@ const ERRORS = [
   "assignee_not_eligible",
   "previous_status_unavailable",
   "invalid_checkpoint",
+  "invalid_comment",
+  "comment_not_found",
   "validation_error",
   "unavailable",
 ] as const;
@@ -40,6 +42,8 @@ const HISTORY_KEYS = [
   "checkpoint_done",
   "checkpoint_undone",
   "checkpoint_removed",
+  "comment_added",
+  "comment_edited",
 ] as const;
 type HistoryKey = (typeof HISTORY_KEYS)[number] | "other";
 
@@ -86,6 +90,8 @@ export function TaskModal({
   const [dirty, setDirty] = useState(false);
   const [assignees, setAssignees] = useState<Options["results"]>([]);
   const checkpointRef = useRef<HTMLFormElement>(null);
+  const commentRef = useRef<HTMLFormElement>(null);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
   const base = `${API_PATHS.tasks}/${taskId}`;
 
   useEffect(() => {
@@ -511,6 +517,115 @@ export function TaskModal({
               <p className="text-xs text-muted-foreground">{t("checkpointsNote")}</p>
             </div>
           </details>
+
+          <section aria-labelledby="task-comments" className="flex flex-col gap-3">
+            <h3 id="task-comments" className="text-sm font-medium">
+              {t("commentsTitle")}
+              {task.comments.length > 0 ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  {t("commentsCount", { count: task.comments.length })}
+                </span>
+              ) : null}
+            </h3>
+            {task.comments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noComments")}</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {task.comments.map((comment) => (
+                  <li key={comment.id} className="rounded-md border border-border p-3 text-sm">
+                    <div className="mb-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{comment.author.name}</span>
+                      <span>{dateTime(comment.created_at)}</span>
+                      {comment.edited_at ? <span>· {t("commentEdited")}</span> : null}
+                      {comment.is_own &&
+                      task.actions.comment &&
+                      !locked &&
+                      editingComment !== comment.id ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setEditingComment(comment.id)}
+                          className="ml-auto rounded px-2 underline hover:bg-muted"
+                        >
+                          {t("commentEdit")}
+                        </button>
+                      ) : null}
+                    </div>
+                    {editingComment === comment.id ? (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          const text = String(new FormData(event.currentTarget).get("text") ?? "");
+                          void run(`${base}/comments/${comment.id}`, "PATCH", { text }).then(
+                            (ok) => {
+                              if (ok) {
+                                setEditingComment(null);
+                              }
+                            },
+                          );
+                        }}
+                        className="flex flex-col gap-2"
+                      >
+                        <textarea
+                          name="text"
+                          required
+                          maxLength={5000}
+                          rows={3}
+                          defaultValue={comment.text}
+                          aria-label={t("commentEditLabel")}
+                          className={`${fieldClass} h-auto py-2`}
+                        />
+                        <div className="flex gap-2">
+                          <button type="submit" disabled={busy} className={buttonClass}>
+                            {t("save")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingComment(null)}
+                            className={buttonClass}
+                          >
+                            {t("cancel")}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p className="break-words whitespace-pre-wrap">{comment.text}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {task.actions.comment && !locked ? (
+              <form
+                ref={commentRef}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const text = String(new FormData(event.currentTarget).get("text") ?? "");
+                  void run(`${base}/comments`, "POST", { text }).then((ok) => {
+                    if (ok) {
+                      commentRef.current?.reset();
+                    }
+                  });
+                }}
+                className="flex flex-col gap-2"
+              >
+                <textarea
+                  name="text"
+                  required
+                  maxLength={5000}
+                  rows={2}
+                  aria-label={t("commentPlaceholder")}
+                  placeholder={t("commentPlaceholder")}
+                  className={`${fieldClass} h-auto py-2`}
+                />
+                <button type="submit" disabled={busy} className={`${buttonClass} self-start`}>
+                  {t("commentAdd")}
+                </button>
+              </form>
+            ) : null}
+            <p className="text-xs text-muted-foreground">{t("commentsNote")}</p>
+          </section>
 
           <details className="rounded-md border border-border p-3">
             <summary className="cursor-pointer text-sm font-medium">{t("historyTitle")}</summary>

@@ -59,6 +59,19 @@ class CheckpointSerializer(serializers.Serializer[Any]):
     is_done = serializers.BooleanField()
 
 
+class CommentSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    author = NamedSerializer()
+    text = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    edited_at = serializers.DateTimeField(allow_null=True)
+    is_own = serializers.BooleanField(help_text="Written by the viewer.")
+
+
+class CommentWriteSerializer(serializers.Serializer[Any]):
+    text = serializers.CharField(max_length=5000, trim_whitespace=True)
+
+
 class HistoryEntrySerializer(serializers.Serializer[Any]):
     occurred_at = serializers.DateTimeField()
     action = serializers.CharField()
@@ -71,6 +84,7 @@ class TaskActionsSerializer(serializers.Serializer[Any]):
     deadline = serializers.BooleanField()
     checkpoints_use = serializers.BooleanField()
     checkpoints_manage = serializers.BooleanField()
+    comment = serializers.BooleanField()
     priority = serializers.BooleanField()
     reassign = serializers.BooleanField()
     archive = serializers.BooleanField()
@@ -83,6 +97,7 @@ class TaskDetailSerializer(TaskCardSerializer):
     created_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField(allow_null=True)
     checkpoints = CheckpointSerializer(many=True)
+    comments = CommentSerializer(many=True)
     history = HistoryEntrySerializer(many=True)
     actions = TaskActionsSerializer(
         help_text="What the interface may offer. Every operation is checked again by the server."

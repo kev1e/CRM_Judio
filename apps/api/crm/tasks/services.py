@@ -32,6 +32,8 @@ from crm.organization.models import Department, DepartmentMembership
 from crm.tasks import policy
 from crm.tasks.models import (
     Checkpoint,
+    Comment,
+    CommentRevision,
     Priority,
     StatusCategory,
     StatusTransition,
@@ -515,6 +517,83 @@ def remove_checkpoint(*, actor: Actor, task_id: UUID, checkpoint_id: UUID) -> No
 
 
 # --- Deactivation hand-over (D019, Q08) -------------------------------------
+
+
+# --- Comments ---------------------------------------------------------------
+
+COMMENT_MAX_LENGTH = 5000
+
+
+def _clean_comment(raw: str) -> str:
+    body = raw.replace("\r\n", "\n").strip()
+    if not body or len(body) > COMMENT_MAX_LENGTH:
+        raise DomainError(
+            "invalid_comment", f"A comment needs a text of up to {COMMENT_MAX_LENGTH} characters."
+        )
+    return body
+
+
+def comments(actor: Actor, task: Task) -> QuerySet[Comment]:
+    """Comments of a task the actor may see. Everybody who sees the task reads them."""
+    if not policy.allowed(actor, policy.READ, task):
+        return Comment.objects.none()
+    return task.comments.select_related("author")
+
+
+def add_comment(*, actor: Actor, task_id: UUID, body: str) -> Comment:
+    """Q19: the assignee and the manager comment. The comment's text is never
+    copied into the audit log."""
+    clean = _clean_comment(body)
+    with transaction.atomic():
+        task = _locked(actor, task_id)
+        policy.require(actor, "task.comment", task)
+        _require_editable(task)
+        if actor.user is None:  # unreachable: only a user holds a task permission
+            raise PermissionDeniedError()
+        comment = Comment.objects.create(task=task, author=actor.user, body=clean)
+        _log(actor, "task.comment_added", task, comment_id=str(comment.pk))
+    return comment
+
+
+def edit_comment(*, actor: Actor, task_id: UUID, comment_id: UUID, body: str) -> Comment:
+    """Only the author edits a comment, and only while they still may comment on
+    the task. The previous text is kept as a revision.
+
+    PROVISIONAL (docs/OPEN_QUESTIONS.md): no time limit for editing.
+    """
+    clean = _clean_comment(body)
+    with transaction.atomic():
+        task = _locked(actor, task_id)
+        policy.require(actor, "task.comment", task)
+        _require_editable(task)
+        comment = Comment.objects.select_for_update().filter(pk=comment_id, task=task).first()
+        if comment is None:
+            raise DomainError("comment_not_found", "No such comment.")
+        if actor.user is None or comment.author_id != actor.user.pk:
+            raise PermissionDeniedError()
+        if clean == comment.body:
+            return comment
+        now = timezone.now()
+        CommentRevision.objects.create(
+            comment=comment,
+            revision=comment.revision,
+            body=comment.body,
+            written_at=comment.edited_at or comment.created_at,
+            replaced_at=now,
+            replaced_by=actor.user,
+        )
+        comment.body = clean
+        comment.revision += 1
+        comment.edited_at = now
+        comment.save(update_fields=["body", "revision", "edited_at"])
+        _log(
+            actor,
+            "task.comment_edited",
+            task,
+            comment_id=str(comment.pk),
+            revision=comment.revision,
+        )
+    return comment
 
 
 def hand_over_open_tasks(*, actor: Actor, user: User) -> int:

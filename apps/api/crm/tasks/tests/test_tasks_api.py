@@ -135,6 +135,7 @@ def test_card_and_detail_carry_what_the_board_needs(
         "deadline": True,
         "checkpoints_use": True,
         "checkpoints_manage": False,
+        "comment": True,
         "priority": False,
         "reassign": False,
         "archive": False,

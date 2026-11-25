@@ -55,6 +55,7 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
     created_at: "2026-11-25T10:00:00Z",
     completed_at: null,
     checkpoints: [{ id: "c-1", text: "Собрать данные", is_done: true }],
+    comments: [],
     history: [
       { occurred_at: "2026-11-25T10:00:00Z", action: "task.created", actor_name: "Ольга Смирнова" },
     ],
@@ -64,6 +65,7 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
       deadline: true,
       checkpoints_use: true,
       checkpoints_manage: false,
+      comment: true,
       priority: false,
       reassign: false,
       archive: false,
@@ -218,6 +220,83 @@ describe("TaskBoard", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ is_done: true });
     expect(await dialog.findByRole("checkbox", { name: "Собрать данные" })).toBeChecked();
     expect(dialog.getByRole("combobox", { name: "Статус" })).toHaveValue("todo");
+  });
+
+  const mine = {
+    id: "m-1",
+    author: { id: "u-anna", name: "Анна Петрова" },
+    text: "Клиент ждёт ответа",
+    created_at: "2026-11-25T11:00:00Z",
+    edited_at: null,
+    is_own: true,
+  };
+  const theirs = {
+    ...mine,
+    id: "m-2",
+    author: { id: "u-olga", name: "Ольга Смирнова" },
+    text: "Согласовано",
+    is_own: false,
+  };
+
+  async function openTask(first: TaskDetail) {
+    fetchMock.mockResolvedValueOnce(Response.json(first));
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[card()]} />);
+    await userEvent.click(screen.getByRole("button", { name: /Подготовить предложение/ }));
+    return within(await screen.findByRole("dialog"));
+  }
+
+  it("sends a comment and shows it", async () => {
+    const user = userEvent.setup();
+    const dialog = await openTask(detail());
+    expect(dialog.getByText("Комментариев пока нет.")).toBeInTheDocument();
+    fetchMock.mockResolvedValue(Response.json(detail({ comments: [mine] })));
+
+    await user.type(dialog.getByRole("textbox", { name: "Новый комментарий" }), mine.text);
+    await user.click(dialog.getByRole("button", { name: "Отправить" }));
+
+    expect(await dialog.findByText(mine.text)).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("/api/v1/tasks/t-1/comments");
+    expect(JSON.parse(String(init?.body))).toEqual({ text: mine.text });
+    expect(dialog.getByRole("textbox", { name: "Новый комментарий" })).toHaveValue("");
+  });
+
+  it("lets the viewer edit only their own comment", async () => {
+    const user = userEvent.setup();
+    const dialog = await openTask(detail({ comments: [mine, theirs] }));
+    fetchMock.mockResolvedValue(
+      Response.json(
+        detail({
+          comments: [{ ...mine, text: "Исправлено", edited_at: "2026-11-25T12:00:00Z" }, theirs],
+        }),
+      ),
+    );
+
+    expect(dialog.getAllByRole("button", { name: "Изменить" })).toHaveLength(1);
+    await user.click(dialog.getByRole("button", { name: "Изменить" }));
+    const field = dialog.getByRole("textbox", { name: "Текст комментария" });
+    expect(field).toHaveValue(mine.text);
+    await user.clear(field);
+    await user.type(field, "Исправлено");
+    await user.click(
+      within(field.closest("form") as HTMLElement).getByRole("button", { name: "Сохранить" }),
+    );
+
+    expect(await dialog.findByText("Исправлено")).toBeInTheDocument();
+    expect(dialog.getByText("· изменён")).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("/api/v1/tasks/t-1/comments/m-1");
+    expect(init?.method).toBe("PATCH");
+  });
+
+  it("shows comments read-only to somebody who may not comment", async () => {
+    const dialog = await openTask(
+      detail({ comments: [mine], actions: { ...detail().actions, comment: false } }),
+    );
+
+    expect(dialog.getByText(mine.text)).toBeInTheDocument();
+    expect(dialog.queryByRole("textbox", { name: "Новый комментарий" })).toBeNull();
+    expect(dialog.queryByRole("button", { name: "Изменить" })).toBeNull();
   });
 
   it("explains a task the viewer cannot open", async () => {
