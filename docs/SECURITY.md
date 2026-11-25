@@ -117,4 +117,27 @@ Implemented and covered by automated tests:
 - Telegram enrollment (Q11), domain part: the binding code is 256 bits of randomness, stored only as a SHA-256 hash, valid once and for a limited time; issuing a new code revokes the previous one. Binding takes the numeric Telegram ID from the update, never from user text, and never uses the username as identity. Codes sent outside a private chat, replayed, altered, expired, revoked, for a deactivated or already bound account, or from a Telegram account bound elsewhere are refused with one generic answer and audited with the real reason. Re-binding is impossible here: it is a recovery action.
 - Binding codes for the first administrator can be issued from the CLI only until an administrator has bound Telegram.
 
-Not implemented yet (so nothing can sign in to the CRM yet): the bot process itself, login with bot approval, sessions, throttling, email verification, the recovery workflow, the emergency administrator account.
+Not implemented yet: user provisioning screens, email verification, the recovery workflow, the emergency administrator account.
+
+## Implementation status (S1.2b, S1.3) — sign-in
+
+Implemented and covered by automated tests:
+
+- **Login (Q13, Q30).** CRM login + password, then approval in Telegram. A wrong password, an unknown login, an account without a password and a deactivated account all get the same `invalid_credentials` answer after the same amount of hashing work; the real reason goes only to the audit log. A login that matches no account is not written to the audit log (people type passwords into the wrong field). "Not bound to Telegram" is told only to somebody who already proved the password.
+- **Challenge.** Lives 180 seconds (also a database constraint), one live challenge per account (a new attempt cancels the previous one). It is bound to the account, to the numeric Telegram ID bound at that moment and to the browser that sent the password. A decision counts only from that Telegram ID, only once, only before expiry, and only while the binding and the account are unchanged; everything else is refused with one generic answer and audited with its reason. The callback data of the buttons carries no secret.
+- **Collecting the session.** The browser proves it started the attempt with a 256-bit secret kept in an HttpOnly, SameSite=Strict cookie scoped to `/api/v1/auth/` (only its SHA-256 is stored). An approval is exchanged for a session exactly once (state machine under a row lock, plus a one-session-per-challenge unique constraint). Cancelling in the browser disarms the prompt in Telegram.
+- **Sessions.** Random 256-bit token in an HttpOnly, Secure, SameSite=Lax cookie with the `__Host-` prefix; only its SHA-256 is stored. Absolute lifetime 12 hours from issuance, never prolonged (also a database constraint). Every request re-reads the session, its expiry, its revocation and the account's active state from PostgreSQL, and permissions are read live, so deactivation, logout and changes of rights apply to open sessions at once. A password change ends all sessions of the user and cancels waiting attempts.
+- **Deny by default.** Every API view needs a session unless it declares otherwise (health probes, the two login steps, logout).
+- **CSRF / login CSRF.** A state-changing request is accepted only with an `Origin` from `WEB_ORIGINS`, or with no `Origin` and no CRM cookie at all (a script, not a browser session).
+- **Throttling (Q13).** Progressive delays, never a permanent lock, counters start over after a quiet period: per login+address, per login, per address, per account for Telegram prompts (a stolen password cannot be used to flood the owner's Telegram), per Telegram account for wrong binding codes. Unknown logins are throttled exactly like real ones. Subjects are stored as keyed hashes. **The thresholds are provisional** (`OPEN_QUESTIONS.md`).
+- **Client address.** `X-Forwarded-For` is honoured only for `TRUSTED_PROXY_HOPS` proxies and read from the trusted end; the web application does not forward client-supplied address headers.
+- **Telegram outage (Q13).** If the queue or Telegram is unavailable, or Telegram refuses the message, the prompt is marked failed and the login cannot complete; open sessions are unaffected.
+- **Bot.** Takes identity only from the update (`from_user.id`), never from text or the username; asks Telegram only for messages addressed to it and button presses; stores nothing from chats; stays silent in groups; deletes the message that contained a binding code.
+- **Login form.** Submits by POST even when page scripts fail to load, so the password can never reach the address bar; the password field is cleared after a failed attempt.
+
+Residual risks and limits of this slice:
+
+- Local Docker Compose has no reverse proxy yet, so the API sees every browser at the web container's address: the per-address counters are shared by all users there. The per-login and per-prompt counters still work. The real client address arrives with the HTTPS ingress (S8) and `TRUSTED_PROXY_HOPS`.
+- No TLS/HSTS inside the stack yet (S8). The session cookie is nevertheless always `Secure`.
+- Expired sessions, challenges and throttle counters are not purged yet; they are inert rows. A cleanup job belongs to S8.
+- A prompt may be delivered twice if a worker crashes between sending and recording it; both messages act on the same single-use challenge.

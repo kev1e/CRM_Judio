@@ -41,7 +41,7 @@ Stack revised on 2026-11-19 (D025, D026, D029, D030 in `DECISIONS.md`).
 | pytest / pytest-django | 9.2.0 / 4.14.0 | |
 | Ruff / mypy | 0.17.4 / 2.4.1 | With django-stubs 6.1.2, djangorestframework-stubs 3.18.2, celery-types 0.26.0 |
 | PostgreSQL / Redis | 18.7 / 8.10.3 | Docker images |
-| aiogram / argon2-cffi | 3.32.0 / 25.1.0 | Verified in the pre-S0 smoke project; installed in S1 |
+| aiogram / argon2-cffi | 3.32.0 / 25.1.0 | aiogram left the 7-day quarantine on 2026-11-22 and is installed since S1.2b |
 
 Compatibility evidence (D031 condition "after checking compatibility with all tools"):
 
@@ -67,7 +67,7 @@ apps/
   web/            # Next.js web app (TypeScript)
   api/            # Django project + DRF API; all domain apps (modules) live here
   worker/         # Celery app entrypoint, worker/beat runtime config and worker tests; imports domain services from api
-  telegram-bot/   # aiogram bot process — added in S1 (login approval), extended in S6
+  telegram-bot/   # aiogram bot process (crm_bot): Telegram binding and login approval; extended in S6
   telegram-mini/  # Optional dedicated Mini App front-end — S6
 packages/
   contracts/      # OpenAPI schema exported from the API + generated TypeScript types; no hand-written business logic
@@ -83,7 +83,7 @@ uv.lock
 package.json  pnpm-workspace.yaml  pnpm-lock.yaml  turbo.json
 ```
 
-S0 created `apps/web`, `apps/api`, `apps/worker`, `packages/contracts`, `packages/config` and `e2e`.
+S0 created `apps/web`, `apps/api`, `apps/worker`, `packages/contracts`, `packages/config` and `e2e`; S1 added `apps/telegram-bot`.
 
 Rules:
 
@@ -91,6 +91,9 @@ Rules:
 - The Celery application object is defined in `apps/api/crm/celery.py`, next to the settings, because the API process enqueues tasks; `apps/worker` re-exports it and owns the worker runtime and its tests.
 - `apps/worker` and the bot hold no business rules; Celery tasks and bot handlers call the same domain services as the HTTP views.
 - `apps/web` talks to the backend only through HTTP using the generated contract types. It never connects to PostgreSQL or Redis.
+- The browser talks only to the web origin. `/api/v1/*` there is a relay (`apps/web/src/lib/api-proxy.ts`) to the API on the internal network: it forwards cookies, `Origin` and the body, adds nothing and decides nothing. Server components ask the API who the request's cookies belong to on every render. When the HTTPS ingress arrives (S8) it may route `/api/` to the API directly.
+- `crm.telegram` (inside `apps/api`, not a Django app) is the only code that sends to Telegram from synchronous code; `settings.TELEGRAM_GATEWAY` names the transport, and tests use a recording one. The bot process answers through aiogram itself.
+- The API is deny-by-default: `SessionAuthentication` + `IsAuthenticated` are the DRF defaults; a view open to anonymous callers says so explicitly.
 - D032 (approved): own user model, no Django admin site (`/admin` does not exist; administration is CRM screens over the DRF API), own scoped RBAC. None of `django.contrib.auth`, `admin`, `sessions`, `contenttypes` is installed.
 - **Authorization** lives in `crm.access` and is the only place that answers "may this actor do this": REST views, Celery tasks and Telegram handlers all call it. Grants are read from PostgreSQL on every check, so a change of rights applies to already open sessions at once.
 - **Audit** lives in `crm.audit`: append-only events written by the domain services in the same transaction as the change.
@@ -98,7 +101,7 @@ Rules:
 
 ## Key modules and their responsibilities
 
-Implemented so far as Django apps in `apps/api/crm`: `system` (probes), `identity` (users, password policy), `access` (roles, scoped grants, the authorization service), `audit` (append-only events). Shared building blocks are in `crm/common`: `Actor` (who performs an operation — a user, a system component or a CLI operator), `DomainError`/`PermissionDeniedError`, UUIDv7 identifiers and the error envelope.
+Implemented so far as Django apps in `apps/api/crm`: `system` (probes), `identity` (users, password policy, Telegram binding, sign-in, sessions, throttling), `access` (roles, scoped grants, the authorization service), `audit` (append-only events). Shared building blocks are in `crm/common`: `Actor` (who performs an operation — a user, a system component or a CLI operator), `DomainError`/`PermissionDeniedError`, UUIDv7 identifiers and the error envelope.
 
 - **Identity/Session:** passwords, sessions, user lifecycle, Telegram binding, MFA challenges and recovery workflows.
 - **Organization/RBAC:** departments, memberships, managed departments, roles/grants, scoped policy evaluator, immediate invalidation.

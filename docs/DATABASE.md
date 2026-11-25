@@ -193,4 +193,14 @@ Notes:
 - The built-in `administrator` role is created by a data migration; its grants change only through migrations.
 - `permissions_version` is incremented in the same transaction as any change of the user's roles or of the grants of a role they hold.
 - The audit row has no department scope column yet; it is added with departments in S2 (Q14 scoped reading).
-- Not built yet: sessions, login challenges, throttling counters, the Telegram binding lifecycle history beyond audit events, recovery requests, the emergency-account marker.
+- Not built yet: the Telegram binding lifecycle history beyond audit events, recovery requests, the emergency-account marker.
+
+### S1.3 — sign-in
+
+| Table | Columns | Constraints |
+|---|---|---|
+| `identity_login_challenge` | `id` UUIDv7, `user_id`, `telegram_user_id` (the binding at creation), `attempt_key_hash` (SHA-256 hex of the browser's secret), `status` (`pending`/`approved`/`denied`/`consumed`/`cancelled`), `delivery` (`pending`/`sent`/`failed`), `telegram_message_id`, `ip_address`, `user_agent`, `created_at`, `expires_at`, `decided_at`, `consumed_at` | at most one `pending` row per user; `expires_at` ≤ `created_at` + 180 s; `consumed_at` set ⇔ status `consumed`; hash unique and format-checked |
+| `identity_session` | `id` UUIDv7, `user_id`, `challenge_id`, `token_hash` (SHA-256 hex), `permissions_version` (informational), `ip_address`, `user_agent`, `created_at`, `expires_at`, `revoked_at`, `revoked_reason` | one session per challenge; `expires_at` ≤ `created_at` + 12 h; hash unique and format-checked; revocation time and reason set together |
+| `identity_throttle_counter` | `id`, `kind` (`login_source`/`login`/`source`/`mfa`/`enrollment`), `subject_digest` (HMAC-SHA-256 of the subject), `failures`, `last_failure_at`, `blocked_until` | one row per (kind, subject) |
+
+"Expired" is not a stored challenge state: it is a `pending` or `approved` row past `expires_at`. Neither the browser's attempt secret nor the session token is stored; rights are never read from the session row. Old rows of these three tables are not purged yet (S8).
