@@ -36,11 +36,16 @@ export default async function HomePage() {
             </h1>
             <p className="text-muted-foreground">{t("description")}</p>
             {session.me.permissions["user.read"] ? (
-              <nav>
+              <nav className="flex gap-4">
                 {}
                 <a href="/users" className="underline underline-offset-4">
                   {t("users")}
                 </a>
+                {session.me.permissions["department.read"] ? (
+                  <a href="/departments" className="underline underline-offset-4">
+                    {t("departments")}
+                  </a>
+                ) : null}
               </nav>
             ) : null}
           </>

@@ -1,4 +1,4 @@
-import { API_PATHS, type UserList } from "@crm/contracts";
+import { API_PATHS, type DepartmentList, type UserList } from "@crm/contracts";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -23,6 +23,19 @@ async function fetchUsers(cookieHeader: string): Promise<UserList | null> {
   }
 }
 
+async function fetchDepartments(cookieHeader: string): Promise<DepartmentList["results"]> {
+  try {
+    const response = await fetch(new URL(API_PATHS.departments, getApiInternalUrl()), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json", Cookie: cookieHeader },
+    });
+    return response.ok ? ((await response.json()) as DepartmentList).results : [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function UsersPage() {
   const t = await getTranslations("users");
   const cookieHeader = (await cookies()).toString();
@@ -36,6 +49,10 @@ export default async function UsersPage() {
     notFound();
   }
   const { permissions, user } = session.me;
+  // Open departments the viewer may see; for a manager these are the managed ones.
+  const departments = permissions["department.read"]
+    ? (await fetchDepartments(cookieHeader)).filter((department) => department.is_active)
+    : [];
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-6 px-4 py-6">
@@ -52,9 +69,11 @@ export default async function UsersPage() {
           initialUsers={list.results}
           currentUserId={user.id}
           permissions={{
-            create: permissions["user.create"] === "company",
+            create: Boolean(permissions["user.create"]),
             deactivate: permissions["user.deactivate"] === "company",
           }}
+          departments={departments.map(({ id, name }) => ({ id, name }))}
+          departmentRequired={permissions["user.create"] === "managed_departments"}
         />
       </main>
     </div>

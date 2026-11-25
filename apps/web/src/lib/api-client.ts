@@ -22,7 +22,7 @@ function errorCode(body: unknown): string | null {
  */
 export async function callApi<T>(
   path: string,
-  init: { method: "GET" | "POST"; body?: unknown },
+  init: { method: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown },
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApiResult<T>> {
   try {
