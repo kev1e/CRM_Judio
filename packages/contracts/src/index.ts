@@ -10,4 +10,6 @@ export const API_PATHS = {
   loginComplete: "/api/v1/auth/login/complete",
   me: "/api/v1/auth/me",
   logout: "/api/v1/auth/logout",
+  passwordSetup: "/api/v1/auth/password/setup",
+  users: "/api/v1/users",
 } as const satisfies Record<string, `/api/v${number}/${string}`>;
