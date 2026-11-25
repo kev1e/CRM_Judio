@@ -302,3 +302,10 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - New dependencies: `boto3` (runtime) and `moto`, `boto3-stubs` (tests and typing).
 - Not a product decision, listed as provisional in `OPEN_QUESTIONS.md`: who removes a file (the manager), the archive limits, legacy `.doc`/`.xls` accepted without macro inspection, downloads not written to the audit log.
 - The S3 adapter was exercised against the `moto` emulator only. It has **not** been run against a real provider: none is chosen yet.
+
+### 2026-11-26 — projects and invitations implemented (D004, D018, Q10; no new product decision)
+
+- Built: projects owned by one department, participants, and the invitation of another department's employee with approval. Approved rules implemented as written: a manager adds an employee of a department they manage directly; anybody else is invited and gets nothing until a manager of the department of participation approves, or a superuser with the separate `project.invitation.approve` grant (Q29); the requester names the department of participation among the employee's current departments and everything is checked again at the decision (Q10); membership never shows a task (D003).
+- The administrator role holds no project permission (capability matrix: "only with explicit permissions").
+- Tasks are not linked to projects yet (the "optional project" field of a task): next slice.
+- Provisional choices are in `OPEN_QUESTIONS.md`.

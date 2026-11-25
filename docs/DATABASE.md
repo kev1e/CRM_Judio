@@ -230,6 +230,9 @@ Managing and belonging are separate tables on purpose. The built-in `department_
 | `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
 | `tasks_checkpoint` | `id`, `task_id`, `label`, `position`, `is_done`, `done_by_id`, `done_at`, `created_at` | done state, author and time set together |
 
+| `projects_project` | `id`, `name`, `owning_department_id`, `is_active`, `created_by_id`, `created_at` | name unique regardless of case, not empty |
+| `projects_member` | `id`, `project_id`, `user_id`, `participation_department_id`, `added_by_id`, `joined_at` | one row per project and user |
+| `projects_invitation` | `id`, `project_id`, `user_id`, `participation_department_id`, `requested_by_id`, `state` (`pending`/`approved`/`declined`/`cancelled`), `decided_by_id`, `decided_at`, `reason`, `created_at` | one pending invitation per project and user; decision author and time set exactly when decided |
 | `tasks_attachment` | `id`, `task_id`, `uploader_id`, `storage`, `storage_key`, `original_name`, `content_type`, `byte_size`, `sha256`, `created_at`, `deleted_at`, `deleted_by_id` | key unique; name not empty and size positive; deletion time and author set together |
 | `tasks_comment` | `id`, `task_id`, `author_id`, `body`, `revision`, `created_at`, `edited_at`, `deleted_at`, `deleted_by_id` | body not empty; `revision = 1` ⇔ never edited; deletion time and author set together |
 | `tasks_comment_revision` | `id`, `comment_id`, `revision`, `body`, `written_at`, `replaced_at`, `replaced_by_id` | one row per comment and revision; rows are only added |
