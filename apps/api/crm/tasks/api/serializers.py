@@ -85,6 +85,7 @@ class TaskActionsSerializer(serializers.Serializer[Any]):
     checkpoints_use = serializers.BooleanField()
     checkpoints_manage = serializers.BooleanField()
     comment = serializers.BooleanField()
+    comment_delete = serializers.BooleanField()
     priority = serializers.BooleanField()
     reassign = serializers.BooleanField()
     archive = serializers.BooleanField()

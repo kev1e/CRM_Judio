@@ -161,6 +161,8 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `role.manage` | company | **No** — administrator only |
 | `role.assign` | company | **No** — administrator only |
 | `audit.read` | managed departments, company | Yes (Q14: a superuser needs this separate grant) |
+| `task.create` | managed departments, company | Yes. D037: held by the department manager for managed departments; not by an ordinary employee |
+| `task.comment.delete` | managed departments, company | Yes. D038: held by the department manager; the comment's author alone cannot delete |
 | `task.comment` | own, managed departments, company | Yes. Every active employee holds it for the tasks assigned to them, a manager for the managed departments; a superuser does not (Q29). Editing is limited to one's own comments |
 | `workflow.manage` | company | **No** — administrator only. Configures task statuses and moves (D005, Q09); shows task counts per status and never a task |
 
@@ -188,7 +190,7 @@ Catalogue (`task.*`), with cumulative scopes: `own` = tasks assigned to the user
 | Permission | Every employee (no role) | Department manager | Superuser role | Administrator role |
 |---|---|---|---|---|
 | `task.read` | own | managed | **company** | — |
-| `task.create` | yes | yes | — | — |
+| `task.create` | — (D037) | yes | — | — |
 | `task.update` (title, description) | own | managed | — | — |
 | `task.status` (incl. completion) | own | managed | — | — |
 | `task.deadline` | own | managed | — | — |

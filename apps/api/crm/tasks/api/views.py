@@ -44,6 +44,7 @@ _ACTION_KEYS = {
     "task.checkpoints.use": "checkpoints_use",
     "task.checkpoints.manage": "checkpoints_manage",
     "task.comment": "comment",
+    "task.comment.delete": "comment_delete",
     "task.priority": "priority",
     "task.reassign": "reassign",
     "task.archive": "archive",
@@ -401,4 +402,14 @@ class TaskCommentView(APIView):
             comment_id=comment_id,
             body=serializer.validated_data["text"],
         )
+        return _task_response(actor, task_id)
+
+    @extend_schema(
+        operation_id="tasks_delete_comment",
+        responses={200: TaskDetailSerializer, **_ERRORS},
+        tags=["tasks"],
+    )
+    def delete(self, request: Request, task_id: UUID, comment_id: UUID) -> Response:
+        actor = _actor(request)
+        services.delete_comment(actor=actor, task_id=task_id, comment_id=comment_id)
         return _task_response(actor, task_id)

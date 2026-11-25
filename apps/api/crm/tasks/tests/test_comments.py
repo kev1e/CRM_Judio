@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from crm.access import services as access
 from crm.access.models import Role
@@ -221,9 +222,90 @@ def test_comment_of_another_task_is_not_found(world: World) -> None:  # noqa: F8
 
 def test_database_refuses_inconsistent_comments(world: World) -> None:  # noqa: F811
     task = make_task(world)
-    for fields in ({"body": ""}, {"body": "x", "revision": 2}):
+    for fields in (
+        {"body": ""},
+        {"body": "x", "revision": 2},
+        {"body": "x", "deleted_at": timezone.now()},
+    ):
         with pytest.raises(IntegrityError), transaction.atomic():
             Comment.objects.create(task=task, author_id=uid(world.anna), **fields)
+
+
+# --- Deleting (D038) --------------------------------------------------------
+
+
+def test_manager_deletes_any_comment_and_it_disappears(world: World) -> None:  # noqa: F811
+    task = make_task(world)
+    kept = services.add_comment(actor=world.olga, task_id=task.pk, body="Остаётся")
+    gone = services.add_comment(actor=world.anna, task_id=task.pk, body=SECRET_TEXT)
+
+    services.delete_comment(actor=world.olga, task_id=task.pk, comment_id=gone.pk)
+
+    assert list(services.comments(world.anna, task)) == [kept]
+    stored = Comment.objects.get(pk=gone.pk)
+    assert stored.deleted_at is not None
+    assert stored.deleted_by_id == uid(world.olga)
+    assert stored.body == SECRET_TEXT  # hidden, not erased
+    event = AuditEvent.objects.get(action="task.comment_deleted")
+    assert event.metadata["comment_id"] == str(gone.pk)
+    assert event.metadata["author_id"] == str(uid(world.anna))
+    assert SECRET_TEXT not in str(event.metadata)
+    # A deleted comment can be neither edited nor deleted again.
+    for operation in (
+        lambda: services.edit_comment(
+            actor=world.anna, task_id=task.pk, comment_id=gone.pk, body="Вернуть"
+        ),
+        lambda: services.delete_comment(actor=world.olga, task_id=task.pk, comment_id=gone.pk),
+    ):
+        with pytest.raises(DomainError) as error:
+            operation()
+        assert error.value.code == "comment_not_found"
+
+
+def test_only_the_manager_deletes(world: World) -> None:  # noqa: F811
+    assert "task.comment.delete" not in BASELINE_GRANTS
+    assert DEPARTMENT_MANAGER_GRANTS["task.comment.delete"] is Scope.MANAGED_DEPARTMENTS
+    task = make_task(world)
+    comment = services.add_comment(actor=world.anna, task_id=task.pk, body="Моё")
+
+    # Not the author, not the read-only superuser.
+    for actor in (world.anna, world.zoya):
+        with pytest.raises(PermissionDeniedError):
+            services.delete_comment(actor=actor, task_id=task.pk, comment_id=comment.pk)
+    # People who cannot see the task, a manager of another department included.
+    for actor in (world.boris, world.pavel, world.vera, world.admin):
+        with pytest.raises(DomainError) as error:
+            services.delete_comment(actor=actor, task_id=task.pk, comment_id=comment.pk)
+        assert error.value.code == "task_not_found"
+    assert Comment.objects.get(pk=comment.pk).deleted_at is None
+    assert not AuditEvent.objects.filter(action="task.comment_deleted").exists()
+
+
+def test_comment_of_an_archived_task_is_not_deleted(world: World) -> None:  # noqa: F811
+    task = make_task(world)
+    comment = services.add_comment(actor=world.anna, task_id=task.pk, body="Моё")
+    services.archive_task(actor=world.olga, task_id=task.pk)
+    with pytest.raises(DomainError) as error:
+        services.delete_comment(actor=world.olga, task_id=task.pk, comment_id=comment.pk)
+    assert error.value.code == "task_archived"
+
+
+def test_api_delete_comment(
+    team: dict[str, Employee],  # noqa: F811
+    sales: Department,  # noqa: F811
+) -> None:
+    olga, anna = sign_in(team["olga"]), sign_in(team["anna"])
+    task_id = new_task(olga, sales, team["anna"]).json()["id"]
+    base = f"/api/v1/tasks/{task_id}"
+    comment_id = call(anna, "post", f"{base}/comments", {"text": "Моё"}).json()["comments"][0]["id"]
+
+    assert call(anna, "get", base).json()["actions"]["comment_delete"] is False
+    assert call(anna, "delete", f"{base}/comments/{comment_id}").status_code == 403
+    assert call(olga, "get", base).json()["actions"]["comment_delete"] is True
+    deleted = call(olga, "delete", f"{base}/comments/{comment_id}")
+    assert deleted.status_code == 200
+    assert deleted.json()["comments"] == []
+    assert call(olga, "delete", f"{base}/comments/{comment_id}").status_code == 404
 
 
 # --- HTTP -------------------------------------------------------------------

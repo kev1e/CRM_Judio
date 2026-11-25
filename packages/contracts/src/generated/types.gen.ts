@@ -268,6 +268,7 @@ export type TaskActions = {
     checkpoints_use: boolean;
     checkpoints_manage: boolean;
     comment: boolean;
+    comment_delete: boolean;
     priority: boolean;
     reassign: boolean;
     archive: boolean;
@@ -975,6 +976,30 @@ export type TasksAddCommentResponses = {
 };
 
 export type TasksAddCommentResponse = TasksAddCommentResponses[keyof TasksAddCommentResponses];
+
+export type TasksDeleteCommentData = {
+    body?: never;
+    path: {
+        comment_id: string;
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/comments/{comment_id}';
+};
+
+export type TasksDeleteCommentErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type TasksDeleteCommentError = TasksDeleteCommentErrors[keyof TasksDeleteCommentErrors];
+
+export type TasksDeleteCommentResponses = {
+    200: TaskDetail;
+};
+
+export type TasksDeleteCommentResponse = TasksDeleteCommentResponses[keyof TasksDeleteCommentResponses];
 
 export type TasksEditCommentData = {
     body?: PatchedCommentWriteRequest;

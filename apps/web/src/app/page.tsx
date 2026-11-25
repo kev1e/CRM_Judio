@@ -64,6 +64,7 @@ export default async function HomePage({
         view={view}
         statuses={statuses?.results ?? []}
         initialCards={tasks?.results ?? []}
+        canCreate={Boolean(session.me.permissions["task.create"])}
         initialTaskId={params.task && UUID.test(params.task) ? params.task : undefined}
       />
     </AppShell>
