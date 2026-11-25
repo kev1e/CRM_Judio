@@ -29,7 +29,9 @@ def test_start_with_a_valid_code_binds_the_sender(
     user.refresh_from_db()
     assert user.telegram_user_id == TG_ID
     assert user.telegram_username == "ivan_p"
-    assert session.texts(SendMessage) == [texts.ENROLLMENT_DONE]
+    # Confirmation first, then the one-time link for choosing a password (D036).
+    assert session.texts(SendMessage)[0] == texts.ENROLLMENT_DONE
+    assert len(session.of(SendMessage)) == 2
     # The message with the code is removed from the chat.
     assert [call.message_id for call in session.of(DeleteMessage)] == [10]
     assert token.value not in " ".join(session.texts(SendMessage))

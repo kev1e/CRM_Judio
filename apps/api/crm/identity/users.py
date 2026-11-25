@@ -1,0 +1,125 @@
+"""Managing employee accounts (S1.4): the use cases behind the Users screen.
+
+Every function authorizes its actor through `crm.access`. Until departments exist
+(S2) only company-wide grants count, i.e. in practice the administrator; managers
+get their department-scoped part with S2.
+"""
+
+from dataclasses import dataclass
+
+from django.db import transaction
+from django.db.models import QuerySet
+from django.utils import timezone
+
+from crm.access import services as access
+from crm.access.models import Role, UserRole
+from crm.access.permissions import ADMINISTRATOR_ROLE_KEY, Scope
+from crm.audit import services as audit
+from crm.common.actors import Actor
+from crm.common.exceptions import DomainError
+from crm.identity import enrollment, services, sessions
+from crm.identity.models import PasswordSetupToken, TelegramEnrollmentToken, User
+
+
+@dataclass(frozen=True, slots=True)
+class ProvisionedUser:
+    user: User
+    binding_token: enrollment.IssuedToken
+
+
+def list_users(*, actor: Actor) -> QuerySet[User]:
+    access.require_permission(actor, "user.read", at_least=Scope.COMPANY)
+    return User.objects.order_by("display_name", "crm_login")
+
+
+def provision_user(
+    *, actor: Actor, crm_login: str, display_name: str, email: str | None = None
+) -> ProvisionedUser:
+    """Create an account without a password and a one-time Telegram binding code.
+
+    The employee binds Telegram with the code and then chooses a password through
+    the link the bot sends (D036). The new account holds no role.
+    """
+    access.require_permission(actor, "user.create", at_least=Scope.COMPANY)
+    with transaction.atomic():
+        user = services.create_user(
+            actor=actor, crm_login=crm_login, display_name=display_name, email=email
+        )
+        token = enrollment.issue_token(actor=actor, user=user)
+    return ProvisionedUser(user=user, binding_token=token)
+
+
+def reissue_binding_token(*, actor: Actor, user: User) -> enrollment.IssuedToken:
+    """A fresh binding code for an account that is not bound yet; the old one stops working."""
+    return enrollment.issue_token(actor=actor, user=user)
+
+
+def deactivate_user(*, actor: Actor, user: User) -> bool:
+    """Close the account: no login, no open session, no pending code or link.
+
+    Returns False if it was already deactivated. Handing the employee's open
+    tasks over (D019, Q08) joins this transaction when tasks exist (S3).
+    """
+    access.require_permission(actor, "user.deactivate", at_least=Scope.COMPANY)
+    if actor.user is not None and actor.user.pk == user.pk:
+        raise DomainError("cannot_deactivate_self", "You cannot deactivate your own account.")
+    with transaction.atomic():
+        # Locking the administrator role serialises this with role revocation, so
+        # two requests cannot remove the last two administrators at once.
+        admin_role = Role.objects.select_for_update().get(
+            key=ADMINISTRATOR_ROLE_KEY, is_system=True
+        )
+        access.require_permission(actor, "user.deactivate", at_least=Scope.COMPANY)
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if not target.is_active:
+            return False
+        is_admin = UserRole.objects.filter(user=target, role=admin_role).exists()
+        if is_admin and not (
+            UserRole.objects.filter(role=admin_role, user__is_active=True)
+            .exclude(user=target)
+            .exists()
+        ):
+            raise DomainError(
+                "last_administrator", "The last active administrator cannot be deactivated."
+            )
+
+        now = timezone.now()
+        target.is_active = False
+        target.deactivated_at = now
+        target.save(update_fields=["is_active", "deactivated_at", "updated_at"])
+        access.bump_permissions_version([target.pk])
+        sessions.revoke_all_for_user(actor=actor, user=target, reason="deactivated")
+        pending = {"used_at__isnull": True, "revoked_at__isnull": True}
+        TelegramEnrollmentToken.objects.filter(user=target, **pending).update(revoked_at=now)
+        PasswordSetupToken.objects.filter(user=target, **pending).update(revoked_at=now)
+        audit.record(
+            actor=actor,
+            action="user.deactivated",
+            entity_type="user",
+            entity_id=str(target.pk),
+        )
+    user.is_active, user.deactivated_at = False, now
+    return True
+
+
+def reactivate_user(*, actor: Actor, user: User) -> bool:
+    """Open a deactivated account again. Its roles, password and Telegram binding
+    are as they were; nothing that was revoked comes back. Returns False if the
+    account was active already."""
+    access.require_permission(actor, "user.deactivate", at_least=Scope.COMPANY)
+    with transaction.atomic():
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if target.is_active:
+            return False
+        target.is_active = True
+        target.deactivated_at = None
+        target.save(update_fields=["is_active", "deactivated_at", "updated_at"])
+        access.bump_permissions_version([target.pk])
+        audit.record(
+            actor=actor,
+            action="user.reactivated",
+            entity_type="user",
+            entity_id=str(target.pk),
+        )
+    user.is_active, user.deactivated_at = True, None
+    return True

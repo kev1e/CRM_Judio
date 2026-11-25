@@ -24,6 +24,7 @@ def test_schema_contains_only_own_tables() -> None:
         "audit_event",
         "django_migrations",
         "identity_login_challenge",
+        "identity_password_setup_token",
         "identity_session",
         "identity_telegram_enrollment_token",
         "identity_throttle_counter",
