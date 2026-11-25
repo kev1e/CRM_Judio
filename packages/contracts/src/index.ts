@@ -16,5 +16,7 @@ export const API_PATHS = {
   tasks: "/api/v1/tasks",
   taskStatuses: "/api/v1/task-statuses",
   taskDepartments: "/api/v1/task-departments",
+  workflowStatuses: "/api/v1/workflow/statuses",
+  workflowOrder: "/api/v1/workflow/order",
   taskAssignees: "/api/v1/task-assignees",
 } as const satisfies Record<string, `/api/v${number}/${string}`>;

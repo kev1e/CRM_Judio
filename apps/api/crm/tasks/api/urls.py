@@ -1,6 +1,6 @@
 from django.urls import path
 
-from crm.tasks.api import views
+from crm.tasks.api import views, workflow_views
 
 urlpatterns = [
     path("task-statuses", views.StatusListView.as_view(), name="task-statuses"),
@@ -26,5 +26,22 @@ urlpatterns = [
         "tasks/<uuid:task_id>/checkpoints/<uuid:checkpoint_id>",
         views.TaskCheckpointView.as_view(),
         name="task-checkpoint",
+    ),
+    path("workflow/statuses", workflow_views.WorkflowView.as_view(), name="workflow"),
+    path("workflow/order", workflow_views.WorkflowOrderView.as_view(), name="workflow-order"),
+    path(
+        "workflow/statuses/<uuid:status_id>",
+        workflow_views.WorkflowStatusView.as_view(),
+        name="workflow-status",
+    ),
+    path(
+        "workflow/statuses/<uuid:status_id>/retire",
+        workflow_views.WorkflowRetireView.as_view(),
+        name="workflow-retire",
+    ),
+    path(
+        "workflow/statuses/<uuid:status_id>/restore",
+        workflow_views.WorkflowRestoreView.as_view(),
+        name="workflow-restore",
     ),
 ]

@@ -118,6 +118,12 @@ _ALL = (
         "a superuser only with this separate grant).",
         _DEPARTMENT_OR_COMPANY,
     ),
+    PermissionDef(
+        "workflow.manage",
+        "Configure task statuses and the allowed moves between them (D005, Q09).",
+        _COMPANY_ONLY,
+        system_role_only=True,
+    ),
     *_TASK,
 )
 

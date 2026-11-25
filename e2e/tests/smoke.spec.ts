@@ -89,6 +89,12 @@ test.describe("pages that need an account", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
+  test("the Statuses screen sends an anonymous visitor to the login page", async ({ page }) => {
+    await page.goto("/statuses");
+
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
   test("the password page without a link explains what to do", async ({ page }) => {
     await page.goto("/set-password");
 
