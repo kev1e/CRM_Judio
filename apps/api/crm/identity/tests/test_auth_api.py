@@ -294,6 +294,36 @@ def test_logout_revokes_the_session_and_clears_the_cookie(
     assert replay.get("/api/v1/auth/me").status_code == 401
 
 
+def test_giving_up_an_attempt_disarms_the_telegram_prompt(
+    client: APIClient, employee: Employee
+) -> None:
+    login(client, employee)
+    challenge = LoginChallenge.objects.get()
+
+    response = post(client, "/api/v1/auth/logout")
+
+    assert response.status_code == 204
+    assert cookie(response, ATTEMPT_COOKIE).value == ""
+    challenge.refresh_from_db()
+    assert challenge.status == "cancelled"
+    with pytest.raises(auth.ChallengeRejectedError):
+        approve_latest(employee)
+
+
+def test_a_stranger_cannot_cancel_somebody_elses_attempt(
+    client: APIClient, employee: Employee
+) -> None:
+    login(client, employee)
+    challenge = LoginChallenge.objects.get()
+    stranger = APIClient()
+    stranger.cookies[ATTEMPT_COOKIE] = f"{challenge.pk}.guessed-key"
+
+    post(stranger, "/api/v1/auth/logout")
+
+    challenge.refresh_from_db()
+    assert challenge.status == "pending"
+
+
 def test_logout_without_a_session_still_answers_204(client: APIClient) -> None:
     assert post(client, "/api/v1/auth/logout").status_code == 204
 

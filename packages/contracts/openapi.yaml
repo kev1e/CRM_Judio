@@ -64,8 +64,9 @@ paths:
     post:
       operationId: auth_logout
       description: |-
-        Ends the current session. Answers 204 even without a session, so that a
-        stale cookie is always removed.
+        Ends the current session and gives up a login attempt that is still
+        waiting. Answers 204 even when there is neither, so that stale cookies are
+        always removed.
       tags:
       - auth
       security:

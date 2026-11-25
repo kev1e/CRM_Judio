@@ -159,8 +159,9 @@ class MeView(APIView):
 
 
 class LogoutView(APIView):
-    """Ends the current session. Answers 204 even without a session, so that a
-    stale cookie is always removed."""
+    """Ends the current session and gives up a login attempt that is still
+    waiting. Answers 204 even when there is neither, so that stale cookies are
+    always removed."""
 
     permission_classes = [AllowAny]
 
@@ -170,6 +171,8 @@ class LogoutView(APIView):
             sessions.revoke(
                 actor=Actor.for_user(request.user), session=request.auth, reason="logout"
             )
+        if (attempt := cookies.read_attempt(request)) is not None:
+            auth.cancel_login(challenge_id=attempt[0], attempt_key=attempt[1])
         response = Response(status=status.HTTP_204_NO_CONTENT)
         cookies.clear_session(response)
         cookies.clear_attempt(response)

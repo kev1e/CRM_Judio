@@ -372,6 +372,29 @@ def decide_challenge(*, challenge_id: UUID, telegram_user_id: int, approve: bool
     )
 
 
+def cancel_login(*, challenge_id: UUID, attempt_key: str) -> bool:
+    """The browser that started an attempt gives it up: the prompt in Telegram
+    stops working. Returns True if a live attempt was cancelled."""
+    with transaction.atomic():
+        challenge = LoginChallenge.objects.select_for_update().filter(pk=challenge_id).first()
+        if (
+            challenge is None
+            or not hmac.compare_digest(challenge.attempt_key_hash, hash_token(attempt_key))
+            or challenge.status not in (LoginChallengeStatus.PENDING, LoginChallengeStatus.APPROVED)
+        ):
+            return False
+        challenge.status = LoginChallengeStatus.CANCELLED
+        challenge.save(update_fields=["status"])
+        audit.record(
+            actor=AUTH_ACTOR,
+            action="auth.challenge_cancelled",
+            entity_type="user",
+            entity_id=str(challenge.user_id),
+            metadata={"challenge_id": str(challenge.pk)},
+        )
+        return True
+
+
 def complete_login(
     *, challenge_id: UUID, attempt_key: str, ip_address: str | None, user_agent: str | None
 ) -> LoginProgress:
