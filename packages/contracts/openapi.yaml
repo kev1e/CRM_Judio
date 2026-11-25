@@ -676,6 +676,153 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/tasks/{task_id}/attachments:
+    post:
+      operationId: tasks_add_attachment
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AttachmentUploadRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '413':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/attachments/{attachment_id}:
+    get:
+      operationId: tasks_download_attachment
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: The file.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    delete:
+      operationId: tasks_delete_attachment
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetail'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/tasks/{task_id}/checkpoints:
     post:
       operationId: tasks_add_checkpoint
@@ -1499,6 +1646,39 @@ paths:
           description: ''
 components:
   schemas:
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        byte_size:
+          type: integer
+        content_type:
+          type: string
+        uploader:
+          $ref: '#/components/schemas/Named'
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - byte_size
+      - content_type
+      - created_at
+      - id
+      - name
+      - uploader
+    AttachmentUploadRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PDF, Word, Excel, an image or a ZIP archive, up to 100 MB.
+      required:
+      - file
     BindingCode:
       type: object
       properties:
@@ -2036,6 +2216,10 @@ components:
           type: boolean
         checkpoints_manage:
           type: boolean
+        attach:
+          type: boolean
+        attachment_delete:
+          type: boolean
         comment:
           type: boolean
         comment_delete:
@@ -2050,6 +2234,8 @@ components:
           type: boolean
       required:
       - archive
+      - attach
+      - attachment_delete
       - checkpoints_manage
       - checkpoints_use
       - comment
@@ -2213,6 +2399,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Checkpoint'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
         comments:
           type: array
           items:
@@ -2229,6 +2419,7 @@ components:
       required:
       - actions
       - assignee
+      - attachments
       - author
       - checkpoints
       - checkpoints_done

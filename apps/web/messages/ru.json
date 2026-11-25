@@ -239,6 +239,15 @@
     "checkpointRemove": "Убрать пункт: {text}",
     "noCheckpoints": "Пунктов пока нет.",
     "checkpointsNote": "Отметка всех пунктов не меняет статус задачи.",
+    "filesTitle": "Файлы",
+    "noFiles": "Файлов пока нет.",
+    "fileChoose": "Выберите файл",
+    "fileAttach": "Прикрепить",
+    "fileUploading": "Загружаем…",
+    "fileDelete": "Убрать файл: {name}",
+    "confirmFileDelete": "Убрать файл «{name}» из задачи?",
+    "fileMeta": "{size} · {author} · {date}",
+    "filesNote": "Можно прикрепить PDF, Word, Excel, изображения и ZIP-архивы до 100 МБ. Файлы видят те же сотрудники, что и задачу. Убрать файл может руководитель отдела.",
     "commentsTitle": "Комментарии",
     "commentsCount": "({count})",
     "noComments": "Комментариев пока нет.",
@@ -284,6 +293,8 @@
       "comment_added": "Добавлен комментарий",
       "comment_edited": "Изменён комментарий",
       "comment_deleted": "Удалён комментарий",
+      "attachment_added": "Прикреплён файл",
+      "attachment_deleted": "Убран файл",
       "other": "Изменение"
     },
     "errors": {
@@ -301,7 +312,15 @@
       "validation_error": "Проверьте заполнение полей.",
       "department_not_found": "Отдел не найден или закрыт.",
       "invalid_comment": "Введите текст комментария (до 5000 символов).",
-      "comment_not_found": "Комментарий не найден."
+      "comment_not_found": "Комментарий не найден.",
+      "file_too_large": "Файл больше 100 МБ.",
+      "file_type_not_allowed": "Такой тип файла не принимается. Можно PDF, Word, Excel, изображения и ZIP. Документы с макросами не принимаются.",
+      "file_content_mismatch": "Содержимое файла не соответствует его расширению, или файл повреждён.",
+      "file_archive_unsafe": "Архив распаковывается в слишком большой объём данных.",
+      "file_empty": "Файл пустой.",
+      "file_missing": "Выберите файл.",
+      "storage_unavailable": "Хранилище файлов недоступно. Попробуйте позже.",
+      "attachment_not_found": "Файл не найден."
     }
   },
   "newTask": {

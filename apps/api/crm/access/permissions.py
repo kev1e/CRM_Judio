@@ -59,6 +59,8 @@ _TASK = (
     PermissionDef(
         "task.comment.delete", "Delete anybody's comment on a task (D038).", _DEPARTMENT_OR_COMPANY
     ),
+    PermissionDef("task.attach", "Attach files to a task.", _ANY_SCOPE),
+    PermissionDef("task.attachment.delete", "Remove a file from a task.", _DEPARTMENT_OR_COMPANY),
     PermissionDef(
         "task.checkpoints.manage", "Rename and remove checkpoints.", _DEPARTMENT_OR_COMPANY
     ),
@@ -169,6 +171,7 @@ BASELINE_GRANTS: dict[str, Scope] = dict.fromkeys(
         "task.deadline",
         "task.checkpoints.use",
         "task.comment",
+        "task.attach",
     ),
     Scope.OWN,
 )

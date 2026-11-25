@@ -38,6 +38,9 @@ ENV PYTHONUNBUFFERED=1 \
 RUN groupadd --system --gid 10001 crm \
     && useradd --system --uid 10001 --gid crm --no-create-home --shell /usr/sbin/nologin crm
 
+# Uploads in progress and local file storage; a volume is mounted here.
+RUN mkdir -p /var/lib/crm/files /var/lib/crm/upload-tmp && chown -R crm:crm /var/lib/crm
+
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY apps/api/manage.py /app/manage.py
@@ -45,4 +48,5 @@ COPY apps/api/manage.py /app/manage.py
 USER 10001:10001
 EXPOSE 8000
 
-CMD ["gunicorn", "crm.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-tmp-dir", "/dev/shm", "--access-logfile", "-"]
+# Threaded workers: a slow 100 MB upload or download must not look like a hung worker.
+CMD ["gunicorn", "crm.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-class", "gthread", "--threads", "4", "--timeout", "120", "--worker-tmp-dir", "/dev/shm", "--access-logfile", "-"]

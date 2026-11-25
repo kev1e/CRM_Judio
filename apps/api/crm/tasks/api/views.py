@@ -14,7 +14,7 @@ from crm.common.actors import Actor
 from crm.common.exceptions import DomainError
 from crm.identity.api.serializers import ErrorSerializer
 from crm.identity.models import User
-from crm.tasks import policy, services
+from crm.tasks import attachments, policy, services
 from crm.tasks.api.serializers import (
     VIEWS,
     CheckpointCreateSerializer,
@@ -43,6 +43,8 @@ _ACTION_KEYS = {
     "task.deadline": "deadline",
     "task.checkpoints.use": "checkpoints_use",
     "task.checkpoints.manage": "checkpoints_manage",
+    "task.attach": "attach",
+    "task.attachment.delete": "attachment_delete",
     "task.comment": "comment",
     "task.comment.delete": "comment_delete",
     "task.priority": "priority",
@@ -99,6 +101,17 @@ def _detail(actor: Actor, task: Task) -> dict[str, Any]:
         "created_at": task.created_at,
         "completed_at": task.completed_at,
         "checkpoints": [{"id": c.pk, "text": c.label, "is_done": c.is_done} for c in checkpoints],
+        "attachments": [
+            {
+                "id": a.pk,
+                "name": a.original_name,
+                "byte_size": a.byte_size,
+                "content_type": a.content_type,
+                "uploader": {"id": a.uploader_id, "name": a.uploader.display_name},
+                "created_at": a.created_at,
+            }
+            for a in attachments.attachments(actor, task)
+        ],
         "comments": [
             {
                 "id": c.pk,

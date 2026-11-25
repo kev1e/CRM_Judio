@@ -294,3 +294,11 @@ The owner's words: "1. Руководитель ставит задачи, ис�
   - Consequence to resolve before S5: D006 says a request's creator selects the assignee. If ordinary employees are to submit templated requests, that needs its own rule; D037 as implemented does not let them.
 - **D038**, implemented as: new permission `task.comment.delete` held by the department manager for managed departments. A deleted comment is hidden from everybody and kept in the database with who deleted it and when; the audit log records the deletion without the text. Restoring a deleted comment is not built.
 - **D039**: recorded; file storage is the next slice. Q16 previously said "local persistent storage on own VPS" — D039 replaces that part. OPEN: which provider (and whether it satisfies Q25 data-residency expectations), bucket encryption and key custody, how backups of the bucket meet Q15 (RPO ≤ 1 h, 30-day retention).
+
+### 2026-11-26 — attachments implemented (D039, Q16)
+
+- Built: files on tasks. Storage is behind one interface with two adapters: S3-compatible object storage (`FILE_STORAGE=s3`, D039) and a local directory for development and tests (`FILE_STORAGE=local`, the default of the local Compose stack). Nothing but the API reads the storage: a download is authorized against the task and then streamed through the API; there are no public or pre-signed addresses.
+- Q16 as implemented: extensions pdf, doc, docx, xls, xlsx, png, jpg/jpeg, gif, webp, zip; the content must match the extension; 100 MB per file checked from the declared length, while reading and on the stored size; archives are inspected by their table of contents only and refused when they unpack to too much; documents with macros (docm/xlsm, or a `vbaProject.bin` inside docx/xlsx) are refused. No antivirus scan (Q16).
+- New dependencies: `boto3` (runtime) and `moto`, `boto3-stubs` (tests and typing).
+- Not a product decision, listed as provisional in `OPEN_QUESTIONS.md`: who removes a file (the manager), the archive limits, legacy `.doc`/`.xls` accepted without macro inspection, downloads not written to the audit log.
+- The S3 adapter was exercised against the `moto` emulator only. It has **not** been run against a real provider: none is chosen yet.

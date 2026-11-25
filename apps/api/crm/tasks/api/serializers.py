@@ -59,6 +59,21 @@ class CheckpointSerializer(serializers.Serializer[Any]):
     is_done = serializers.BooleanField()
 
 
+class AttachmentSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    byte_size = serializers.IntegerField()
+    content_type = serializers.CharField()
+    uploader = NamedSerializer()
+    created_at = serializers.DateTimeField()
+
+
+class AttachmentUploadSerializer(serializers.Serializer[Any]):
+    file = serializers.FileField(
+        help_text="PDF, Word, Excel, an image or a ZIP archive, up to 100 MB."
+    )
+
+
 class CommentSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     author = NamedSerializer()
@@ -84,6 +99,8 @@ class TaskActionsSerializer(serializers.Serializer[Any]):
     deadline = serializers.BooleanField()
     checkpoints_use = serializers.BooleanField()
     checkpoints_manage = serializers.BooleanField()
+    attach = serializers.BooleanField()
+    attachment_delete = serializers.BooleanField()
     comment = serializers.BooleanField()
     comment_delete = serializers.BooleanField()
     priority = serializers.BooleanField()
@@ -98,6 +115,7 @@ class TaskDetailSerializer(TaskCardSerializer):
     created_at = serializers.DateTimeField()
     completed_at = serializers.DateTimeField(allow_null=True)
     checkpoints = CheckpointSerializer(many=True)
+    attachments = AttachmentSerializer(many=True)
     comments = CommentSerializer(many=True)
     history = HistoryEntrySerializer(many=True)
     actions = TaskActionsSerializer(

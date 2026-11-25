@@ -74,6 +74,8 @@ def actions(actor: Actor, task: Task) -> dict[str, bool]:
         "task.deadline",
         "task.checkpoints.use",
         "task.checkpoints.manage",
+        "task.attach",
+        "task.attachment.delete",
         "task.comment",
         "task.comment.delete",
         "task.priority",

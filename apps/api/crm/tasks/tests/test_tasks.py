@@ -481,6 +481,8 @@ def test_interface_hints_match_what_the_services_allow(world: World) -> None:
         "task.deadline": True,
         "task.checkpoints.use": True,
         "task.checkpoints.manage": False,
+        "task.attach": True,
+        "task.attachment.delete": False,
         "task.comment": True,
         "task.comment.delete": False,
         "task.priority": False,

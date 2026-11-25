@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Modal } from "@/components/modal";
-import { callApi } from "@/lib/api-client";
+import { callApi, uploadFile } from "@/lib/api-client";
 import { fromLocalInput, toLocalInput } from "@/lib/tasks";
 
 const ERRORS = [
@@ -20,6 +20,14 @@ const ERRORS = [
   "previous_status_unavailable",
   "invalid_checkpoint",
   "invalid_comment",
+  "file_too_large",
+  "file_type_not_allowed",
+  "file_content_mismatch",
+  "file_archive_unsafe",
+  "file_empty",
+  "file_missing",
+  "storage_unavailable",
+  "attachment_not_found",
   "comment_not_found",
   "validation_error",
   "unavailable",
@@ -45,6 +53,8 @@ const HISTORY_KEYS = [
   "comment_added",
   "comment_edited",
   "comment_deleted",
+  "attachment_added",
+  "attachment_deleted",
 ] as const;
 type HistoryKey = (typeof HISTORY_KEYS)[number] | "other";
 
@@ -55,6 +65,19 @@ function toHistoryKey(action: string): HistoryKey {
 
 function toError(code: string): ErrorKey {
   return (ERRORS as readonly string[]).includes(code) ? (code as ErrorKey) : "unavailable";
+}
+
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.zip";
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} Б`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} КБ`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} МБ`;
 }
 
 const fieldClass =
@@ -92,6 +115,8 @@ export function TaskModal({
   const [assignees, setAssignees] = useState<Options["results"]>([]);
   const checkpointRef = useRef<HTMLFormElement>(null);
   const commentRef = useRef<HTMLFormElement>(null);
+  const fileRef = useRef<HTMLFormElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const base = `${API_PATHS.tasks}/${taskId}`;
 
@@ -518,6 +543,109 @@ export function TaskModal({
               <p className="text-xs text-muted-foreground">{t("checkpointsNote")}</p>
             </div>
           </details>
+
+          <section aria-labelledby="task-files" className="flex flex-col gap-3">
+            <h3 id="task-files" className="text-sm font-medium">
+              {t("filesTitle")}
+              {task.attachments.length > 0 ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  {t("commentsCount", { count: task.attachments.length })}
+                </span>
+              ) : null}
+            </h3>
+            {task.attachments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noFiles")}</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {task.attachments.map((file) => (
+                  <li
+                    key={file.id}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    {/* A plain link: the API answers with "attachment", so the browser saves the file. */}
+                    <a
+                      href={`${base}/attachments/${file.id}`}
+                      download={file.name}
+                      className="font-medium break-all underline"
+                    >
+                      {file.name}
+                    </a>
+                    <span className="text-xs text-muted-foreground">
+                      {t("fileMeta", {
+                        size: formatBytes(file.byte_size),
+                        author: file.uploader.name,
+                        date: dateTime(file.created_at),
+                      })}
+                    </span>
+                    {task.actions.attachment_delete && !locked ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={t("fileDelete", { name: file.name })}
+                        onClick={() => {
+                          if (window.confirm(t("confirmFileDelete", { name: file.name }))) {
+                            void run(`${base}/attachments/${file.id}`, "DELETE");
+                          }
+                        }}
+                        className="ml-auto rounded px-2 text-muted-foreground hover:bg-muted"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {task.actions.attach && !locked ? (
+              <form
+                ref={fileRef}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const input = event.currentTarget.elements.namedItem("file");
+                  const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined;
+                  if (!file || file.size === 0) {
+                    setError("file_missing");
+                    return;
+                  }
+                  if (file.size > MAX_FILE_BYTES) {
+                    setError("file_too_large");
+                    return;
+                  }
+                  setUploading(true);
+                  setBusy(true);
+                  setError(null);
+                  void uploadFile<TaskDetail>(`${base}/attachments`, file)
+                    .then((result) => {
+                      if (result.ok) {
+                        setTask(result.data);
+                        fileRef.current?.reset();
+                        onChanged();
+                      } else {
+                        setError(toError(result.code));
+                      }
+                    })
+                    .finally(() => {
+                      setUploading(false);
+                      setBusy(false);
+                    });
+                }}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  type="file"
+                  name="file"
+                  accept={FILE_ACCEPT}
+                  aria-label={t("fileChoose")}
+                  className="min-w-0 flex-1 text-sm file:mr-3 file:h-9 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:text-sm"
+                />
+                <button type="submit" disabled={busy} className={buttonClass}>
+                  {uploading ? t("fileUploading") : t("fileAttach")}
+                </button>
+              </form>
+            ) : null}
+            <p className="text-xs text-muted-foreground">{t("filesNote")}</p>
+          </section>
 
           <section aria-labelledby="task-comments" className="flex flex-col gap-3">
             <h3 id="task-comments" className="text-sm font-medium">

@@ -262,3 +262,48 @@ class CommentRevision(models.Model):
 
     def __str__(self) -> str:
         return f"comment:{self.comment_id}#{self.revision}"
+
+
+class Attachment(models.Model):
+    """A file attached to a task (Q16, D039). The bytes live in the file storage
+    under `storage_key`; this row is the only way to reach them, and it is
+    reachable only through the task's access rules."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    task = models.ForeignKey(Task, on_delete=models.PROTECT, related_name="attachments")
+    uploader = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    storage = models.CharField(max_length=16)
+    # Chosen by the CRM; contains nothing typed by a user.
+    storage_key = models.CharField(max_length=200, unique=True)
+    # For display and for the download's file name only.
+    original_name = models.CharField(max_length=200)
+    content_type = models.CharField(max_length=100)
+    byte_size = models.PositiveBigIntegerField()
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(db_default=Now())
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        db_table = "tasks_attachment"
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(original_name="") & Q(byte_size__gt=0),
+                name="tasks_attachment_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(deleted_at__isnull=True, deleted_by__isnull=True)
+                    | Q(deleted_at__isnull=False, deleted_by__isnull=False)
+                ),
+                name="tasks_attachment_deletion_consistent",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"attachment:{self.pk}"

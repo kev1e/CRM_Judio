@@ -55,6 +55,7 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
     created_at: "2026-11-25T10:00:00Z",
     completed_at: null,
     checkpoints: [{ id: "c-1", text: "Собрать данные", is_done: true }],
+    attachments: [],
     comments: [],
     history: [
       { occurred_at: "2026-11-25T10:00:00Z", action: "task.created", actor_name: "Ольга Смирнова" },
@@ -65,6 +66,8 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
       deadline: true,
       checkpoints_use: true,
       checkpoints_manage: false,
+      attach: true,
+      attachment_delete: false,
       comment: true,
       comment_delete: false,
       priority: false,
@@ -288,6 +291,84 @@ describe("TaskBoard", () => {
     const [url, init] = fetchMock.mock.calls[1] ?? [];
     expect(url).toBe("/api/v1/tasks/t-1/comments/m-1");
     expect(init?.method).toBe("PATCH");
+  });
+
+  const contract = {
+    id: "f-1",
+    name: "Договор.pdf",
+    byte_size: 2 * 1024 * 1024,
+    content_type: "application/pdf",
+    uploader: { id: "u-anna", name: "Анна Петрова" },
+    created_at: "2026-11-25T11:00:00Z",
+  };
+
+  it("lists files as download links and shows who attached them", async () => {
+    const dialog = await openTask(detail({ comments: [], attachments: [contract] }));
+
+    const link = dialog.getByRole("link", { name: "Договор.pdf" });
+    expect(link).toHaveAttribute("href", "/api/v1/tasks/t-1/attachments/f-1");
+    expect(link).toHaveAttribute("download");
+    expect(dialog.getByText(/2,0 МБ · Анна Петрова/)).toBeInTheDocument();
+    expect(dialog.queryByRole("button", { name: /Убрать файл/ })).toBeNull();
+  });
+
+  it("uploads a chosen file as multipart and shows it", async () => {
+    const user = userEvent.setup();
+    const dialog = await openTask(detail());
+    fetchMock.mockResolvedValue(Response.json(detail({ attachments: [contract] })));
+
+    const file = new File(["%PDF-1.7"], "Договор.pdf", { type: "application/pdf" });
+    await user.upload(dialog.getByLabelText("Выберите файл"), file);
+    await user.click(dialog.getByRole("button", { name: "Прикрепить" }));
+
+    expect(await dialog.findByRole("link", { name: "Договор.pdf" })).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("/api/v1/tasks/t-1/attachments");
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBeInstanceOf(FormData);
+    expect((init?.body as FormData).get("file")).toBeInstanceOf(File);
+    // No JSON content type: the browser must write the multipart boundary itself.
+    expect(new Headers(init?.headers).get("content-type")).toBeNull();
+  });
+
+  it("explains why a file was refused", async () => {
+    const user = userEvent.setup();
+    const dialog = await openTask(detail());
+    fetchMock.mockResolvedValue(
+      Response.json({ error: { code: "file_content_mismatch", message: "x" } }, { status: 400 }),
+    );
+
+    await user.upload(
+      dialog.getByLabelText("Выберите файл"),
+      new File(["MZ"], "счёт.pdf", { type: "application/pdf" }),
+    );
+    await user.click(dialog.getByRole("button", { name: "Прикрепить" }));
+
+    expect(await dialog.findByRole("alert")).toHaveTextContent(
+      "Содержимое файла не соответствует его расширению",
+    );
+    expect(dialog.getByText("Файлов пока нет.")).toBeInTheDocument();
+  });
+
+  it("lets a manager remove a file and hides the upload form from a reader", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const dialog = await openTask(
+      detail({
+        attachments: [contract],
+        actions: { ...detail().actions, attach: false, attachment_delete: true },
+      }),
+    );
+    fetchMock.mockResolvedValue(Response.json(detail()));
+
+    expect(dialog.queryByLabelText("Выберите файл")).toBeNull();
+    await user.click(dialog.getByRole("button", { name: "Убрать файл: Договор.pdf" }));
+
+    expect(await dialog.findByText("Файлов пока нет.")).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("/api/v1/tasks/t-1/attachments/f-1");
+    expect(init?.method).toBe("DELETE");
+    confirm.mockRestore();
   });
 
   it("offers a new task only to somebody who may create one", () => {

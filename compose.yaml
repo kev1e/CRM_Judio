@@ -21,6 +21,16 @@ x-backend: &backend
     WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://127.0.0.1:3000}
     SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
+    # Attachments (D039). "local" keeps files in the crm-files volume and is for
+    # trying the stack out; production sets FILE_STORAGE=s3 and the S3 settings.
+    FILE_STORAGE: ${FILE_STORAGE:-local}
+    FILE_STORAGE_LOCAL_ROOT: /var/lib/crm/files
+    FILE_UPLOAD_TEMP_DIR: /var/lib/crm/upload-tmp
+    FILE_STORAGE_S3_ENDPOINT_URL: ${FILE_STORAGE_S3_ENDPOINT_URL:-}
+    FILE_STORAGE_S3_REGION: ${FILE_STORAGE_S3_REGION:-}
+    FILE_STORAGE_S3_BUCKET: ${FILE_STORAGE_S3_BUCKET:-}
+    FILE_STORAGE_S3_ACCESS_KEY_ID: ${FILE_STORAGE_S3_ACCESS_KEY_ID:-}
+    FILE_STORAGE_S3_SECRET_ACCESS_KEY: ${FILE_STORAGE_S3_SECRET_ACCESS_KEY:-}
   networks: [internal]
   read_only: true
   tmpfs: [/tmp]
@@ -79,6 +89,10 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    # Uploads in progress and, with FILE_STORAGE=local, the files themselves.
+    # The container's own filesystem is read-only and /tmp is memory.
+    volumes:
+      - crm-files:/var/lib/crm
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     healthcheck:
@@ -157,5 +171,6 @@ networks:
   internal:
 
 volumes:
+  crm-files:
   postgres-data:
   redis-data:

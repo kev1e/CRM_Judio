@@ -143,6 +143,8 @@ def test_card_and_detail_carry_what_the_board_needs(
         "deadline": True,
         "checkpoints_use": True,
         "checkpoints_manage": False,
+        "attach": True,
+        "attachment_delete": False,
         "comment": True,
         "comment_delete": False,
         "priority": False,

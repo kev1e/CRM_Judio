@@ -35,6 +35,11 @@ export function Modal({
       ref={ref}
       aria-labelledby={labelledBy}
       onCancel={(event) => {
+        // A file field inside the window sends its own "cancel" when the file
+        // chooser is dismissed; only the window's own Escape closes it.
+        if (event.target !== ref.current) {
+          return;
+        }
         event.preventDefault();
         onClose();
       }}

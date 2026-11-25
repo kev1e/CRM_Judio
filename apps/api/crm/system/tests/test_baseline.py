@@ -33,6 +33,7 @@ def test_schema_contains_only_own_tables() -> None:
         "organization_department_manager",
         "organization_department_membership",
         "system_heartbeat",
+        "tasks_attachment",
         "tasks_checkpoint",
         "tasks_comment",
         "tasks_comment_revision",

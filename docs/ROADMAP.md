@@ -52,7 +52,7 @@ Resolve Q10/Q16. Projects and membership, own-dept invites direct, other-dept ap
 
 **Exit:** cross-dept invitation flow works without granting task read by mere project membership; file IDOR tests pass.
 
-**Status (2026-11-26):** task comments are done — the assignee and the department's manager comment, everybody who sees the task reads, only the author edits and every earlier text is kept, nothing of the text reaches the audit log. Deleting a comment by the manager (D038) and the manager-only creation of tasks (D037) are done. **Not done:** projects and membership, invitations with approval, files in object storage (D039; the provider is not chosen), mentions and notifications (S6).
+**Status (2026-11-26):** task comments are done — the assignee and the department's manager comment, everybody who sees the task reads, only the author edits and every earlier text is kept, nothing of the text reaches the audit log. Deleting a comment by the manager (D038) and the manager-only creation of tasks (D037) are done. Files on tasks are done (2026-11-26): upload, download and removal under the task's access rules, content checks of Q16, an S3-compatible adapter (D039) and a local one. **Not done:** projects and membership, invitations with approval, a real object-storage provider and its backups, purge of removed files, mentions and notifications (S6).
 
 ## S5 — request templates & web creation
 

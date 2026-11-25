@@ -119,6 +119,53 @@ describe("forwardToApi", () => {
     },
   );
 
+  it("passes a download's headers so the browser saves the file instead of showing it", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("%PDF-", {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": 'attachment; filename="file.pdf"',
+          "Content-Length": "5",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+          "X-Content-Type-Options": "nosniff",
+          "X-Internal": "secret",
+        },
+      }),
+    );
+
+    const response = await forwardToApi(
+      new Request("http://crm.test/api/v1/tasks/t/attachments/a"),
+      ["tasks", "t", "attachments", "a"],
+      fetchImpl,
+      new URL("http://api.internal:8000"),
+    );
+
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="file.pdf"');
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-security-policy")).toContain("sandbox");
+    expect(response.headers.get("x-internal")).toBeNull();
+    expect(await response.text()).toBe("%PDF-");
+  });
+
+  it("refuses an obviously oversized body without reading it", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+
+    const response = await forwardToApi(
+      new Request("http://crm.test/api/v1/tasks/t/attachments", {
+        method: "POST",
+        headers: { "Content-Length": String(200 * 1024 * 1024) },
+        body: "x",
+      }),
+      ["tasks", "t", "attachments"],
+      fetchImpl,
+      new URL("http://api.internal:8000"),
+    );
+
+    expect(response.status).toBe(413);
+    expect((await response.json()).error.code).toBe("file_too_large");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("answers 502 in the error envelope when the API cannot be reached", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("ECONNREFUSED api"));
     const request = new Request("http://crm.local/api/v1/auth/me");

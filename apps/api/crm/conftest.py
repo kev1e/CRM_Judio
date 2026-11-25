@@ -2,6 +2,7 @@
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 from pytest_django.fixtures import Settings as SettingsWrapper
@@ -98,3 +99,16 @@ def make_employee(make_user: UserFactory, admin_actor: Actor) -> EmployeeFactory
 @pytest.fixture
 def employee(make_employee: EmployeeFactory) -> Employee:
     return make_employee("anna.petrova")
+
+
+@pytest.fixture(autouse=True)
+def file_storage(settings: SettingsWrapper, tmp_path: Path) -> Iterator[Path]:
+    """Every test gets its own empty file storage directory."""
+    from crm.files import storage
+
+    root = tmp_path / "files"
+    settings.FILE_STORAGE = "local"
+    settings.FILE_STORAGE_LOCAL_ROOT = str(root)
+    storage.reset_storage_cache()
+    yield root
+    storage.reset_storage_cache()

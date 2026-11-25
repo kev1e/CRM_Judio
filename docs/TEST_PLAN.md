@@ -321,6 +321,26 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S4 — files (`crm/files/tests`, `crm/tasks/tests/test_attachments.py`, `task-board.test.tsx`, `modal.test.tsx`, `api-proxy.test.ts`)
+
+| Requirement | Covered |
+|---|---|
+| Q16 allowlist | Each accepted type is recognized by content; other extensions (exe, html, svg, js, docm, xlsm, mp4, rar, none) refused; a renamed executable, HTML as PNG, PNG as JPEG, a plain archive as docx, a broken archive refused; empty file refused; document with macros refused |
+| Archive bombs | A small archive that unpacks to megabytes and one with too many entries are refused without unpacking |
+| File names | Path parts, control characters and over-long names are reduced to a safe display name; the storage key contains nothing of it |
+| 100 MB | Exactly the limit accepted, one byte over refused (service); over HTTP refused with 413 both while reading and from the declared length; the web relay refuses an oversized body without reading it |
+| Access (Q19, Q02, Q29) | Assignee and manager attach; a colleague, another department's manager and employee and the administrator can neither attach nor download ("not found") and nothing is stored for them; a superuser downloads and cannot attach |
+| No way around the task | A file of another task is not reachable through a task the viewer can see; unknown IDs are not found; no session → 401; foreign Origin → 403 |
+| Revocation / Q24 | The former assignee loses the files at once; archived tasks keep files downloadable under the same rules and take no new ones |
+| Consistency | A refused file leaves no row and no object; if the record cannot be written the stored object is removed; a storage failure is a clean 503-class refusal |
+| Removal | Only the manager; the file disappears for every reader, the row and the bytes stay |
+| Audit | Upload and removal recorded with ID, size and type; the file name appears in no audit event |
+| Download headers | `attachment` with an encoded name, `nosniff`, sandboxing CSP, `no-store`, exact length; the web relay passes them on and nothing else |
+| Storage adapters | Local: round trip, never overwrites, unsafe keys refused. S3 (moto emulator): round trip, content type set, no public grant, failures without provider detail, missing settings are a configuration error |
+| Web | List with size and author, upload as multipart, refusal message, removal by the manager, no upload form for a reader; the task window no longer closes when a file chooser is dismissed |
+
+Verified by hand in a browser on 2026-11-26 against a local stack (local storage, gunicorn): upload a PDF with a Cyrillic name and download it byte for byte with its name; a renamed executable refused; a 99 MB file uploaded and downloaded byte for byte; a 101 MB file refused; removal. **Not verified:** a real S3 provider; the Docker image and volume (CI builds and starts the stack but uploads nothing there).
+
 ### D037 — who creates tasks (`test_tasks.py`, `test_tasks_api.py`, `task-board.test.tsx`)
 
 | Requirement | Covered |
