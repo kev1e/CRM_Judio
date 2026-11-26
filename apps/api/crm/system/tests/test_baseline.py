@@ -29,6 +29,7 @@ def test_schema_contains_only_own_tables() -> None:
         "identity_telegram_enrollment_token",
         "identity_throttle_counter",
         "identity_user",
+        "notifications_notification",
         "organization_department",
         "organization_department_manager",
         "organization_department_membership",

@@ -68,6 +68,8 @@ Template builder UI, published immutable versions, all eight field types and val
 
 aiogram webhooks, Telegram wizard and Mini App both calling same task creation service, no chat sync, notification service, outbox/retries/idempotency, permissions checked at dispatch.
 
+**Status (2026-11-26, first slice):** instant Telegram notifications are done for assignment (new task or request, reassignment, hand-over on deactivation), a changed deadline (D017) and a new comment — through an outbox written in the change's transaction, a Celery delivery with bounded retries, and a re-check of the recipient's read access at send time (Q23). **Not done:** the request wizard and the Mini App, webhook mode, the group allowlist (Q22), notifications about status, checkpoints, mentions and project invitations, deadline reminders, digests, per-user settings and time zones, in-CRM notifications, an operator alert on terminal failure, a sweep that re-queues rows left pending by a broker outage.
+
 **Exit:** authorized employee creates request via either Telegram UI; spoofed/replayed requests rejected; group messages aren't mirrored; task/permission events notify proper recipients.
 
 ## S7 — search, saved views, analytics and dashboard builder

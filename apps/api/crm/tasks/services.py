@@ -29,6 +29,7 @@ from crm.audit import services as audit
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.identity.models import User
+from crm.notifications import services as notifications
 from crm.organization.models import Department, DepartmentMembership
 from crm.projects import services as projects
 from crm.projects.models import Project
@@ -263,6 +264,7 @@ def create_task(
             for position, label in enumerate(checkpoints, start=1)
         )
         _log(actor, "task.created", task, assignee_id=str(assignee.pk), task_type=task_type)
+        notifications.task_assigned(task=task, actor=actor)
     return task
 
 
@@ -298,8 +300,8 @@ def update_content(
 def change_deadline(
     *, actor: Actor, task_id: UUID, due_at: datetime | None, expected_version: int | None = None
 ) -> Task:
-    """D017: the assignee may move the deadline; both values are kept in history.
-    Notifying the manager arrives with notifications (S6)."""
+    """D017: the assignee may move the deadline; both values are kept in history
+    and the department's managers are notified."""
     with transaction.atomic():
         task = _locked(actor, task_id)
         policy.require(actor, "task.deadline", task)
@@ -320,6 +322,7 @@ def change_deadline(
                 before=before.isoformat() if before else None,
                 after=due_at.isoformat() if due_at else None,
             )
+            notifications.deadline_changed(task=task, actor=actor)
     return task
 
 
@@ -408,6 +411,7 @@ def reassign(
             task.assigned_at = timezone.now()
             _save(task, "assignee", "assigned_at")
             _log(actor, "task.reassigned", task, before=str(before), after=str(assignee.pk))
+            notifications.task_assigned(task=task, actor=actor)
     return task
 
 
@@ -637,6 +641,7 @@ def add_comment(*, actor: Actor, task_id: UUID, body: str) -> Comment:
             raise PermissionDeniedError()
         comment = Comment.objects.create(task=task, author=actor.user, body=clean)
         _log(actor, "task.comment_added", task, comment_id=str(comment.pk))
+        notifications.comment_added(task=task, actor=actor)
     return comment
 
 
@@ -750,4 +755,5 @@ def hand_over_open_tasks(*, actor: Actor, user: User) -> int:
             after=str(target.pk),
             reason="deactivation",
         )
+        notifications.task_assigned(task=task, actor=actor)
     return len(tasks)
