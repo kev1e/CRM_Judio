@@ -333,3 +333,170 @@ def test_nothing_about_messages_is_stored_or_audited(world: World) -> None:  # n
     assert "text" not in stored
     assert "body" not in stored
     assert not AuditEvent.objects.filter(action__startswith="notification").exists()
+
+
+# --- Status -----------------------------------------------------------------
+
+
+def status_named(name: str) -> Any:
+    from crm.tasks.models import TaskStatus
+
+    return TaskStatus.objects.get(name=name)
+
+
+def test_status_change_notifies_the_other_side(world: World) -> None:  # noqa: F811
+    task = make_task(world)
+    Notification.objects.all().delete()
+
+    task_services.change_status(
+        actor=world.anna, task_id=task.pk, status_id=status_named("В работе").pk
+    )
+    task_services.change_status(
+        actor=world.anna, task_id=task.pk, status_id=status_named("В работе").pk
+    )  # the same status again: nothing new
+
+    assert outbox() == [("status_changed", "olga", "pending")]
+    send_all()
+    (message,) = FakeGateway.messages
+    assert message.text.endswith(
+        "перевёл(а) задачу «Подготовить коммерческое предложение» в статус «В работе»."
+    )
+    assert message.url.endswith(f"/?view=all&task={task.pk}")
+
+
+def test_completion_is_announced_with_a_link_to_the_archive(world: World) -> None:  # noqa: F811
+    task = make_task(world)
+    task_services.change_status(
+        actor=world.anna, task_id=task.pk, status_id=status_named("В работе").pk
+    )
+    Notification.objects.all().delete()
+
+    task_services.change_status(
+        actor=world.anna, task_id=task.pk, status_id=status_named("Готово").pk
+    )
+    send_all()
+
+    (message,) = FakeGateway.messages
+    assert message.chat_id == chat(world.olga)
+    assert "завершил(а) задачу «Подготовить коммерческое предложение»" in message.text
+    assert message.url.endswith(f"/?view=archive&task={task.pk}")
+
+
+def test_manager_changing_the_status_notifies_the_assignee(world: World) -> None:  # noqa: F811
+    task = make_task(world)
+    Notification.objects.all().delete()
+
+    task_services.change_status(
+        actor=world.olga, task_id=task.pk, status_id=status_named("В работе").pk
+    )
+
+    assert outbox() == [("status_changed", "anna", "pending")]
+
+
+# --- Project invitations (Q10) ----------------------------------------------
+
+
+def invite_vera(world: World) -> Any:  # noqa: F811
+    """Olga (Sales) asks to bring Vera (Support, managed by Pavel) into her project."""
+    from crm.projects import services as projects
+
+    project = projects.create_project(
+        actor=world.olga, name="Запуск продукта", department_id=world.sales.pk
+    )
+    joined = projects.add_participant(
+        actor=world.olga,
+        project_id=project.pk,
+        user_id=uid(world.vera),
+        department_id=world.support.pk,
+    )
+    assert joined.invitation is not None
+    return joined.invitation
+
+
+def test_invitation_asks_the_employees_manager(world: World) -> None:  # noqa: F811
+    invite_vera(world)
+
+    assert outbox() == [("invitation_requested", "pavel", "pending")]
+    send_all()
+    (message,) = FakeGateway.messages
+    assert message.chat_id == chat(world.pavel)
+    assert "просит включить сотрудника в проект «Запуск продукта»" in message.text
+    assert "Отдел: Поддержка" in message.text
+    assert message.url.endswith("/projects")
+
+
+def test_decision_is_told_to_the_requester_and_the_employee(world: World) -> None:  # noqa: F811
+    from crm.projects import services as projects
+
+    invitation = invite_vera(world)
+    Notification.objects.all().delete()
+
+    projects.approve_invitation(actor=world.pavel, invitation_id=invitation.pk)
+
+    assert outbox() == [
+        ("invitation_decided", "olga", "pending"),
+        ("project_joined", "vera", "pending"),
+    ]
+    send_all()
+    by_chat = {message.chat_id: message.text for message in FakeGateway.messages}
+    assert "в проекте «Запуск продукта» одобрено" in by_chat[chat(world.olga)]
+    assert by_chat[chat(world.vera)] == "Вас включили в проект «Запуск продукта»."
+
+
+def test_declined_invitation_tells_only_the_requester(world: World) -> None:  # noqa: F811
+    from crm.projects import services as projects
+
+    invitation = invite_vera(world)
+    Notification.objects.all().delete()
+
+    projects.decline_invitation(actor=world.pavel, invitation_id=invitation.pk, reason="Занята")
+    send_all()
+
+    (message,) = FakeGateway.messages
+    assert message.chat_id == chat(world.olga)
+    assert "отклонено" in message.text
+    # The reason typed by the manager is not sent.
+    assert "Занята" not in message.text
+
+
+def test_invitation_rights_are_checked_when_sending(world: World) -> None:  # noqa: F811
+    from crm.projects import services as projects
+
+    # Already decided before the request went out.
+    invitation = invite_vera(world)
+    projects.approve_invitation(actor=world.pavel, invitation_id=invitation.pk)
+    send_all()
+    request_row = Notification.objects.get(kind=Kind.INVITATION_REQUESTED)
+    assert (request_row.status, request_row.reason) == ("skipped", "already_decided")
+
+    # The requester stopped managing the project's department; the employee was removed.
+    FakeGateway.clear()
+    Notification.objects.all().delete()
+    invitation.refresh_from_db()
+    services.invitation_decided(invitation=invitation, actor=world.pavel)
+    org.add_manager(
+        actor=world.admin, department_id=world.sales.pk, user_id=uid(world.boris), designated=True
+    )
+    org.remove_manager(actor=world.admin, department_id=world.sales.pk, user_id=uid(world.olga))
+    projects.remove_participant(
+        actor=world.boris, project_id=invitation.project_id, user_id=uid(world.vera)
+    )
+    send_all()
+
+    assert FakeGateway.messages == []
+    assert outbox() == [
+        ("invitation_decided", "olga", "skipped"),
+        ("project_joined", "vera", "skipped"),
+    ]
+
+
+def test_manager_who_lost_the_department_is_not_asked(world: World) -> None:  # noqa: F811
+    org.add_manager(actor=world.admin, department_id=world.support.pk, user_id=uid(world.boris))
+    invite_vera(world)
+    org.remove_manager(actor=world.admin, department_id=world.support.pk, user_id=uid(world.boris))
+
+    send_all()
+
+    assert [message.chat_id for message in FakeGateway.messages] == [chat(world.pavel)]
+    row = Notification.objects.get(recipient_id=uid(world.boris))
+    assert (row.status, row.reason) == ("skipped", "no_access")

@@ -68,6 +68,8 @@ Template builder UI, published immutable versions, all eight field types and val
 
 aiogram webhooks, Telegram wizard and Mini App both calling same task creation service, no chat sync, notification service, outbox/retries/idempotency, permissions checked at dispatch.
 
+**Status (2026-11-26, fourth slice):** notifications about a changed status and completion, and about project invitations (asked, decided, joined) are done, with the same re-check at send time. **Not done:** checkpoints, mentions, deadline reminders, digests, user settings, in-CRM notifications.
+
 **Status (2026-11-26, third slice):** `/task` in the bot — a manager gives an ordinary task to a particular employee (owner's request of 2026-11-26): department, assignee, title, optional description and deadline, priority, confirmation; the same `create_task` as the website. Updates of one chat are now handled one at a time.
 
 **Status (2026-11-26, second slice):** the request dialogue in the bot is done — `/request` in a private chat walks a manager through the form of a published template (all eight field types, files up to 20 MB) and calls the same `submit` as the website, with an idempotency key against a double tap; the conversation state lives in Redis for 30 minutes. **Not done:** the Mini App, webhook mode, the group allowlist and hand-off (Q22).

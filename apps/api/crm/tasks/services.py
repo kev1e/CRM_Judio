@@ -456,6 +456,7 @@ def change_status(
             before=str(before),
             after=str(target.pk),
         )
+        notifications.status_changed(task=task, actor=actor)
     return task
 
 
