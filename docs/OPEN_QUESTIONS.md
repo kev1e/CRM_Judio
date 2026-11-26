@@ -40,7 +40,7 @@ These are technical parameters or choices that the approved decisions leave open
 | Comments on archived and deleted tasks | Readable, not writable (the same provisional read-only rule as for the task itself) | Production |
 | Separate grant for editing a comment (the capability matrix mentions a "comment edit grant" for a superuser) | One permission `task.comment` covers writing and editing one's own | Production |
 | D037: may a manager address a task to a department they do not manage? May an employee create a task for themselves? | No to both: a manager creates tasks only for managed departments; employees do not create tasks | Confirm with the owner |
-| D037 against D006: who submits templated requests | Not decided. As implemented, only managers create anything | Before S5 |
+| D037 against D006: who submits templated requests | **Decided: D040** — managers | Closed |
 | D038: restoring a deleted comment; whether its author may delete their own | Not built; the author cannot delete | Production |
 | D039: object-storage provider, its jurisdiction (Q25), encryption and backups (Q15) | **Needs the owner's decision.** Development and tests will use a local S3-compatible server | Before files go to production |
 | Who removes a file from a task (listed as still open under Q19) | The manager of the task's department (`task.attachment.delete`), by analogy with D038. A removed file is hidden; its bytes stay in the storage | Confirm with the owner |
@@ -57,7 +57,14 @@ These are technical parameters or choices that the approved decisions leave open
 | A participant who leaves the department of participation or is deactivated | Stays listed (marked as deactivated); not removed automatically | Production |
 | Which project a task may belong to, and who decides | The manager of the task's department chooses among the open projects they can see (their departments' projects and those their employees take part in). The assignee need not take part in the project; the task's department need not be the project's. A closed project keeps its tasks labelled | Confirm with the owner |
 | "Relationship to other CRM record" field type (PRD §5; Q27 leaves the external systems open) | Field type `reference`: a short text identifier or address of a record in another system; nothing is looked up or verified | Before the type is used for real |
-| "Employee selector" field: whom it may name | An employee or manager of the request's department (decided with the submission slice) | Next slice |
+| "Employee selector" field: whom it may name | An active employee or manager of the request's department — the same people who may be the assignee (D037). Anybody else is refused like an unknown identifier | Production |
+| Which version a request uses | Always the latest published one. If a newer version was published while the form was being filled in, the submission is refused and the form must be reopened | Production |
+| Title, assignee, priority and deadline of a request | Typed by the manager next to the form (the title is pre-filled with the template's name); the form itself has no description field | Production |
+| Files of a request form | One file per file field; they become ordinary attachments of the task (Q16 rules). They come with the right to create the request — no separate `task.attach` is asked for. All files of one request together fit 100 MB | Production |
+| A "yes / no" field marked as required | Must be answered (yes or no), not necessarily "yes" | Production |
+| Numbers in a form | Money: two decimal places; other numbers: up to six; below 10^15 | Production |
+| Editing the answers of a submitted request | Not possible: the answers are written once (PRD §5 "stored values"). A removed file is shown as removed | Production |
+| Request without a template (type "Заявка" in the new-task window) | Still possible for a manager; it simply has no form | Production |
 | Default values of fields (PRD §5: "default values subject to security") | Not built | Production |
 | Changing the department list of a template | Takes effect at once for all published versions; not versioned. Requests already made are untouched | Production |
 | Form builder | A structured editor (list of fields with settings), no drag-and-drop and no live preview yet | Production |

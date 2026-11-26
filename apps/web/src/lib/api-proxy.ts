@@ -73,7 +73,8 @@ export async function forwardToApi(
   if (hasBody && (!Number.isFinite(declared) || declared > MAX_BODY_BYTES)) {
     return errorResponse(413, "file_too_large", "The file is larger than 100 MB.");
   }
-  const isFile = path.includes("attachments");
+  // Attachments, and requests by a template (their form may carry files).
+  const isFile = path.includes("attachments") || path[0] === "requests";
   let upstream: Response;
   try {
     upstream = await fetchImpl(target, {

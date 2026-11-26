@@ -4,10 +4,12 @@
 class DomainError(Exception):
     """A business rule refused the operation. `code` is stable and machine-readable."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, details: dict[str, str] | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        # Safe to show: which input was refused, never data.
+        self.details = details
 
 
 class PermissionDeniedError(DomainError):

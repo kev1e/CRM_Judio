@@ -160,3 +160,15 @@ Residual risks and limits of this slice:
 - **Bot API address.** `TELEGRAM_API_BASE_URL` may point to a relay; that host sees the bot token and all messages and must be under the company's control.
 
 Not built: editing accounts, role assignment from the interface, the hand-over of tasks on deactivation (S3), recovery (S1.5).
+
+## Implementation status (S5) — requests by a template
+
+- **Who submits.** `task.create` in the department is checked first, then that the template is active, published and listed for that department (Q21, D040). Every failure of the second check answers the same "not found".
+- **Mass assignment.** A submission may carry only the keys of the published version. An unknown key, a value for a file field typed as text, a file for a field that takes none, and any multipart part other than `payload` and `file.<key>` are refused; nothing is silently dropped or stored.
+- **Lookups through the form.** An `employee` field accepts only active people of the request's department; everybody else is refused exactly like a made-up identifier, so the form cannot be used to probe who exists.
+- **Files.** The same content checks, size limit and storage keys as task attachments (Q16, D039). The whole request body is limited to 100 MB while it is being read.
+- **Reading.** The answers are served only through the task's read check; there is no address of a submission that works without it. File answers link to the task's attachment download, which has its own check.
+- **Audit and logs.** `request.submitted` records the template, the version, the source and counts. No answer, title or file name is written to the audit log; a refusal names the field key and a reason code, never the value.
+- **Atomicity.** A request is created completely or not at all; objects stored before a failure are deleted.
+
+Not built: per-field visibility inside a form (every reader of the task sees all answers), default values, Telegram submissions (S6).

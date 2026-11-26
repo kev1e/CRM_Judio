@@ -753,6 +753,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Readiness'
           description: ''
+  /api/v1/request-forms:
+    get:
+      operationId: request_forms_list
+      tags:
+      - requests
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestFormList'
+          description: ''
   /api/v1/request-templates:
     get:
       operationId: request_templates_list
@@ -882,6 +896,62 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: ''
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/requests:
+    post:
+      operationId: requests_submit
+      tags:
+      - requests
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RequestSubmitRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCreated'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '413':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '503':
           content:
             application/json:
               schema:
@@ -1566,6 +1636,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/tasks/{task_id}/form:
+    get:
+      operationId: tasks_form
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - requests
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskForm'
           description: ''
         '404':
           content:
@@ -2364,6 +2461,41 @@ components:
       - code
       - details
       - message
+    FormAnswer:
+      type: object
+      properties:
+        key:
+          type: string
+        question:
+          type: string
+          description: The field's label in the form.
+        type:
+          type: string
+        filled:
+          type: boolean
+        value:
+          nullable: true
+          description: Text, number as text, ISO date, list of options, true/false,
+            a person's name or a file's name.
+        currency:
+          type: string
+          nullable: true
+        with_time:
+          type: boolean
+        attachment_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: For a file that is still attached.
+      required:
+      - attachment_id
+      - currency
+      - filled
+      - key
+      - question
+      - type
+      - value
+      - with_time
     Health:
       type: object
       properties:
@@ -2836,6 +2968,59 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    RequestForm:
+      type: object
+      description: A form the caller may submit now.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The template.
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: integer
+          description: Send it back when submitting.
+        form_fields:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Named'
+          description: Departments the caller may submit this form for.
+      required:
+      - departments
+      - description
+      - form_fields
+      - id
+      - name
+      - version
+    RequestFormList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestForm'
+      required:
+      - results
+    RequestSubmitRequest:
+      type: object
+      description: |-
+        `multipart/form-data`. Besides `payload`, a file of the field `<key>` is
+        sent as a part named `file.<key>`.
+      properties:
+        payload:
+          type: string
+          minLength: 1
+          description: 'JSON: see RequestPayload.'
+      required:
+      - payload
     SessionInfo:
       type: object
       properties:
@@ -2891,6 +3076,21 @@ components:
             $ref: '#/components/schemas/Status'
       required:
       - results
+    SubmittedForm:
+      type: object
+      properties:
+        template_name:
+          type: string
+        version:
+          type: integer
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormAnswer'
+      required:
+      - answers
+      - template_name
+      - version
     TaskActions:
       type: object
       properties:
@@ -3145,6 +3345,16 @@ components:
       - task_type
       - title
       - version
+    TaskForm:
+      type: object
+      properties:
+        form:
+          allOf:
+          - $ref: '#/components/schemas/SubmittedForm'
+          nullable: true
+          description: Null for a task made without a form.
+      required:
+      - form
     TaskList:
       type: object
       properties:

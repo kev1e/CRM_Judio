@@ -7,6 +7,7 @@ from django.db.models.functions import Lower, Now
 
 from crm.common.ids import new_id
 from crm.organization.models import Department
+from crm.tasks.models import Task
 
 
 class RequestTemplate(models.Model):
@@ -99,3 +100,36 @@ class TemplateVersion(models.Model):
 
     def delete(self, *args: Any, **kwargs: Any) -> NoReturn:
         raise TypeError("A published template version is never deleted.")
+
+
+class SubmissionSource(models.TextChoices):
+    WEB = "web", "Website"
+    TELEGRAM = "telegram", "Telegram"
+
+
+class Submission(models.Model):
+    """What was typed into a form when a request was made: the task, the exact
+    published version of the form and the values (D009). Written once, together
+    with the task; no service changes it afterwards."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    task = models.OneToOneField(Task, on_delete=models.CASCADE, related_name="form_submission")
+    version = models.ForeignKey(TemplateVersion, on_delete=models.PROTECT, related_name="+")
+    # Field key -> value, already validated against `version.fields`. A file
+    # field holds the identifier of the task's attachment.
+    values = models.JSONField()
+    source = models.CharField(max_length=20, choices=SubmissionSource.choices)
+    created_at = models.DateTimeField(db_default=Now())
+
+    class Meta:
+        db_table = "request_templates_submission"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(source__in=SubmissionSource.values),
+                name="request_templates_submission_source_known",
+            ),
+        ]
+        indexes = [models.Index(fields=["version"], name="request_tpl_subm_version_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.task_id}:{self.version_id}"

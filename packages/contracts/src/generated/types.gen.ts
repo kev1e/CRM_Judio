@@ -125,6 +125,26 @@ export type ErrorBody = {
     details: unknown;
 };
 
+export type FormAnswer = {
+    key: string;
+    /**
+     * The field's label in the form.
+     */
+    question: string;
+    type: string;
+    filled: boolean;
+    /**
+     * Text, number as text, ISO date, list of options, true/false, a person's name or a file's name.
+     */
+    value: unknown;
+    currency: string | null;
+    with_time: boolean;
+    /**
+     * For a file that is still attached.
+     */
+    attachment_id: string | null;
+};
+
 export type Health = {
     status: HealthStatusEnum;
 };
@@ -351,6 +371,44 @@ export type ReadinessChecks = {
  */
 export type ReadinessStatusEnum = 'ok' | 'unavailable';
 
+/**
+ * A form the caller may submit now.
+ */
+export type RequestForm = {
+    /**
+     * The template.
+     */
+    id: string;
+    name: string;
+    description: string;
+    /**
+     * Send it back when submitting.
+     */
+    version: number;
+    form_fields: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Departments the caller may submit this form for.
+     */
+    departments: Array<Named>;
+};
+
+export type RequestFormList = {
+    results: Array<RequestForm>;
+};
+
+/**
+ * `multipart/form-data`. Besides `payload`, a file of the field `<key>` is
+ * sent as a part named `file.<key>`.
+ */
+export type RequestSubmitRequest = {
+    /**
+     * JSON: see RequestPayload.
+     */
+    payload: string;
+};
+
 export type SessionInfo = {
     expires_at: string;
 };
@@ -377,6 +435,12 @@ export type Status = {
 
 export type StatusList = {
     results: Array<Status>;
+};
+
+export type SubmittedForm = {
+    template_name: string;
+    version: number;
+    answers: Array<FormAnswer>;
 };
 
 export type TaskActions = {
@@ -468,6 +532,13 @@ export type TaskDetail = {
      * What the interface may offer. Every operation is checked again by the server.
      */
     actions: TaskActions;
+};
+
+export type TaskForm = {
+    /**
+     * Null for a task made without a form.
+     */
+    form: SubmittedForm | null;
 };
 
 export type TaskList = {
@@ -1091,6 +1162,19 @@ export type ReadyResponses = {
 
 export type ReadyResponse = ReadyResponses[keyof ReadyResponses];
 
+export type RequestFormsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/request-forms';
+};
+
+export type RequestFormsListResponses = {
+    200: RequestFormList;
+};
+
+export type RequestFormsListResponse = RequestFormsListResponses[keyof RequestFormsListResponses];
+
 export type RequestTemplatesListData = {
     body?: never;
     path?: never;
@@ -1175,6 +1259,30 @@ export type RequestTemplatesPublishResponses = {
 };
 
 export type RequestTemplatesPublishResponse = RequestTemplatesPublishResponses[keyof RequestTemplatesPublishResponses];
+
+export type RequestsSubmitData = {
+    body: RequestSubmitRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/requests';
+};
+
+export type RequestsSubmitErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+    409: Error;
+    413: Error;
+    503: Error;
+};
+
+export type RequestsSubmitError = RequestsSubmitErrors[keyof RequestsSubmitErrors];
+
+export type RequestsSubmitResponses = {
+    201: TaskCreated;
+};
+
+export type RequestsSubmitResponse = RequestsSubmitResponses[keyof RequestsSubmitResponses];
 
 export type TaskAssigneesData = {
     body?: never;
@@ -1572,6 +1680,27 @@ export type TasksEditCommentResponses = {
 };
 
 export type TasksEditCommentResponse = TasksEditCommentResponses[keyof TasksEditCommentResponses];
+
+export type TasksFormData = {
+    body?: never;
+    path: {
+        task_id: string;
+    };
+    query?: never;
+    url: '/api/v1/tasks/{task_id}/form';
+};
+
+export type TasksFormErrors = {
+    404: Error;
+};
+
+export type TasksFormError = TasksFormErrors[keyof TasksFormErrors];
+
+export type TasksFormResponses = {
+    200: TaskForm;
+};
+
+export type TasksFormResponse = TasksFormResponses[keyof TasksFormResponses];
 
 export type TasksReopenData = {
     body?: never;

@@ -13,7 +13,8 @@ file is hidden; its bytes stay in the storage until a purge is decided (Q06).
 
 import contextlib
 import hashlib
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator, Sequence
+from dataclasses import dataclass
 from typing import BinaryIO
 from uuid import UUID
 
@@ -66,51 +67,104 @@ def attachments(actor: Actor, task: Task) -> QuerySet[Attachment]:
     return task.attachments.filter(deleted_at__isnull=True).select_related("uploader")
 
 
+@dataclass(frozen=True)
+class CheckedFile:
+    """A file that passed the content rules (Q16) and is ready to be stored."""
+
+    stream: BinaryIO
+    name: str
+    content_type: str
+    byte_size: int
+    sha256: str
+
+
+def check_file(stream: BinaryIO, name: str) -> CheckedFile:
+    """Size and content rules of Q16. `stream` must be seekable. Stores nothing."""
+    size = file_size(stream)
+    if size > settings.ATTACHMENT_MAX_BYTES:
+        raise DomainError("file_too_large", "The file is larger than 100 MB.")
+    accepted = validation.inspect(stream, name)
+    digest = hashlib.sha256()
+    while chunk := stream.read(CHUNK):
+        digest.update(chunk)
+    stream.seek(0)
+    return CheckedFile(stream, accepted.name, accepted.content_type, size, digest.hexdigest())
+
+
+def _store(checked: CheckedFile) -> tuple[UUID, str, str]:
+    storage = get_storage()
+    attachment_id = new_id()
+    key = f"attachments/{attachment_id}"
+    try:
+        storage.save(key, checked.stream, content_type=checked.content_type)
+    except StorageError as error:
+        raise _unavailable(error) from error
+    return attachment_id, key, storage.name
+
+
+def discard(keys: Iterable[str]) -> None:
+    """Remove stored objects no row points at."""
+    storage = get_storage()
+    for key in keys:
+        with contextlib.suppress(StorageError):
+            storage.delete(key)
+
+
+def _register(
+    actor: Actor, task: Task, checked: CheckedFile, attachment_id: UUID, key: str, storage: str
+) -> Attachment:
+    if actor.user is None:
+        raise PermissionDeniedError()
+    attachment = Attachment.objects.create(
+        id=attachment_id,
+        task=task,
+        uploader=actor.user,
+        storage=storage,
+        storage_key=key,
+        original_name=checked.name,
+        content_type=checked.content_type,
+        byte_size=checked.byte_size,
+        sha256=checked.sha256,
+    )
+    _log(actor, "task.attachment_added", attachment, task)
+    return attachment
+
+
 def add_attachment(*, actor: Actor, task_id: UUID, stream: BinaryIO, name: str) -> Attachment:
     """Check, store and register a file. `stream` must be seekable."""
     if actor.user is None:
         raise PermissionDeniedError()
     # Rights first: nothing is inspected or stored for somebody who may not attach.
     _writable_task(actor, task_id, "task.attach", lock=False)
-    size = file_size(stream)
-    if size > settings.ATTACHMENT_MAX_BYTES:
-        raise DomainError("file_too_large", "The file is larger than 100 MB.")
-    accepted = validation.inspect(stream, name)
-
-    digest = hashlib.sha256()
-    while chunk := stream.read(CHUNK):
-        digest.update(chunk)
-    stream.seek(0)
-
-    storage = get_storage()
-    attachment_id = new_id()
-    key = f"attachments/{attachment_id}"
-    try:
-        storage.save(key, stream, content_type=accepted.content_type)
-    except StorageError as error:
-        raise _unavailable(error) from error
+    checked = check_file(stream, name)
+    attachment_id, key, storage = _store(checked)
     try:
         with transaction.atomic():
             # Rights again, under the lock: they may have changed during the upload.
             task = _writable_task(actor, task_id, "task.attach", lock=True)
-            attachment = Attachment.objects.create(
-                id=attachment_id,
-                task=task,
-                uploader=actor.user,
-                storage=storage.name,
-                storage_key=key,
-                original_name=accepted.name,
-                content_type=accepted.content_type,
-                byte_size=size,
-                sha256=digest.hexdigest(),
-            )
-            _log(actor, "task.attachment_added", attachment, task)
+            attachment = _register(actor, task, checked, attachment_id, key, storage)
     except BaseException:
         # No row points at the object: do not leave it behind.
-        with contextlib.suppress(StorageError):
-            storage.delete(key)
+        discard([key])
         raise
     return attachment
+
+
+def attach_to_new_task(
+    *, actor: Actor, task: Task, files: Sequence[CheckedFile], stored_keys: list[str]
+) -> list[Attachment]:
+    """Files that arrive together with a new task (a request form). Called inside
+    the transaction that creates the task, by the service that was allowed to
+    create it; every stored key is appended to `stored_keys` so that the caller
+    can `discard` them if the transaction does not commit."""
+    if actor.user is None:
+        raise PermissionDeniedError()
+    created = []
+    for checked in files:
+        attachment_id, key, storage = _store(checked)
+        stored_keys.append(key)
+        created.append(_register(actor, task, checked, attachment_id, key, storage))
+    return created
 
 
 def open_attachment(
