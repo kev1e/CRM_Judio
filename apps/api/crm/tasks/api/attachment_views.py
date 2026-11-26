@@ -28,18 +28,18 @@ _ERRORS = {
     503: ErrorSerializer,
 }
 # Room for the multipart envelope around a file of the maximum size.
-_ENVELOPE_BYTES = 1024 * 1024
+ENVELOPE_BYTES = 1024 * 1024
 
 
 def _actor(request: Request) -> Actor:
     return Actor.for_user(cast(User, request.user))
 
 
-def _too_large() -> DomainError:
+def too_large() -> DomainError:
     return DomainError("file_too_large", "The file is larger than 100 MB.")
 
 
-class _LimitedUploadHandler(TemporaryFileUploadHandler):
+class LimitedUploadHandler(TemporaryFileUploadHandler):
     """Writes the upload to a temporary file and stops reading once it is too big,
     whatever the Content-Length header said."""
 
@@ -67,18 +67,15 @@ class TaskAttachmentsView(APIView):
     )
     def post(self, request: Request, task_id: UUID) -> Response:
         declared = request.META.get("CONTENT_LENGTH") or "0"
-        if (
-            not declared.isdigit()
-            or int(declared) > settings.ATTACHMENT_MAX_BYTES + _ENVELOPE_BYTES
-        ):
-            raise _too_large()
-        handler = _LimitedUploadHandler(request._request)
+        if not declared.isdigit() or int(declared) > settings.ATTACHMENT_MAX_BYTES + ENVELOPE_BYTES:
+            raise too_large()
+        handler = LimitedUploadHandler(request._request)
         request._request.upload_handlers = [handler]
         try:
             upload = request.FILES.get("file")
         finally:
             if handler.exceeded:
-                raise _too_large()
+                raise too_large()
         if upload is None or upload.file is None:
             raise DomainError("file_missing", "Choose a file to attach.")
         actor = _actor(request)

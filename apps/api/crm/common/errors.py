@@ -37,7 +37,9 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
             return Response(envelope(exc.code, exc.message), status=413)
         if exc.code == "storage_unavailable":
             return Response(envelope(exc.code, exc.message), status=503)
-        return Response(envelope(exc.code, exc.message), status=400)
+        if exc.code == "template_changed":
+            return Response(envelope(exc.code, exc.message), status=409)
+        return Response(envelope(exc.code, exc.message, exc.details), status=400)
 
     response = drf_exception_handler(exc, context)
     if response is None:

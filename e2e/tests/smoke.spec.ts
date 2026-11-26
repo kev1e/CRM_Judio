@@ -133,6 +133,16 @@ test.describe("api through the web origin", () => {
     expect((await response.json()).error.code).toBe("not_authenticated");
   });
 
+  test("offers no request forms and takes no request without a session", async ({ request }) => {
+    const forms = await request.get("/api/v1/request-forms");
+    const submitted = await request.post("/api/v1/requests", {
+      multipart: { payload: "{}" },
+    });
+
+    expect(forms.status()).toBe(401);
+    expect([401, 403]).toContain(submitted.status());
+  });
+
   test("refuses a state-changing request that claims another origin", async ({ request }) => {
     const response = await request.post("/api/v1/auth/login", {
       headers: { Origin: "https://evil.example" },

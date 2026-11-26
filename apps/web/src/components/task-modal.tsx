@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Modal } from "@/components/modal";
+import { TaskFormSection } from "@/components/task-form-section";
 import { callApi, uploadFile } from "@/lib/api-client";
 import { fromLocalInput, toLocalInput } from "@/lib/tasks";
 
@@ -472,6 +473,10 @@ export function TaskModal({
               <span className="text-muted-foreground">{t("noDescription")}</span>
             )}
           </p>
+
+          {task.task_type === "request" ? (
+            <TaskFormSection taskId={task.id} revision={task.attachments.length} />
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             {canEditAnything ? (

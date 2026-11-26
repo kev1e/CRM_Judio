@@ -322,3 +322,13 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Built: templates with a draft and immutable published versions (D009), the eight field types of PRD §5 as a validated schema, checkpoints per version, the list of departments, retiring, the administrator's "Шаблоны заявок" screen. Only `template.manage` (administrator, built-in roles only) manages them (Q21).
 - A published version is immutable in the database as well: a trigger refuses UPDATE and DELETE on `request_templates_version`.
 - **Not built yet:** submitting a request by a template and showing its values in the task — the next slice.
+
+### 2026-11-26 — requests by a template (S5, second slice)
+
+- A manager submits a request by a template for a department they manage, if the template is available there (D040, Q21). The check order is: the right to create tasks for the department first, then the template — somebody without the right learns nothing about templates.
+- One service, `crm.request_templates.submissions.submit`, validates and creates; the website calls it and the Telegram form will (PRD §5: no duplicated business logic). Values are validated by `crm.request_templates.values` against the published version; unknown keys are refused, not ignored.
+- The request is an ordinary task of type `request` (D006): assigned at once, with the version's checkpoints, in the starting status. The answers live in `request_templates_submission`, pointing at the immutable version (D009).
+- The answers are shown by `GET /tasks/{id}/form`, which goes through the task's read check (D003): the creator who cannot read the task (Q02) cannot read its answers either.
+- Nothing typed into a form reaches the audit log: the event `request.submitted` carries the template, the version, the source and counts only.
+- Task creation, attachments, the submission row and the audit event are one transaction; files stored before a failure are removed from the storage.
+- Provisional choices are listed in `OPEN_QUESTIONS.md` (latest version only, files and their limit, numbers, required "yes / no", no editing of answers).

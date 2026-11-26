@@ -15,6 +15,7 @@ Rules that are easy to get wrong:
   first. (PROVISIONAL — the mutation policy for such tasks is not approved.)
 """
 
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
@@ -215,8 +216,10 @@ def create_task(
     due_at: datetime | None = None,
     task_type: str = TaskType.TASK,
     project_id: UUID | None = None,
+    checkpoints: Sequence[str] = (),
 ) -> Task:
-    """Create a task that is assigned at once, without anybody's approval (D006)."""
+    """Create a task that is assigned at once, without anybody's approval (D006).
+    `checkpoints` are the ones a request template provides (already validated)."""
     # D037: a manager creates tasks, and only for a department they manage.
     access.require_in_department(actor, "task.create", department_id)
     if actor.user is None:
@@ -254,6 +257,10 @@ def create_task(
             status=first_status,
             due_at=due_at,
             original_due_at=due_at,
+        )
+        Checkpoint.objects.bulk_create(
+            Checkpoint(task=task, label=label, position=position)
+            for position, label in enumerate(checkpoints, start=1)
         )
         _log(actor, "task.created", task, assignee_id=str(assignee.pk), task_type=task_type)
     return task

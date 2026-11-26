@@ -19,6 +19,7 @@ import {
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { NewRequestDialog } from "@/components/new-request-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
 import { TaskCardView } from "@/components/task-card";
 import { TaskModal } from "@/components/task-modal";
@@ -126,6 +127,7 @@ export function TaskBoard({
   const [cards, setCards] = useState(initialCards);
   const [openId, setOpenId] = useState<string | null>(initialTaskId ?? null);
   const [creating, setCreating] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<BoardError | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [draggingFrom, setDraggingFrom] = useState<string | null>(null);
@@ -194,6 +196,7 @@ export function TaskBoard({
 
   function onCreated(created: TaskCreated) {
     setCreating(false);
+    setRequesting(false);
     setNotice(created.task ? null : { kind: "createdForOther", title: created.title });
     void reload();
   }
@@ -203,13 +206,22 @@ export function TaskBoard({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t(`titles.${view}`)}</h1>
         {isBoard && canCreate ? (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {t("newTask")}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setRequesting(true)}
+              className="h-10 rounded-md border border-border px-4 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t("newRequest")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t("newTask")}
+            </button>
+          </div>
         ) : null}
       </header>
 
@@ -306,6 +318,9 @@ export function TaskBoard({
         />
       ) : null}
       {creating ? <NewTaskDialog onClose={() => setCreating(false)} onCreated={onCreated} /> : null}
+      {requesting ? (
+        <NewRequestDialog onClose={() => setRequesting(false)} onCreated={onCreated} />
+      ) : null}
     </div>
   );
 }

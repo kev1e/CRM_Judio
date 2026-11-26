@@ -163,6 +163,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `audit.read` | managed departments, company | Yes (Q14: a superuser needs this separate grant) |
 | `task.create` | managed departments, company | Yes. D037: held by the department manager for managed departments; not by an ordinary employee |
 | `task.comment.delete` | managed departments, company | Yes. D038: held by the department manager; the comment's author alone cannot delete |
+| — (submitting a request by a template) | — | Not a separate permission: `task.create` in the department **and** the template being available in that department (Q21, D040). The answers of a request are read with `task.read` of that task and with nothing else |
 | `template.manage` | company | **No** — administrator only (Q21). Create, edit, publish, retire request templates and choose their departments. Shows no request and no task |
 | `project.manage` | managed departments, company | Yes. Held by the department manager for projects of managed departments; **not** by the administrator role |
 | `project.invitation.approve` | managed departments, company | Yes. Held by the department manager for employees taking part from managed departments; a superuser needs this separate grant (Q29) |

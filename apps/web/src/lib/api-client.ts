@@ -1,8 +1,32 @@
 /** Browser-side calls to the CRM API through this origin. */
 
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; code: string };
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  // `details` names what was refused (a field, a reason) — never data.
+  | { ok: false; code: string; details?: Record<string, string> };
 
 const JSON_HEADERS = { Accept: "application/json", "Content-Type": "application/json" };
+
+function errorDetails(body: unknown): Record<string, string> | undefined {
+  if (typeof body !== "object" || body === null || !("error" in body)) {
+    return undefined;
+  }
+  const error = body.error;
+  if (typeof error !== "object" || error === null || !("details" in error)) {
+    return undefined;
+  }
+  const details = error.details;
+  if (typeof details !== "object" || details === null || Array.isArray(details)) {
+    return undefined;
+  }
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(details)) {
+    if (typeof value === "string") {
+      result[key] = value;
+    }
+  }
+  return result;
+}
 
 function errorCode(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("error" in body)) {
@@ -45,14 +69,12 @@ export async function callApi<T>(
   }
 }
 
-/** Uploads one file as `multipart/form-data`; the browser sets the boundary itself. */
-export async function uploadFile<T>(
+/** Sends `multipart/form-data`; the browser sets the boundary itself. */
+export async function sendForm<T>(
   path: string,
-  file: File,
+  form: FormData,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApiResult<T>> {
-  const form = new FormData();
-  form.append("file", file);
   try {
     const response = await fetchImpl(path, {
       method: "POST",
@@ -64,8 +86,19 @@ export async function uploadFile<T>(
     if (response.ok) {
       return { ok: true, data: body as T };
     }
-    return { ok: false, code: errorCode(body) ?? "unavailable" };
+    return { ok: false, code: errorCode(body) ?? "unavailable", details: errorDetails(body) };
   } catch {
     return { ok: false, code: "unavailable" };
   }
+}
+
+/** Uploads one file as `multipart/form-data`. */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ApiResult<T>> {
+  const form = new FormData();
+  form.append("file", file);
+  return sendForm<T>(path, form, fetchImpl);
 }

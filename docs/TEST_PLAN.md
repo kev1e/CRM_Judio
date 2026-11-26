@@ -335,6 +335,24 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 
 Verified by hand in a browser on 2026-11-26: create a template, make it available to a department, add a field of each of the eight types and two checkpoints, save, publish version 1, remove a field, publish version 2, see both versions listed; phone width.
 
+### S5 — requests by a template (`test_submissions.py`, `new-request-dialog.test.tsx`, `task-form-section.test.tsx`, `request-form.test.ts`)
+
+| Area | Covered |
+|---|---|
+| Submitting | A manager submits a form with every field type and a file: the task is a request, assigned, with the version's checkpoints; values are stored in canonical form; optional fields may stay empty |
+| D040 / Q21 negative | An employee, the administrator, the superuser and a manager of another department are refused (403) and are offered no forms; a template not listed for the department, retired, never published or unknown answers "not found" alike; a closed department takes no requests |
+| Q02 | Somebody who creates company-wide but cannot read the task gets a receipt and cannot read the answers |
+| D009 | After a new version is published an old request still shows its own form and answers; a stale form is refused with 409; new requests use the new version |
+| Values | 27 refusals across all types (required, wrong type, length, range, precision, integer, dates, options, duplicates, unknown people, a typed "file", unknown keys) — each names the field and the reason and creates nothing |
+| Employee field | Only active employees and managers of the request's department; an outsider and a deactivated colleague are refused like an unknown identifier |
+| Files | A required file must arrive; a file for a field that takes none is refused; content rules of Q16 apply; a failure after storing leaves no object in the storage and no rows |
+| Reading | Assignee, manager and superuser read the answers; a colleague, another manager and the administrator do not (404); a removed file is shown as gone; a plain task has no form |
+| Audit | `request.submitted` carries identifiers and counts; no value, title or file name appears anywhere in the log |
+| HTTP | 401 without a session; origin check; error envelope with `details`; malformed payload and stray parts refused |
+| Web | Empty state; rendering of a published form and the exact multipart payload; people follow the chosen department; another template starts empty; the refused field is named; a changed template asks to reopen; answers of every type are shown readably |
+
+Verified by hand in a browser on 2026-11-26: a manager opens "Заявка по шаблону", a negative amount is refused by the server with the field named, a full form with a file is submitted, the task window shows the answers, two checkpoints and the file; the assignee sees the answers on a phone-sized screen and has no submit button; a colleague of the same department gets 404 for the answers.
+
 ### S4 — projects and invitations (`apps/api/crm/projects/tests`, `projects-panel.test.tsx`)
 
 | Requirement | Covered |
