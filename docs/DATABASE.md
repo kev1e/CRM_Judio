@@ -227,7 +227,7 @@ Managing and belonging are separate tables on purpose. The built-in `department_
 |---|---|---|
 | `tasks_status` | `id`, `name`, `category` (`new`/`active`/`completed`/`cancelled`), `position`, `is_active`, `created_at` | name unique |
 | `tasks_status_transition` | `id`, `from_status_id`, `to_status_id` | one row per pair; no move to itself |
-| `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
+| `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `project_id` (nullable), `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
 | `tasks_checkpoint` | `id`, `task_id`, `label`, `position`, `is_done`, `done_by_id`, `done_at`, `created_at` | done state, author and time set together |
 
 | `projects_project` | `id`, `name`, `owning_department_id`, `is_active`, `created_by_id`, `created_at` | name unique regardless of case, not empty |

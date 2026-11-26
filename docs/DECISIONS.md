@@ -309,3 +309,8 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - The administrator role holds no project permission (capability matrix: "only with explicit permissions").
 - Tasks are not linked to projects yet (the "optional project" field of a task): next slice.
 - Provisional choices are in `OPEN_QUESTIONS.md`.
+
+### 2026-11-26 — a task's optional project implemented (PRD "optional project"; no new product decision)
+
+- A task may carry one project. The manager of the task's department chooses it at creation or later (`task.project`, a manager's field like priority) among the open projects they can see. The card shows "project · department".
+- The project is a label for grouping. It gives nobody access to the task (D003): covered by a test in which fellow participants of the task's project still cannot open it.

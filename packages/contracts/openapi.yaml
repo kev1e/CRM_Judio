@@ -796,6 +796,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Options'
           description: ''
+  /api/v1/task-projects:
+    get:
+      operationId: task_projects
+      description: Open projects a task may be put into by the caller.
+      tags:
+      - tasks
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Options'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/task-statuses:
     get:
       operationId: task_statuses
@@ -2482,6 +2503,10 @@ components:
           nullable: true
         priority:
           $ref: '#/components/schemas/PriorityEnum'
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
         assignee_id:
           type: string
           format: uuid
@@ -2724,6 +2749,8 @@ components:
           type: boolean
         priority:
           type: boolean
+        project:
+          type: boolean
         reassign:
           type: boolean
         archive:
@@ -2742,6 +2769,7 @@ components:
       - delete
       - edit
       - priority
+      - project
       - reassign
       - status
     TaskCard:
@@ -2766,6 +2794,10 @@ components:
           nullable: true
         department:
           $ref: '#/components/schemas/Named'
+        project:
+          allOf:
+          - $ref: '#/components/schemas/Named'
+          nullable: true
         assignee:
           $ref: '#/components/schemas/Named'
         checkpoints_done:
@@ -2791,6 +2823,7 @@ components:
       - is_completed
       - is_deleted
       - priority
+      - project
       - status_id
       - task_type
       - title
@@ -2819,6 +2852,10 @@ components:
         due_at:
           type: string
           format: date-time
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
           nullable: true
         task_type:
           allOf:
@@ -2868,6 +2905,10 @@ components:
           nullable: true
         department:
           $ref: '#/components/schemas/Named'
+        project:
+          allOf:
+          - $ref: '#/components/schemas/Named'
+          nullable: true
         assignee:
           $ref: '#/components/schemas/Named'
         checkpoints_done:
@@ -2934,6 +2975,7 @@ components:
       - is_completed
       - is_deleted
       - priority
+      - project
       - status_id
       - task_type
       - title

@@ -20,6 +20,7 @@ const ERRORS = [
   "previous_status_unavailable",
   "invalid_checkpoint",
   "invalid_comment",
+  "project_not_found",
   "file_too_large",
   "file_type_not_allowed",
   "file_content_mismatch",
@@ -38,6 +39,7 @@ const HISTORY_KEYS = [
   "content_changed",
   "deadline_changed",
   "priority_changed",
+  "project_changed",
   "reassigned",
   "status_changed",
   "status_remapped",
@@ -113,6 +115,7 @@ export function TaskModal({
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [assignees, setAssignees] = useState<Options["results"]>([]);
+  const [projects, setProjects] = useState<Options["results"]>([]);
   const checkpointRef = useRef<HTMLFormElement>(null);
   const commentRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLFormElement>(null);
@@ -155,6 +158,22 @@ export function TaskModal({
       active = false;
     };
   }, [editing, canReassign, departmentId]);
+
+  const canMoveProject = task?.actions.project ?? false;
+  useEffect(() => {
+    if (!editing || !canMoveProject) {
+      return;
+    }
+    let active = true;
+    void callApi<Options>(API_PATHS.taskProjects, { method: "GET" }).then((result) => {
+      if (active && result.ok) {
+        setProjects(result.data.results);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [editing, canMoveProject]);
 
   function requestClose(): boolean {
     if (editing && dirty && !window.confirm(t("unsaved"))) {
@@ -210,6 +229,12 @@ export function TaskModal({
       const due = fromLocalInput(String(data.get("due_at") ?? ""));
       if (due !== (task.due_at ? new Date(task.due_at).toISOString() : null)) {
         body.due_at = due;
+      }
+    }
+    if (task.actions.project) {
+      const project = String(data.get("project_id") ?? "") || null;
+      if (project !== (task.project?.id ?? null)) {
+        body.project_id = project;
       }
     }
     const priority = data.get("priority");
@@ -322,6 +347,25 @@ export function TaskModal({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
+              {t("fields.project")}
+              <select
+                name="project_id"
+                defaultValue={task.project?.id ?? ""}
+                disabled={!task.actions.project}
+                className={fieldClass}
+              >
+                <option value="">{t("noProject")}</option>
+                {task.project ? <option value={task.project.id}>{task.project.name}</option> : null}
+                {projects
+                  .filter((project) => project.id !== task.project?.id)
+                  .map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
               {t("fields.assignee")}
               <select
                 name="assignee_id"
@@ -411,6 +455,12 @@ export function TaskModal({
             <dd>{task.due_at ? dateTime(task.due_at) : t("noDue")}</dd>
             <dt className="text-muted-foreground">{t("fields.department")}</dt>
             <dd>{task.department.name}</dd>
+            {task.project ? (
+              <>
+                <dt className="text-muted-foreground">{t("fields.project")}</dt>
+                <dd>{task.project.name}</dd>
+              </>
+            ) : null}
             <dt className="text-muted-foreground">{t("fields.author")}</dt>
             <dd>
               {task.author.name}, {dateTime(task.created_at)}

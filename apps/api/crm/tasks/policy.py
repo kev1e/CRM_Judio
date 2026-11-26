@@ -79,6 +79,7 @@ def actions(actor: Actor, task: Task) -> dict[str, bool]:
         "task.comment",
         "task.comment.delete",
         "task.priority",
+        "task.project",
         "task.reassign",
         "task.archive",
         "task.delete",

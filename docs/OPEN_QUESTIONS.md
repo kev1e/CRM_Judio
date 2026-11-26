@@ -55,7 +55,7 @@ These are technical parameters or choices that the approved decisions leave open
 | List of employees for inviting | Somebody who runs a project sees every active employee's name and departments | Production |
 | An employee's own consent to an invitation; leaving a project | Not asked: the manager decides (as specified). An employee cannot leave by themselves | Production |
 | A participant who leaves the department of participation or is deactivated | Stays listed (marked as deactivated); not removed automatically | Production |
-| Which project a task may belong to | Not built yet | Next slice |
+| Which project a task may belong to, and who decides | The manager of the task's department chooses among the open projects they can see (their departments' projects and those their employees take part in). The assignee need not take part in the project; the task's department need not be the project's. A closed project keeps its tasks labelled | Confirm with the owner |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

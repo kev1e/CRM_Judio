@@ -12,6 +12,7 @@ const ERRORS = [
   "invalid_title",
   "assignee_not_eligible",
   "department_not_found",
+  "project_not_found",
   "validation_error",
   "permission_denied",
   "unavailable",
@@ -36,6 +37,7 @@ export function NewTaskDialog({
   const [departments, setDepartments] = useState<Option[] | null>(null);
   const [departmentId, setDepartmentId] = useState("");
   const [assignees, setAssignees] = useState<Option[]>([]);
+  const [projects, setProjects] = useState<Option[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ErrorKey | null>(null);
 
@@ -48,6 +50,18 @@ export function NewTaskDialog({
       const list = result.ok ? result.data.results : [];
       setDepartments(list);
       setDepartmentId(list[0]?.id ?? "");
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void callApi<Options>(API_PATHS.taskProjects, { method: "GET" }).then((result) => {
+      if (active && result.ok) {
+        setProjects(result.data.results);
+      }
     });
     return () => {
       active = false;
@@ -84,6 +98,7 @@ export function NewTaskDialog({
         department_id: departmentId,
         assignee_id: String(data.get("assignee_id") ?? ""),
         priority: String(data.get("priority") ?? "normal"),
+        project_id: String(data.get("project_id") ?? "") || null,
         task_type: String(data.get("task_type") ?? "task"),
         due_at: fromLocalInput(String(data.get("due_at") ?? "")),
       },
@@ -162,6 +177,19 @@ export function NewTaskDialog({
                 ))}
               </select>
             </label>
+            {projects.length > 0 ? (
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {t("projectLabel")}
+                <select name="project_id" defaultValue="" className={fieldClass}>
+                  <option value="">{t("noProject")}</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t("priorityLabel")}
               <select name="priority" defaultValue="normal" className={fieldClass}>

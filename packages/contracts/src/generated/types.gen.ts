@@ -255,6 +255,7 @@ export type PatchedTaskUpdateRequest = {
     description?: string;
     due_at?: string | null;
     priority?: PriorityEnum;
+    project_id?: string | null;
     assignee_id?: string;
 };
 
@@ -378,6 +379,7 @@ export type TaskActions = {
     comment: boolean;
     comment_delete: boolean;
     priority: boolean;
+    project: boolean;
     reassign: boolean;
     archive: boolean;
     delete: boolean;
@@ -394,6 +396,7 @@ export type TaskCard = {
     status_id: string;
     due_at: string | null;
     department: Named;
+    project: Named | null;
     assignee: Named;
     checkpoints_done: number;
     checkpoints_total: number;
@@ -410,6 +413,7 @@ export type TaskCreateRequest = {
     assignee_id: string;
     priority?: PriorityEnum;
     due_at?: string | null;
+    project_id?: string | null;
     task_type?: TaskTypeEnum;
 };
 
@@ -433,6 +437,7 @@ export type TaskDetail = {
     status_id: string;
     due_at: string | null;
     department: Named;
+    project: Named | null;
     assignee: Named;
     checkpoints_done: number;
     checkpoints_total: number;
@@ -1066,6 +1071,25 @@ export type TaskDepartmentsResponses = {
 };
 
 export type TaskDepartmentsResponse = TaskDepartmentsResponses[keyof TaskDepartmentsResponses];
+
+export type TaskProjectsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/task-projects';
+};
+
+export type TaskProjectsErrors = {
+    403: Error;
+};
+
+export type TaskProjectsError = TaskProjectsErrors[keyof TaskProjectsErrors];
+
+export type TaskProjectsResponses = {
+    200: Options;
+};
+
+export type TaskProjectsResponse = TaskProjectsResponses[keyof TaskProjectsResponses];
 
 export type TaskStatusesData = {
     body?: never;
