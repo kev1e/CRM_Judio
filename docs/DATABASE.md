@@ -230,6 +230,9 @@ Managing and belonging are separate tables on purpose. The built-in `department_
 | `tasks_task` | `id` UUIDv7, `task_type` (`task`/`request`), `title`, `description`, `priority`, `responsible_department_id`, `author_id`, `assignee_id`, `assigned_at`, `project_id` (nullable), `status_id`, `status_before_completion_id`, `due_at`, `original_due_at`, `completed_at`, `archived_at`, `deleted_at`, `deleted_by_id`, `row_version`, `created_at`, `updated_at` | title not empty; **`completed_at` set ⇒ `archived_at` set** (D016); deletion time and author set together |
 | `tasks_checkpoint` | `id`, `task_id`, `label`, `position`, `is_done`, `done_by_id`, `done_at`, `created_at` | done state, author and time set together |
 
+| `request_templates_template` | `id`, `name`, `description`, `is_active`, `draft_fields` (JSON), `draft_checkpoints` (JSON), `has_unpublished_changes`, `created_by_id`, `created_at`, `updated_at` | name unique regardless of case, not empty |
+| `request_templates_department` | `id`, `template_id`, `department_id` | one row per pair; no row = available to nobody (Q21) |
+| `request_templates_version` | `id`, `template_id`, `number`, `fields` (JSON), `checkpoints` (JSON), `published_by_id`, `published_at` | one row per template and number; **a trigger refuses UPDATE and DELETE** (D009) |
 | `projects_project` | `id`, `name`, `owning_department_id`, `is_active`, `created_by_id`, `created_at` | name unique regardless of case, not empty |
 | `projects_member` | `id`, `project_id`, `user_id`, `participation_department_id`, `added_by_id`, `joined_at` | one row per project and user |
 | `projects_invitation` | `id`, `project_id`, `user_id`, `participation_department_id`, `requested_by_id`, `state` (`pending`/`approved`/`declined`/`cancelled`), `decided_by_id`, `decided_at`, `reason`, `created_at` | one pending invitation per project and user; decision author and time set exactly when decided |

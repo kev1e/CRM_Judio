@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "crm.organization",
     "crm.tasks",
     "crm.projects",
+    "crm.request_templates",
 ]
 
 AUTH_USER_MODEL = "identity.User"

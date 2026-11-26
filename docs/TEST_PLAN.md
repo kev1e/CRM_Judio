@@ -321,6 +321,20 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S5 — request templates, the administrator's side (`apps/api/crm/request_templates/tests`, `templates-panel.test.tsx`, `form-fields.test.ts`)
+
+| Requirement | Covered |
+|---|---|
+| Q21 administrator only | `template.manage` belongs to the administrator role and cannot be given through a custom role; a manager, an employee and a superuser are refused for reading, creating, editing, the department list, retiring and publishing — in the service and over HTTP (403) — and change nothing |
+| D009 eight types | Every type is stored in canonical form; a ninth type, unknown settings, settings of another type, bad keys, empty labels, inverted limits, bad currency, empty or duplicate options, duplicate keys and oversized forms are refused and leave the draft unchanged |
+| D009 immutability | Publishing creates version N+1 from the draft; editing the draft and publishing again leaves earlier versions unchanged; a version cannot be saved or deleted through the model, nor by direct SQL (database trigger); nothing to publish when the draft is unchanged |
+| Retiring | A retired template cannot be published and is offered to nobody; its versions stay; it can be brought back |
+| Q21 availability, D040 | With no department listed a template is available to nobody; then only to the managers of the listed departments — not to an employee, the administrator or the superuser; unpublished and retired templates are not offered; shortening the list and losing the manager's post take effect on the next call; an unknown or closed department cannot be listed |
+| Audit | Creation, edits (which parts, not the contents), department changes, publication, retiring; a field's label does not reach the audit log |
+| Web | State of each template, create and open the editor, build a form from several types and save exactly that payload, reorder and remove fields, publish after confirmation only, retire, refusal message keeps the editor open |
+
+Verified by hand in a browser on 2026-11-26: create a template, make it available to a department, add a field of each of the eight types and two checkpoints, save, publish version 1, remove a field, publish version 2, see both versions listed; phone width.
+
 ### S4 — projects and invitations (`apps/api/crm/projects/tests`, `projects-panel.test.tsx`)
 
 | Requirement | Covered |

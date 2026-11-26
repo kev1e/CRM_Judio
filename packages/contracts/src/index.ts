@@ -16,6 +16,7 @@ export const API_PATHS = {
   projects: "/api/v1/projects",
   projectCandidates: "/api/v1/project-candidates",
   projectInvitations: "/api/v1/project-invitations",
+  requestTemplates: "/api/v1/request-templates",
   tasks: "/api/v1/tasks",
   taskStatuses: "/api/v1/task-statuses",
   taskDepartments: "/api/v1/task-departments",

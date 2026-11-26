@@ -10,6 +10,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("api/v1/", include("crm.organization.api.urls")),
     path("api/v1/", include("crm.tasks.api.urls")),
     path("api/v1/", include("crm.projects.api.urls")),
+    path("api/v1/", include("crm.request_templates.api.urls")),
 ]
 
 if settings.API_SCHEMA_ENABLED:

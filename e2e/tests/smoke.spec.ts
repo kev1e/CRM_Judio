@@ -95,6 +95,12 @@ test.describe("pages that need an account", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
+  test("the Templates screen sends an anonymous visitor to the login page", async ({ page }) => {
+    await page.goto("/templates");
+
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
   test("the Statuses screen sends an anonymous visitor to the login page", async ({ page }) => {
     await page.goto("/statuses");
 
