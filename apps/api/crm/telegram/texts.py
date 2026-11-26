@@ -103,6 +103,33 @@ def comment_added(*, title: str, actor: str | None) -> str:
     return f"Новый комментарий{who} к задаче {_quoted(title)}."
 
 
+def status_changed(*, title: str, status: str, completed: bool, actor: str | None) -> str:
+    if completed:
+        who = f"{actor} завершил(а)" if actor else "Завершена"
+        return f"{who} задачу {_quoted(title)}. Она перенесена в архив."
+    who = f"{actor} перевёл(а)" if actor else "Переведена"
+    return f"{who} задачу {_quoted(title)} в статус «{status}»."
+
+
+def invitation_requested(*, project: str, employee: str, department: str, actor: str | None) -> str:
+    who = f"{actor} просит" if actor else "Просят"
+    return (
+        f"{who} включить сотрудника в проект {_quoted(project)}.\n\n"
+        f"Сотрудник: {employee}\nОтдел: {department}\n\n"
+        "Одобрить или отклонить можно на экране «Проекты»."
+    )
+
+
+def invitation_decided(*, project: str, employee: str, approved: bool, actor: str | None) -> str:
+    verdict = "одобрено" if approved else "отклонено"
+    who = f" ({actor})" if actor else ""
+    return f"Участие сотрудника {employee} в проекте {_quoted(project)} {verdict}{who}."
+
+
+def project_joined(*, project: str) -> str:
+    return f"Вас включили в проект {_quoted(project)}."
+
+
 # --- The request dialogue (S6) ----------------------------------------------
 
 REQUEST_NOT_LINKED = (

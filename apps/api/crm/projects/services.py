@@ -19,6 +19,7 @@ managers of a department somebody takes part from, and holders of a company-wide
 """
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from django.db import IntegrityError, transaction
@@ -43,6 +44,13 @@ class Joined:
 
     member: ProjectMember | None
     invitation: ProjectInvitation | None
+
+
+def _notifications() -> Any:
+    # Imported late: notifications read projects when they are sent.
+    from crm.notifications import services
+
+    return services
 
 
 def _log(actor: Actor, action: str, project: Project, **metadata: object) -> None:
@@ -265,6 +273,7 @@ def add_participant(
             user_id=str(user.pk),
             participation_department_id=str(department_id),
         )
+        _notifications().invitation_requested(invitation=invitation, actor=actor)
         return Joined(member=None, invitation=invitation)
 
 
@@ -336,6 +345,7 @@ def approve_invitation(*, actor: Actor, invitation_id: UUID) -> ProjectMember:
             user_id=str(user.pk),
             participation_department_id=str(invitation.participation_department_id),
         )
+        _notifications().invitation_decided(invitation=invitation, actor=actor)
     return member
 
 
@@ -351,6 +361,7 @@ def decline_invitation(*, actor: Actor, invitation_id: UUID, reason: str = "") -
             invitation_id=str(invitation.pk),
             user_id=str(invitation.user_id),
         )
+        _notifications().invitation_decided(invitation=invitation, actor=actor)
 
 
 def cancel_invitation(*, actor: Actor, invitation_id: UUID) -> None:

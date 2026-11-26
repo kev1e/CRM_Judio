@@ -355,3 +355,9 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - The owner asked (2026-11-26) to add creating tasks for particular employees through the bot ("Задача через бота"). Built as the `/task` dialogue in a private chat. It changes no rule: D037 stands — only who may create tasks for a department (its manager) gets the dialogue, and `tasks.create_task` decides.
 - Somebody who creates no tasks — an employee, an unbound sender — gets the same single refusal.
 - The dispatcher now handles the updates of one chat one at a time (`SimpleEventIsolation`), so a double tap cannot create two tasks: the second tap finds the dialogue finished.
+
+### 2026-11-26 — more notifications (S6, fourth slice)
+
+- A notification is about a task or about a project invitation — exactly one (database constraint).
+- At send time: a request to decide goes only while the invitation is still pending and the recipient may still decide it (`invitations_to_decide`); a decision goes only to a requester who still runs the project; "you joined" only to somebody who is still a participant.
+- A completed task's link opens the archive.

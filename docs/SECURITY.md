@@ -181,6 +181,8 @@ Not built: per-field visibility inside a form (every reader of the task sees all
 - **Addressing.** Messages go to the bound numeric Telegram ID in a private chat, never to a group and never by username.
 - **Availability.** A send failure is retried a bounded number of times and never blocks or rolls back the CRM operation.
 
+Project invitations follow the same rule: the right to decide, to run the project or the membership is read again when the message is sent; the reason typed for a refusal is never sent.
+
 Not built: operator alert on terminal failure, per-user notification settings.
 
 ## Implementation status (S6) — the request dialogue in the bot
