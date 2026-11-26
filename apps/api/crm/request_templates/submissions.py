@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Any, BinaryIO
 from uuid import UUID
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from crm.access import services as access
 from crm.audit import services as audit
@@ -116,6 +116,18 @@ def _usable(template_id: UUID, department_id: UUID, *, lock: bool) -> TemplateVe
     return version
 
 
+def _earlier(actor: Actor, idempotency_key: str) -> Task | None:
+    submission = (
+        Submission.objects.select_related("task").filter(idempotency_key=idempotency_key).first()
+    )
+    if submission is None:
+        return None
+    if actor.user is None or submission.task.author_id != actor.user.pk:
+        # Somebody else's key: it tells nothing and creates nothing.
+        raise PermissionDeniedError()
+    return submission.task
+
+
 def submit(
     *,
     actor: Actor,
@@ -129,8 +141,12 @@ def submit(
     priority: str = Priority.NORMAL,
     due_at: datetime | None = None,
     source: str = SubmissionSource.WEB,
+    idempotency_key: str | None = None,
 ) -> Task:
-    """Create a request from a filled form. All of it or none of it."""
+    """Create a request from a filled form. All of it or none of it.
+
+    With an `idempotency_key`, a second call with the same key by the same
+    author returns the request the first one created."""
     # D040: the right to create tasks for this department comes first — nothing
     # about templates is revealed to somebody who has it not.
     access.require_in_department(actor, CREATE, department_id)
@@ -139,6 +155,11 @@ def submit(
     if source not in SubmissionSource.values:
         raise DomainError("invalid_source", "Unknown source of a request.")
     files = files or {}
+    if idempotency_key is not None:
+        if not 16 <= len(idempotency_key) <= 64:
+            raise DomainError("invalid_form", "Malformed idempotency key.")
+        if (earlier := _earlier(actor, idempotency_key)) is not None:
+            return earlier
 
     def current() -> TemplateVersion:
         latest = _usable(
@@ -186,7 +207,13 @@ def submit(
             )
             for key, attachment in zip(file_fields, added, strict=True):
                 clean[key] = str(attachment.pk)
-            Submission.objects.create(task=task, version=published, values=clean, source=source)
+            Submission.objects.create(
+                task=task,
+                version=published,
+                values=clean,
+                source=source,
+                idempotency_key=idempotency_key,
+            )
             audit.record(
                 actor=actor,
                 action="request.submitted",
@@ -203,6 +230,13 @@ def submit(
                     "files": len(added),
                 },
             )
+    except IntegrityError:
+        attachments.discard(stored_keys)
+        # The same attempt arrived twice at once and the other one won.
+        earlier = _earlier(actor, idempotency_key) if idempotency_key else None
+        if earlier is None:
+            raise
+        return earlier
     except BaseException:
         attachments.discard(stored_keys)
         raise

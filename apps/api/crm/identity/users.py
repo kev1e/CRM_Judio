@@ -152,3 +152,9 @@ def reactivate_user(*, actor: Actor, user: User) -> bool:
         )
     user.is_active, user.deactivated_at = True, None
     return True
+
+
+def active_by_telegram_id(telegram_user_id: int) -> User | None:
+    """The active account bound to this numeric Telegram ID (Q30) — how the bot
+    learns who is talking to it. Read from the database on every call (D020)."""
+    return User.objects.filter(telegram_user_id=telegram_user_id, is_active=True).first()

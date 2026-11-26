@@ -119,6 +119,9 @@ class Submission(models.Model):
     # field holds the identifier of the task's attachment.
     values = models.JSONField()
     source = models.CharField(max_length=20, choices=SubmissionSource.choices)
+    # Chosen by the client for one attempt to submit: a repeated delivery of the
+    # same attempt (a double tap in Telegram) creates nothing new.
+    idempotency_key = models.CharField(max_length=64, null=True, blank=True, unique=True)
     created_at = models.DateTimeField(db_default=Now())
 
     class Meta:

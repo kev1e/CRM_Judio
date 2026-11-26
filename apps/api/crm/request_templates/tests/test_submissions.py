@@ -18,7 +18,7 @@ from crm.conftest import Employee
 from crm.files.tests import samples
 from crm.identity import users
 from crm.organization.models import Department
-from crm.request_templates import services, submissions
+from crm.request_templates import schema, services, submissions
 from crm.request_templates.models import RequestTemplate, Submission
 from crm.request_templates.values import FormValueError
 from crm.tasks import attachments
@@ -718,3 +718,64 @@ def test_api_limits_the_size_of_a_request(
     assert (response.status_code, response.json()["error"]["code"]) == (413, "file_too_large")
     assert not Task.objects.exists()
     assert stored_files(file_storage) == []
+
+
+# --- One attempt, one request; answers one at a time (the Telegram dialogue) --
+
+
+def test_repeated_attempt_returns_the_same_request(world: World) -> None:  # noqa: F811
+    template = published(world)
+    key = "a" * 32
+
+    first = submit(world, template, idempotency_key=key, source="telegram")
+    second = submit(world, template, idempotency_key=key, source="telegram")
+
+    assert second.pk == first.pk
+    assert Task.objects.count() == 1
+    assert Submission.objects.get().source == "telegram"
+    # Somebody else's key creates nothing and returns nothing.
+    with pytest.raises(PermissionDeniedError):
+        submit(world, template, actor=world.vera, idempotency_key=key)
+    with pytest.raises(DomainError) as error:
+        submit(world, template, idempotency_key="short")
+    assert error.value.code == "invalid_form"
+    assert Task.objects.count() == 1
+
+
+def test_unknown_source_is_refused(world: World) -> None:  # noqa: F811
+    with pytest.raises(DomainError) as error:
+        submit(world, published(world), source="email")
+
+    assert error.value.code == "invalid_source"
+
+
+def test_one_answer_is_checked_by_the_same_rules() -> None:
+    from zoneinfo import ZoneInfo
+
+    from crm.request_templates import values
+
+    by_key = {field["key"]: field for field in schema.clean_fields(FIELDS)}
+    moscow = ZoneInfo("Europe/Moscow")
+
+    assert values.clean_one(by_key["amount"], "150,5", people=set()) == "150.50"
+    assert values.clean_one(by_key["comment"], "  ", people=set()) is None
+    with pytest.raises(FormValueError) as error:
+        values.clean_one(by_key["client"], "", people=set())
+    assert refusal(error) == ("client", "required")
+
+    assert values.date_from_text(by_key["pay_by"], " 5.1.2027 ", moscow) == "2027-01-05"
+    assert (
+        values.date_from_text(by_key["call_at"], "15.12.2026 14:30", moscow)
+        == "2026-12-15T14:30:00+03:00"
+    )
+    # What is not a date in the expected form is passed on and refused by the rules.
+    for field, text in (
+        (by_key["pay_by"], "15.12.2026 14:30"),
+        (by_key["call_at"], "15.12.2026"),
+        (by_key["pay_by"], "31.02.2026"),
+        (by_key["pay_by"], "завтра"),
+    ):
+        typed = values.date_from_text(field, text, moscow)
+        assert typed == text
+        with pytest.raises(FormValueError):
+            values.clean_one(field, typed, people=set())

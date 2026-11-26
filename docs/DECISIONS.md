@@ -340,3 +340,12 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Delivery is idempotent on the row's status under a row lock. A crash between Telegram accepting the message and the commit can still produce one duplicate — the same accepted risk as for the login prompt.
 - `TelegramRetryAfter` (flood limit) is treated as temporary, in the login prompt too.
 - Recipients, wording, retry numbers and the single time zone are provisional (`OPEN_QUESTIONS.md`). No new permission: being notified follows from being able to read the task and being its assignee or its department's manager.
+
+### 2026-11-26 — the request dialogue in the bot (S6, second slice)
+
+- `/request` is an adapter: it collects answers and calls `submissions.offers`, `tasks.eligible_assignees`, `values.clean_one` and `submissions.submit` — the services of the website (PRD §5: one validation for both). Each answer is checked at once by `clean_one`; `submit` checks the whole form again.
+- The sender is identified on every step from the numeric Telegram ID of the update and must be an active bound account (Q30). The conversation state is never a source of identity or rights.
+- Buttons carry a per-dialogue nonce; a button of an earlier dialogue, of another step or with an out-of-range choice does nothing.
+- A submission carries an idempotency key generated when the dialogue starts (`request_templates_submission.idempotency_key`, unique): a repeated delivery of "Подать заявку" returns the same request. The state is cleared before submitting.
+- State storage: aiogram FSM in Redis with a 30-minute limit (TELEGRAM.md). It holds the answers until submit or cancel; nothing typed is logged.
+- A file is downloaded and checked when sent, and downloaded again at submit; only Telegram's `file_id` is kept in between.

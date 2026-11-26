@@ -321,6 +321,19 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S6 — the request dialogue in the bot (`apps/telegram-bot/tests/test_request_wizard.py`, `test_submissions.py`)
+
+| Area | Covered |
+|---|---|
+| The whole way | A manager answers every kind of question (typed text, money, date, single and multiple choice, employee, file, yes/no), sees the summary, and only then the request is created with `source=telegram`, the checkpoints, the file and the canonical values |
+| Skipping and choosing | Optional questions are skipped; with several forms and departments the bot asks for them and offers only people of the chosen department |
+| D040 negative | An employee is offered nothing; an unbound sender is refused; an account deactivated mid-dialogue and a template retired before the confirmation create nothing; a group chat is ignored |
+| Answers | Wrong numbers and dates are asked again with the reason; typing where a button is expected; file too large, refused content, text instead of a file |
+| Replay | A double tap on "Подать заявку" creates one request; buttons of an earlier dialogue, a forged nonce, out-of-range and non-numeric choices and a premature submit do nothing; `/cancel` ends the dialogue |
+| Service | A repeated idempotency key returns the same request, somebody else's key is refused; an unknown source is refused; `clean_one` and typed dates follow the form's rules |
+
+Not verified: the dialogue against the real Telegram API and the Redis state storage (tests use the recording session and the in-memory storage).
+
 ### S6 — Telegram notifications (`apps/api/crm/notifications/tests`, `crm/telegram/tests/test_gateway.py`)
 
 | Area | Covered |
