@@ -62,12 +62,14 @@ def _actor(telegram_user_id: int) -> Actor | None:
     return Actor.for_user(user) if user is not None else None
 
 
-def _keyboard(nonce: str, rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
+def _keyboard(
+    nonce: str, rows: list[list[tuple[str, str]]], *, prefix: str = PREFIX
+) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=text[:BUTTON_TEXT_LIMIT], callback_data=f"{PREFIX}:{nonce}:{action}"
+                    text=text[:BUTTON_TEXT_LIMIT], callback_data=f"{prefix}:{nonce}:{action}"
                 )
                 for text, action in row
             ]
@@ -77,12 +79,12 @@ def _keyboard(nonce: str, rows: list[list[tuple[str, str]]]) -> InlineKeyboardMa
 
 
 def _choices(
-    nonce: str, kind: str, names: list[str], *extra: tuple[str, str]
+    nonce: str, kind: str, names: list[str], *extra: tuple[str, str], prefix: str = PREFIX
 ) -> InlineKeyboardMarkup:
     rows = [[(name, f"{kind}:{index}")] for index, name in enumerate(names)]
     if extra:
         rows.append(list(extra))
-    return _keyboard(nonce, rows)
+    return _keyboard(nonce, rows, prefix=prefix)
 
 
 def _index(arg: str, items: list[Any]) -> int | None:
@@ -335,6 +337,7 @@ async def pressed(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
         not isinstance(message, Message)
         or message.chat.type != ChatType.PRIVATE
         or current is None
+        or not current.startswith("Wizard:")
         or len(parts) < 3
         or parts[1] != data.get("nonce")
         or data.get("telegram_user_id") != callback.from_user.id

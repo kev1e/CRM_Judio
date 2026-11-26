@@ -192,3 +192,7 @@ Not built: operator alert on terminal failure, per-user notification settings.
 - **Data at rest.** Answers wait in Redis for at most 30 minutes; files are not stored between steps. No answer is written to logs or to the audit log.
 
 Not built: Mini App with `initData` validation, webhook secret, update de-duplication by `update_id`.
+
+## Implementation status (S6) — `/task` in the bot
+
+Same safeguards as the request dialogue: identity from the numeric Telegram ID on every step, private chat only, per-dialogue nonce on buttons, range-checked choices, `create_task` as the only authority (D037), one answer for everybody who may not create tasks. One dialogue creates at most one task: the state is cleared before creating and updates of a chat are processed sequentially. Note: this sequencing is per bot process — running several bot processes would need a shared lock.

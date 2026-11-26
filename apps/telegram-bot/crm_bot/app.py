@@ -2,11 +2,11 @@ import logging
 
 from aiogram import Dispatcher
 from aiogram.fsm.storage.base import BaseStorage
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
 from aiogram.types import ErrorEvent
 
 from crm.telegram import texts
-from crm_bot import request_wizard
+from crm_bot import request_wizard, task_wizard
 from crm_bot.handlers import build_router
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,13 @@ async def on_error(event: ErrorEvent) -> bool:
 def build_dispatcher(storage: BaseStorage | None = None) -> Dispatcher:
     """`storage` keeps the state of the request dialogue. The process passes a
     Redis storage with a time limit; without one the state lives in memory."""
-    dispatcher = Dispatcher(storage=storage or MemoryStorage())
+    # One update of a chat at a time: two taps on the same button are handled
+    # one after the other, and the second finds the dialogue already finished.
+    dispatcher = Dispatcher(
+        storage=storage or MemoryStorage(), events_isolation=SimpleEventIsolation()
+    )
     dispatcher.include_router(build_router())
     dispatcher.include_router(request_wizard.build_router())
+    dispatcher.include_router(task_wizard.build_router())
     dispatcher.errors.register(on_error)
     return dispatcher

@@ -94,6 +94,7 @@ How to run it:
 
 - **Notifications (S6, first slice)**: assignment, changed deadline and new comment are sent to the recipient's private chat by the Celery task `notifications.deliver` through the outbox, with rights re-checked at send time. See `SECURITY.md` and `OPEN_QUESTIONS.md` for what is provisional.
 
+- **Task dialogue (S6)**: `/task` in a private chat — a manager gives an ordinary task to an employee.
 - **Request dialogue (S6, second slice)**: `/request` in a private chat — see `README.md` and `SECURITY.md`. The dispatcher uses a Redis FSM storage (`REDIS_URL`) with a 30-minute limit; the bot service now depends on Redis and mounts the file volume.
 
 Not built yet: webhook mode with the secret-token check (arrives with the HTTPS ingress; long polling needs no public address), the group allowlist (Q22), the Mini App (S6), the other notification kinds and digests (S6/S8). The tests feed real updates through the dispatcher with a recording session; On 2026-11-25 the bot process was started with the owner's token against the real Telegram API (through a local relay, because the development sandbox reaches the internet only through an HTTPS proxy): binding by `/start <code>` and a login approved with the button were completed with a real Telegram account. See `TEST_PLAN.md` for what is still unobserved.
