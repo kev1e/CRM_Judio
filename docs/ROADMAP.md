@@ -60,6 +60,8 @@ Template builder UI, published immutable versions, all eight field types and val
 
 **Exit:** edit/publish new template does not mutate old request; all field types validated; user cannot submit unsupported/custom values to bypass ACL.
 
+**Status (2026-11-26):** the administrator's side is done — templates with a draft and immutable published versions, the eight field types as a validated schema, checkpoints per version, the department list (Q21), retiring, the builder screen. D040: requests are submitted by managers. **Not done:** submitting a request by a template (web form, validation of values, files, the values in the task window), default values, the Telegram form (S6).
+
 ## S6 — Telegram bot/Mini App and notifications
 
 aiogram webhooks, Telegram wizard and Mini App both calling same task creation service, no chat sync, notification service, outbox/retries/idempotency, permissions checked at dispatch.

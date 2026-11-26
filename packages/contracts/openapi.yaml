@@ -753,6 +753,140 @@ paths:
               schema:
                 $ref: '#/components/schemas/Readiness'
           description: ''
+  /api/v1/request-templates:
+    get:
+      operationId: request_templates_list
+      tags:
+      - request-templates
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    post:
+      operationId: request_templates_create
+      tags:
+      - request-templates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreateRequest'
+        required: true
+      security:
+      - sessionCookie: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/request-templates/{template_id}:
+    patch:
+      operationId: request_templates_update
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - request-templates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTemplateUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/v1/request-templates/{template_id}/publish:
+    post:
+      operationId: request_templates_publish
+      parameters:
+      - in: path
+        name: template_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - request-templates
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/task-assignees:
     get:
       operationId: task_assignees
@@ -2510,6 +2644,37 @@ components:
         assignee_id:
           type: string
           format: uuid
+    PatchedTemplateUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 500
+        draft_fields:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          maxItems: 100
+        draft_checkpoints:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 300
+          maxItems: 100
+        department_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
+        is_active:
+          type: boolean
     PatchedWorkflowStatusUpdateRequest:
       type: object
       properties:
@@ -2997,6 +3162,97 @@ components:
       description: |-
         * `task` - Task
         * `request` - Request
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+          description: False for a retired template.
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Named'
+        draft_fields:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        draft_checkpoints:
+          type: array
+          items:
+            type: string
+        has_unpublished_changes:
+          type: boolean
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVersion'
+          description: Newest first. Immutable.
+      required:
+      - departments
+      - description
+      - draft_checkpoints
+      - draft_fields
+      - has_unpublished_changes
+      - id
+      - is_active
+      - name
+      - versions
+    TemplateCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - name
+    TemplateList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+      required:
+      - results
+    TemplateVersion:
+      type: object
+      properties:
+        number:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        published_by:
+          type: string
+          description: Name of who published it.
+        form_fields:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        checkpoints:
+          type: array
+          items:
+            type: string
+      required:
+      - checkpoints
+      - form_fields
+      - number
+      - published_at
+      - published_by
     TransitionRequest:
       type: object
       properties:

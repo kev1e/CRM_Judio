@@ -138,6 +138,13 @@ _ALL = (
         system_role_only=True,
     ),
     PermissionDef(
+        "template.manage",
+        "Create, edit, publish and retire request templates and choose the departments "
+        "they are available in (Q21: administrator only).",
+        _COMPANY_ONLY,
+        system_role_only=True,
+    ),
+    PermissionDef(
         "project.manage",
         "Create and close projects of a department, add its own employees, invite others (D018).",
         _DEPARTMENT_OR_COMPANY,

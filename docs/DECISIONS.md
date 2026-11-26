@@ -36,6 +36,7 @@ Status: **APPROVED** unless marked `PROPOSED` / `OPEN`.
 | D030 | Version policy: use the latest stable release of every program and library, pinned exactly in lockfiles. Supersedes the earlier "do not uncritically choose latest" wording | APPROVED (2026-11-19) |
 | D031 | Exceptions to D030: **TypeScript 6.0.3** (latest is 7.0.x) and **ESLint 9.39.5** (latest is 10.x), used after their compatibility with every tool in the repository is verified; **7-day quarantine** for newly published dependencies, with documented exceptions for urgent security fixes. Evidence and the exception procedure in `ARCHITECTURE.md` | APPROVED WITH CONDITIONS (2026-11-19) |
 | D032 | Django specifics: **A1** own user model from the first identity migration; **B1** the built-in Django admin site is neither installed nor used and `/admin` is not reachable — all administration goes through the CRM's own Next.js interface over the DRF API; **C1** own scoped RBAC (scopes `OWN`, `MANAGED_DEPARTMENTS`, `COMPANY`) on Django ORM + PostgreSQL, Django Groups and model permissions are not a source of truth for CRM business rights. Mandatory requirements in the section "D032" below | APPROVED (2026-11-20) |
+| D040 | **Requests by template are submitted by managers** (not by every employee). Refines D006 and Q21 in line with D037 | APPROVED (2026-11-26) |
 | D039 | Task attachments are stored in **object storage** (S3-compatible), not on the VPS disk. Supersedes the storage location of Q16; the other parts of Q16 (allowed formats, 100 MB per file, no mandatory antivirus) stand. The provider, its jurisdiction and backup arrangements are OPEN | APPROVED (2026-11-26) |
 | D038 | **Comments can be deleted, by the manager** of the task's responsible department. The author alone cannot delete. **No time limit** for editing one's own comment | APPROVED (2026-11-26) |
 | D037 | **A manager creates tasks; the assignee may be a manager or an employee.** Replaces the provisional rule "any employee creates a task for any department" | APPROVED (2026-11-26) |
@@ -314,3 +315,10 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 
 - A task may carry one project. The manager of the task's department chooses it at creation or later (`task.project`, a manager's field like priority) among the open projects they can see. The card shows "project · department".
 - The project is a label for grouping. It gives nobody access to the task (D003): covered by a test in which fellow participants of the task's project still cannot open it.
+
+### 2026-11-26 — D040 approved; request templates, the administrator's side (S5, first slice)
+
+- **D040 (owner, 2026-11-26):** "Подает заявки по шаблонам руководители". Implemented as: a template is offered to a manager for the departments they manage that are on the template's list (Q21). An ordinary employee, the administrator and the read-only superuser are offered nothing. This closes the conflict between D006 ("creator selects the assignee") and D037 noted earlier, and the open point of Q21 about a user eligible through several departments: the manager names the department explicitly when submitting.
+- Built: templates with a draft and immutable published versions (D009), the eight field types of PRD §5 as a validated schema, checkpoints per version, the list of departments, retiring, the administrator's "Шаблоны заявок" screen. Only `template.manage` (administrator, built-in roles only) manages them (Q21).
+- A published version is immutable in the database as well: a trigger refuses UPDATE and DELETE on `request_templates_version`.
+- **Not built yet:** submitting a request by a template and showing its values in the task — the next slice.

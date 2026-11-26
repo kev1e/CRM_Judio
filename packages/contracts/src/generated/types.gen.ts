@@ -259,6 +259,17 @@ export type PatchedTaskUpdateRequest = {
     assignee_id?: string;
 };
 
+export type PatchedTemplateUpdateRequest = {
+    name?: string;
+    description?: string;
+    draft_fields?: Array<{
+        [key: string]: unknown;
+    }>;
+    draft_checkpoints?: Array<string>;
+    department_ids?: Array<string>;
+    is_active?: boolean;
+};
+
 export type PatchedWorkflowStatusUpdateRequest = {
     name?: string;
     next_status_ids?: Array<string>;
@@ -468,6 +479,48 @@ export type TaskList = {
  * * `request` - Request
  */
 export type TaskTypeEnum = 'task' | 'request';
+
+export type Template = {
+    id: string;
+    name: string;
+    description: string;
+    /**
+     * False for a retired template.
+     */
+    is_active: boolean;
+    departments: Array<Named>;
+    draft_fields: Array<{
+        [key: string]: unknown;
+    }>;
+    draft_checkpoints: Array<string>;
+    has_unpublished_changes: boolean;
+    /**
+     * Newest first. Immutable.
+     */
+    versions: Array<TemplateVersion>;
+};
+
+export type TemplateCreateRequest = {
+    name: string;
+    description?: string;
+};
+
+export type TemplateList = {
+    results: Array<Template>;
+};
+
+export type TemplateVersion = {
+    number: number;
+    published_at: string;
+    /**
+     * Name of who published it.
+     */
+    published_by: string;
+    form_fields: Array<{
+        [key: string]: unknown;
+    }>;
+    checkpoints: Array<string>;
+};
 
 export type TransitionRequest = {
     status_id: string;
@@ -1037,6 +1090,91 @@ export type ReadyResponses = {
 };
 
 export type ReadyResponse = ReadyResponses[keyof ReadyResponses];
+
+export type RequestTemplatesListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/request-templates';
+};
+
+export type RequestTemplatesListErrors = {
+    403: Error;
+};
+
+export type RequestTemplatesListError = RequestTemplatesListErrors[keyof RequestTemplatesListErrors];
+
+export type RequestTemplatesListResponses = {
+    200: TemplateList;
+};
+
+export type RequestTemplatesListResponse = RequestTemplatesListResponses[keyof RequestTemplatesListResponses];
+
+export type RequestTemplatesCreateData = {
+    body: TemplateCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/request-templates';
+};
+
+export type RequestTemplatesCreateErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type RequestTemplatesCreateError = RequestTemplatesCreateErrors[keyof RequestTemplatesCreateErrors];
+
+export type RequestTemplatesCreateResponses = {
+    201: Template;
+};
+
+export type RequestTemplatesCreateResponse = RequestTemplatesCreateResponses[keyof RequestTemplatesCreateResponses];
+
+export type RequestTemplatesUpdateData = {
+    body?: PatchedTemplateUpdateRequest;
+    path: {
+        template_id: string;
+    };
+    query?: never;
+    url: '/api/v1/request-templates/{template_id}';
+};
+
+export type RequestTemplatesUpdateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type RequestTemplatesUpdateError = RequestTemplatesUpdateErrors[keyof RequestTemplatesUpdateErrors];
+
+export type RequestTemplatesUpdateResponses = {
+    200: Template;
+};
+
+export type RequestTemplatesUpdateResponse = RequestTemplatesUpdateResponses[keyof RequestTemplatesUpdateResponses];
+
+export type RequestTemplatesPublishData = {
+    body?: never;
+    path: {
+        template_id: string;
+    };
+    query?: never;
+    url: '/api/v1/request-templates/{template_id}/publish';
+};
+
+export type RequestTemplatesPublishErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type RequestTemplatesPublishError = RequestTemplatesPublishErrors[keyof RequestTemplatesPublishErrors];
+
+export type RequestTemplatesPublishResponses = {
+    200: Template;
+};
+
+export type RequestTemplatesPublishResponse = RequestTemplatesPublishResponses[keyof RequestTemplatesPublishResponses];
 
 export type TaskAssigneesData = {
     body?: never;

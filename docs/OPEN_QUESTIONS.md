@@ -56,6 +56,12 @@ These are technical parameters or choices that the approved decisions leave open
 | An employee's own consent to an invitation; leaving a project | Not asked: the manager decides (as specified). An employee cannot leave by themselves | Production |
 | A participant who leaves the department of participation or is deactivated | Stays listed (marked as deactivated); not removed automatically | Production |
 | Which project a task may belong to, and who decides | The manager of the task's department chooses among the open projects they can see (their departments' projects and those their employees take part in). The assignee need not take part in the project; the task's department need not be the project's. A closed project keeps its tasks labelled | Confirm with the owner |
+| "Relationship to other CRM record" field type (PRD §5; Q27 leaves the external systems open) | Field type `reference`: a short text identifier or address of a record in another system; nothing is looked up or verified | Before the type is used for real |
+| "Employee selector" field: whom it may name | An employee or manager of the request's department (decided with the submission slice) | Next slice |
+| Default values of fields (PRD §5: "default values subject to security") | Not built | Production |
+| Changing the department list of a template | Takes effect at once for all published versions; not versioned. Requests already made are untouched | Production |
+| Form builder | A structured editor (list of fields with settings), no drag-and-drop and no live preview yet | Production |
+| Limits of a form | 50 fields, 50 options per list, 30 checkpoints, 5,000 characters per text | Production |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |
