@@ -13,7 +13,8 @@ BUTTON_DENY = "Отклонить"
 START_HELP = (
     "Это бот корпоративной CRM.\n\n"
     "Чтобы привязать Telegram к учётной записи, отправьте сюда код привязки, "
-    "который вам выдал администратор:\n/start КОД"
+    "который вам выдал администратор:\n/start КОД\n\n"
+    "Руководителям: подать заявку по шаблону — /request"
 )
 ENROLLMENT_DONE = (
     "Готово: Telegram привязан к учётной записи CRM. "
@@ -100,3 +101,124 @@ def deadline_changed(*, title: str, due: str | None, actor: str | None) -> str:
 def comment_added(*, title: str, actor: str | None) -> str:
     who = f" от {actor}" if actor else ""
     return f"Новый комментарий{who} к задаче {_quoted(title)}."
+
+
+# --- The request dialogue (S6) ----------------------------------------------
+
+REQUEST_NOT_LINKED = (
+    "Заявку может подать только сотрудник с привязанной учётной записью CRM. "
+    "Если вы сотрудник, обратитесь к администратору."
+)
+REQUEST_NO_FORMS = (
+    "Нет шаблонов, по которым вы можете подать заявку. "
+    "Шаблоны и отделы, которым они доступны, настраивает администратор."
+)
+REQUEST_CHOOSE_FORM = "Новая заявка. Выберите шаблон:"
+REQUEST_CHOOSE_DEPARTMENT = "Для какого отдела заявка?"
+REQUEST_CHOOSE_ASSIGNEE = "Кто исполнитель?"
+REQUEST_NO_ASSIGNEES = "В этом отделе нет сотрудников, которым можно назначить заявку."
+REQUEST_USE_BUTTONS = "Выберите вариант кнопкой под сообщением. Отменить заявку: /cancel"
+REQUEST_TYPE_TEXT = "Отправьте ответ текстом. Отменить заявку: /cancel"
+REQUEST_SEND_FILE = "Отправьте файл (документом или фото). Отменить заявку: /cancel"
+REQUEST_STALE = "Эта кнопка уже неактуальна."
+REQUEST_CANCELLED = "Заявка отменена. Ничего не создано."
+REQUEST_NOTHING_TO_CANCEL = "Сейчас нет заявки, которую можно отменить."
+REQUEST_EXPIRED = "Заполнение заявки прервано. Начните заново: /request"
+REQUEST_TEMPLATE_CHANGED = (
+    "Шаблон изменился или стал недоступен, пока вы заполняли заявку. Начните заново: /request"
+)
+REQUEST_REFUSED = "Заявку не удалось создать. Начните заново: /request"
+REQUEST_FILE_TOO_LARGE = (
+    "Через Telegram можно отправить файл до 20 МБ. Файл больше приложите в CRM."
+)
+REQUEST_FILE_REFUSED = (
+    "Этот файл нельзя приложить. Допустимы PDF, Word, Excel, изображения и ZIP. "
+    "Отправьте другой файл."
+)
+REQUEST_FILE_FAILED = "Не удалось получить файл. Отправьте его ещё раз."
+
+BUTTON_SKIP = "Пропустить"
+BUTTON_DONE = "Готово"
+BUTTON_YES = "Да"
+BUTTON_NO = "Нет"
+BUTTON_SUBMIT = "Подать заявку"
+BUTTON_CANCEL = "Отмена"
+
+_REASONS = {
+    "required": "это поле обязательно.",
+    "invalid": "значение указано неверно.",
+    "too_long": "слишком длинный текст.",
+    "out_of_range": "значение вне допустимых границ.",
+    "too_precise": "слишком много знаков после запятой.",
+    "not_integer": "нужно целое число.",
+    "not_an_option": "выберите значение из предложенных.",
+}
+
+
+def request_title(*, default: str) -> str:
+    return f"Название заявки? Отправьте его текстом или оставьте «{default}»."
+
+
+def button_keep_title(default: str) -> str:
+    return f"Оставить «{default[:40]}»"
+
+
+def request_refusal(reason: str) -> str:
+    return f"Не подходит: {_REASONS.get(reason, _REASONS['invalid'])} Попробуйте ещё раз."
+
+
+def request_question(
+    *,
+    label: str,
+    kind: str,
+    required: bool,
+    hint: str,
+    currency: str | None,
+    with_time: bool,
+    multiple: bool,
+    number: int,
+    total: int,
+) -> str:
+    lines = [f"{number} из {total}. {label}" + ("" if required else " (необязательно)")]
+    if hint:
+        lines.append(hint)
+    if kind == "number":
+        lines.append(f"Введите число{', ' + currency if currency else ''}.")
+    elif kind == "date":
+        lines.append(
+            "Введите дату и время, например 15.12.2026 14:30."
+            if with_time
+            else "Введите дату, например 15.12.2026."
+        )
+    elif kind == "select":
+        lines.append(
+            "Отметьте нужные варианты и нажмите «Готово»." if multiple else "Выберите вариант."
+        )
+    elif kind == "employee":
+        lines.append("Выберите сотрудника.")
+    elif kind == "file":
+        lines.append("Отправьте файл документом или фото, до 20 МБ.")
+    elif kind == "boolean":
+        lines.append("Да или нет?")
+    return "\n".join(lines)
+
+
+def request_summary(
+    *, form: str, title: str, department: str, assignee: str, answers: list[tuple[str, str]]
+) -> str:
+    lines = [
+        "Проверьте заявку.",
+        "",
+        f"Шаблон: {form}",
+        f"Название: {title}",
+        f"Отдел: {department}",
+        f"Исполнитель: {assignee}",
+    ]
+    if answers:
+        lines.append("")
+        lines += [f"{label}: {value}" for label, value in answers]
+    return "\n".join(lines)
+
+
+def request_created(*, title: str, assignee: str) -> str:
+    return f"Заявка «{title}» создана и назначена: {assignee}."

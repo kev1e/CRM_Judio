@@ -139,6 +139,11 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # Files of requests made in the bot go to the same storage as the API's.
+    volumes:
+      - crm-files:/var/lib/crm
     restart: unless-stopped
 
   web:

@@ -75,6 +75,11 @@ These are technical parameters or choices that the approved decisions leave open
 | Time zone of dates in notifications (Q23: per-user zone; the default is open) | One zone for everybody from `NOTIFICATION_TIME_ZONE`, default `Europe/Moscow`, until users have their own | Before digests |
 | Alert about a notification that could not be delivered (Q23: "notify authorized operational contacts") | Only an error in the worker's log and the row's status; who the operational contact is has not been decided | S8 |
 | Notifications left pending when the queue itself is down | They stay pending; nothing re-queues them yet | S8 |
+| Request dialogue in the bot: what it asks | Template, department, assignee, title, then every field. Priority is "normal" and there is no deadline — both can be changed in the CRM afterwards | Production |
+| Files in the bot | Up to 20 MB (the Bot API does not serve larger files to a bot); checked by the attachment rules as soon as they are sent | Production |
+| Dates typed in the bot | `ДД.ММ.ГГГГ` and `ДД.ММ.ГГГГ ЧЧ:ММ`; the time is understood in `NOTIFICATION_TIME_ZONE` | With per-user time zones |
+| Unfinished dialogue | Forgotten after 30 minutes; the typed answers are kept in Redis until then and nowhere else | Production |
+| `/request` in a group | Ignored silently: the allowlist and the private hand-off of Q22 are not built | With Q22 |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

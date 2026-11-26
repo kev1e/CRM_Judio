@@ -12,15 +12,19 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.client.session.base import BaseSession
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.storage.base import BaseStorage
 from aiogram.methods import (
     AnswerCallbackQuery,
     DeleteMessage,
+    EditMessageReplyMarkup,
     EditMessageText,
+    GetFile,
     SendMessage,
     TelegramMethod,
 )
 from aiogram.methods.base import TelegramType
-from aiogram.types import CallbackQuery, Chat, Message, Update, User
+from aiogram.types import CallbackQuery, Chat, Document, File, Message, Update, User
 from asgiref.sync import sync_to_async
 from django.db import connections
 
@@ -32,6 +36,9 @@ NOW = datetime(2026, 11, 25, 12, 0, tzinfo=UTC)
 
 
 class RecordingSession(BaseSession):
+    # Files "stored at Telegram": file_id -> content. Set by a test.
+    files: dict[str, bytes] = {}
+
     def __init__(self) -> None:
         super().__init__()
         self.calls: list[TelegramMethod[Any]] = []
@@ -51,6 +58,12 @@ class RecordingSession(BaseSession):
                 chat=Chat(id=int(getattr(method, "chat_id", 0) or 0), type="private"),
                 text=method.text,
             )
+        if isinstance(method, GetFile):
+            if method.file_id not in self.files:
+                raise TelegramBadRequest(method=method, message="file is too big")
+            result = File(
+                file_id=method.file_id, file_unique_id=method.file_id, file_path=method.file_id
+            )
         return result  # type: ignore[no-any-return]
 
     async def stream_content(
@@ -61,9 +74,7 @@ class RecordingSession(BaseSession):
         chunk_size: int = 65536,
         raise_for_status: bool = True,
     ) -> AsyncGenerator[bytes]:
-        if url:
-            raise NotImplementedError
-        yield b""
+        yield self.files[url.rsplit("/", 1)[-1]]
 
     def texts(self, kind: type[TelegramMethod[Any]]) -> list[str]:
         return [str(getattr(call, "text", "")) for call in self.calls if isinstance(call, kind)]
@@ -77,7 +88,12 @@ def telegram_user(user_id: int, username: str | None = None) -> User:
 
 
 def message_update(
-    text: str, *, user_id: int, chat_type: str = "private", username: str | None = None
+    text: str | None,
+    *,
+    user_id: int,
+    chat_type: str = "private",
+    username: str | None = None,
+    document: Document | None = None,
 ) -> Update:
     chat_id = user_id if chat_type == "private" else -100500
     return Update(
@@ -88,8 +104,22 @@ def message_update(
             chat=Chat(id=chat_id, type=chat_type),
             from_user=telegram_user(user_id, username),
             text=text,
+            document=document,
         ),
     )
+
+
+def document_update(name: str, content: bytes, *, user_id: int, size: int | None = None) -> Update:
+    """A file sent to the bot; its bytes become downloadable in the recording session."""
+    file_id = f"file-{len(RecordingSession.files) + 1}"
+    RecordingSession.files[file_id] = content
+    document = Document(
+        file_id=file_id,
+        file_unique_id=file_id,
+        file_name=name,
+        file_size=len(content) if size is None else size,
+    )
+    return message_update(None, user_id=user_id, document=document)
 
 
 def callback_update(data: str, *, user_id: int) -> Update:
@@ -111,14 +141,15 @@ def callback_update(data: str, *, user_id: int) -> Update:
     )
 
 
-def feed(update: Update) -> RecordingSession:
-    """Run one update through the real dispatcher and return what the bot sent."""
+def feed(update: Update, storage: BaseStorage | None = None) -> RecordingSession:
+    """Run one update through the real dispatcher and return what the bot sent.
+    Pass the same `storage` to several calls to continue a conversation."""
     session = RecordingSession()
 
     async def run() -> None:
         bot = Bot(token=BOT_TOKEN, session=session)
         try:
-            await build_dispatcher().feed_update(bot, update)
+            await build_dispatcher(storage).feed_update(bot, update)
         finally:
             # The handlers' worker thread keeps its database connection between
             # calls; close it so the test database can be dropped at the end.
@@ -131,10 +162,12 @@ def feed(update: Update) -> RecordingSession:
 __all__ = [
     "AnswerCallbackQuery",
     "DeleteMessage",
+    "EditMessageReplyMarkup",
     "EditMessageText",
     "RecordingSession",
     "SendMessage",
     "callback_update",
+    "document_update",
     "feed",
     "message_update",
 ]

@@ -6,8 +6,9 @@ Anything the form does not define is refused, never stored. A refusal names the
 field and a reason and repeats nothing of what was typed.
 """
 
+import re
 from collections.abc import Collection, Mapping
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, tzinfo
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
@@ -126,6 +127,56 @@ def _employee(field: Mapping[str, Any], value: Any, people: Collection[UUID]) ->
     return str(person)
 
 
+def clean_one(field: Mapping[str, Any], value: Any, *, people: Collection[UUID]) -> Any:
+    """The value of one field (not a file) in the form it is stored in; None for
+    an optional field left empty. Used for the whole form and, by the Telegram
+    dialogue, for one answer at a time — the same rules either way."""
+    key, kind = field["key"], field["type"]
+    if isinstance(value, str) and not value.strip():
+        value = None
+    if _empty(value):
+        if field["required"]:
+            raise FormValueError(key, "required")
+        return None
+    if kind in ("text", "reference"):
+        return _text(field, value)
+    if kind == "number":
+        return _number(field, value)
+    if kind == "date":
+        return _date(field, value)
+    if kind == "select":
+        return _select(field, value)
+    if kind == "employee":
+        return _employee(field, value, people)
+    if kind == "boolean" and isinstance(value, bool):
+        return value
+    raise FormValueError(key, "invalid")
+
+
+_TYPED_DATE = re.compile(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$")
+
+
+def date_from_text(field: Mapping[str, Any], text: str, zone: tzinfo) -> str:
+    """A date typed by a person in a chat — `15.12.2026` or `15.12.2026 14:30` —
+    as the ISO value `clean_one` expects. The time is understood in `zone`.
+    Anything else is passed on unchanged and refused there."""
+    match = _TYPED_DATE.fullmatch(text.strip())
+    if match is None:
+        return text
+    day, month, year, hour, minute = match.groups()
+    try:
+        if field.get("with_time"):
+            if hour is None:
+                return text
+            moment = datetime(int(year), int(month), int(day), int(hour), int(minute), tzinfo=zone)
+            return moment.isoformat()
+        if hour is not None:
+            return text
+        return date(int(year), int(month), int(day)).isoformat()
+    except ValueError:
+        return text
+
+
 def clean_values(
     fields: list[dict[str, Any]],
     raw: Any,
@@ -151,36 +202,14 @@ def clean_values(
 
     clean: dict[str, Any] = {}
     for key, field in by_key.items():
-        kind = field["type"]
-        if kind == "file":
+        if field["type"] == "file":
             if not _empty(raw.get(key)):
                 # A file arrives as a file, never as a value somebody typed.
                 raise FormValueError(key, "invalid")
             if field["required"] and key not in file_keys:
                 raise FormValueError(key, "required")
             continue
-        value = raw.get(key)
-        if isinstance(value, str) and not value.strip():
-            value = None
-        if _empty(value):
-            if field["required"]:
-                raise FormValueError(key, "required")
-            continue
-        if kind in ("text", "reference"):
-            result: Any = _text(field, value)
-        elif kind == "number":
-            result = _number(field, value)
-        elif kind == "date":
-            result = _date(field, value)
-        elif kind == "select":
-            result = _select(field, value)
-        elif kind == "employee":
-            result = _employee(field, value, people)
-        elif kind == "boolean":
-            if not isinstance(value, bool):
-                raise FormValueError(key, "invalid")
-            result = value
-        else:  # pragma: no cover - `schema.clean_fields` admits no other type
-            raise FormValueError(key, "invalid")
-        clean[key] = result
+        result = clean_one(field, raw.get(key), people=people)
+        if result is not None:
+            clean[key] = result
     return clean

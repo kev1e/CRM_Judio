@@ -182,3 +182,13 @@ Not built: per-field visibility inside a form (every reader of the task sees all
 - **Availability.** A send failure is retried a bounded number of times and never blocks or rolls back the CRM operation.
 
 Not built: operator alert on terminal failure, per-user notification settings.
+
+## Implementation status (S6) — the request dialogue in the bot
+
+- **Identity.** Every step resolves the sender from `from_user.id` to an active bound account; an unbound or deactivated sender gets one fixed refusal. Nothing the user types and no username is used as identity.
+- **Authorization.** The dialogue offers only what `offers` returns for that account; the final `submit` enforces `task.create`, the template's availability and every value again. A manager who loses the department or a template retired mid-dialogue ends in a refusal with nothing created.
+- **Replay and forgery.** Callback data is `rq:<nonce>:<action>`; the nonce is random per dialogue and checked together with the sender and the current step. Choices are indexes into lists kept on the server side, range-checked. One dialogue can create at most one request (idempotency key + state cleared before submit).
+- **Groups.** `/request` and `/cancel` act only in a private chat (Q22 allowlist not built); nothing of a form is ever posted to a group.
+- **Data at rest.** Answers wait in Redis for at most 30 minutes; files are not stored between steps. No answer is written to logs or to the audit log.
+
+Not built: Mini App with `initData` validation, webhook secret, update de-duplication by `update_id`.

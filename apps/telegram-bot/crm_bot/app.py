@@ -1,9 +1,12 @@
 import logging
 
 from aiogram import Dispatcher
+from aiogram.fsm.storage.base import BaseStorage
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ErrorEvent
 
 from crm.telegram import texts
+from crm_bot import request_wizard
 from crm_bot.handlers import build_router
 
 logger = logging.getLogger(__name__)
@@ -25,9 +28,11 @@ async def on_error(event: ErrorEvent) -> bool:
     return True
 
 
-def build_dispatcher() -> Dispatcher:
-    # No FSM storage yet: the bot keeps no conversation state (wizards arrive in S6).
-    dispatcher = Dispatcher()
+def build_dispatcher(storage: BaseStorage | None = None) -> Dispatcher:
+    """`storage` keeps the state of the request dialogue. The process passes a
+    Redis storage with a time limit; without one the state lives in memory."""
+    dispatcher = Dispatcher(storage=storage or MemoryStorage())
     dispatcher.include_router(build_router())
+    dispatcher.include_router(request_wizard.build_router())
     dispatcher.errors.register(on_error)
     return dispatcher

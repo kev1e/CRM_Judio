@@ -12,11 +12,14 @@ import sys
 
 import django
 
+WIZARD_TTL_SECONDS = 30 * 60
+
 
 def main() -> None:
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "crm.settings")
     django.setup()
 
+    from aiogram.fsm.storage.redis import RedisStorage
     from django.conf import settings
 
     from crm.telegram.client import build_bot
@@ -29,7 +32,11 @@ def main() -> None:
 
     async def run() -> None:
         bot = build_bot(token)
-        dispatcher = build_dispatcher()
+        # An unfinished request dialogue is forgotten after half an hour.
+        storage = RedisStorage.from_url(
+            settings.REDIS_URL, state_ttl=WIZARD_TTL_SECONDS, data_ttl=WIZARD_TTL_SECONDS
+        )
+        dispatcher = build_dispatcher(storage)
         # Polling and a webhook cannot coexist; updates that queued up while the
         # bot was down are stale (a login prompt lives 3 minutes) and are dropped.
         await bot.delete_webhook(drop_pending_updates=True)
