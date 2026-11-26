@@ -14,7 +14,7 @@ START_HELP = (
     "Это бот корпоративной CRM.\n\n"
     "Чтобы привязать Telegram к учётной записи, отправьте сюда код привязки, "
     "который вам выдал администратор:\n/start КОД\n\n"
-    "Руководителям: подать заявку по шаблону — /request"
+    "Руководителям: поставить задачу сотруднику — /task, подать заявку по шаблону — /request"
 )
 ENROLLMENT_DONE = (
     "Готово: Telegram привязан к учётной записи CRM. "
@@ -117,12 +117,12 @@ REQUEST_CHOOSE_FORM = "Новая заявка. Выберите шаблон:"
 REQUEST_CHOOSE_DEPARTMENT = "Для какого отдела заявка?"
 REQUEST_CHOOSE_ASSIGNEE = "Кто исполнитель?"
 REQUEST_NO_ASSIGNEES = "В этом отделе нет сотрудников, которым можно назначить заявку."
-REQUEST_USE_BUTTONS = "Выберите вариант кнопкой под сообщением. Отменить заявку: /cancel"
-REQUEST_TYPE_TEXT = "Отправьте ответ текстом. Отменить заявку: /cancel"
-REQUEST_SEND_FILE = "Отправьте файл (документом или фото). Отменить заявку: /cancel"
+REQUEST_USE_BUTTONS = "Выберите вариант кнопкой под сообщением. Отменить: /cancel"
+REQUEST_TYPE_TEXT = "Отправьте ответ текстом. Отменить: /cancel"
+REQUEST_SEND_FILE = "Отправьте файл (документом или фото). Отменить: /cancel"
 REQUEST_STALE = "Эта кнопка уже неактуальна."
-REQUEST_CANCELLED = "Заявка отменена. Ничего не создано."
-REQUEST_NOTHING_TO_CANCEL = "Сейчас нет заявки, которую можно отменить."
+REQUEST_CANCELLED = "Заполнение отменено. Ничего не создано."
+REQUEST_NOTHING_TO_CANCEL = "Сейчас отменять нечего."
 REQUEST_EXPIRED = "Заполнение заявки прервано. Начните заново: /request"
 REQUEST_TEMPLATE_CHANGED = (
     "Шаблон изменился или стал недоступен, пока вы заполняли заявку. Начните заново: /request"
@@ -222,3 +222,51 @@ def request_summary(
 
 def request_created(*, title: str, assignee: str) -> str:
     return f"Заявка «{title}» создана и назначена: {assignee}."
+
+
+# --- The task dialogue (S6) -------------------------------------------------
+
+TASK_NOT_ALLOWED = "Ставить задачи может руководитель отдела с привязанной учётной записью CRM."
+TASK_CHOOSE_DEPARTMENT = "Новая задача. Для какого отдела?"
+TASK_CHOOSE_ASSIGNEE = "Новая задача. Кому её поставить?"
+TASK_TITLE = "Название задачи? Отправьте его текстом (до 200 символов)."
+TASK_DESCRIPTION = "Описание задачи? Отправьте текстом или пропустите."
+TASK_DUE = (
+    "Срок? Отправьте дату и время, например 15.12.2026 14:30, "
+    "или только дату — тогда срок будет до конца этого дня."
+)
+TASK_DUE_REFUSED = "Не получилось понять срок. Пример: 15.12.2026 14:30 или 15.12.2026."
+TASK_PRIORITY = "Приоритет?"
+TASK_REFUSED = (
+    "Задачу не удалось создать: права или состав отдела изменились. Начните заново: /task"
+)
+BUTTON_NO_DUE = "Без срока"
+BUTTON_CREATE_TASK = "Поставить задачу"
+PRIORITIES = {"low": "Низкий", "normal": "Обычный", "high": "Высокий", "urgent": "Срочный"}
+
+
+def task_summary(
+    *,
+    title: str,
+    description: str,
+    department: str,
+    assignee: str,
+    due: str | None,
+    priority: str,
+) -> str:
+    lines = [
+        "Проверьте задачу.",
+        "",
+        f"Название: {title}",
+        f"Отдел: {department}",
+        f"Исполнитель: {assignee}",
+        f"Срок: {due or 'без срока'}",
+        f"Приоритет: {PRIORITIES[priority]}",
+    ]
+    if description:
+        lines += ["", description]
+    return "\n".join(lines)
+
+
+def task_created(*, title: str, assignee: str) -> str:
+    return f"Задача «{title}» создана и назначена: {assignee}."

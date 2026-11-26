@@ -349,3 +349,9 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - A submission carries an idempotency key generated when the dialogue starts (`request_templates_submission.idempotency_key`, unique): a repeated delivery of "Подать заявку" returns the same request. The state is cleared before submitting.
 - State storage: aiogram FSM in Redis with a 30-minute limit (TELEGRAM.md). It holds the answers until submit or cancel; nothing typed is logged.
 - A file is downloaded and checked when sent, and downloaded again at submit; only Telegram's `file_id` is kept in between.
+
+### 2026-11-26 — `/task` in the bot (owner's request)
+
+- The owner asked (2026-11-26) to add creating tasks for particular employees through the bot ("Задача через бота"). Built as the `/task` dialogue in a private chat. It changes no rule: D037 stands — only who may create tasks for a department (its manager) gets the dialogue, and `tasks.create_task` decides.
+- Somebody who creates no tasks — an employee, an unbound sender — gets the same single refusal.
+- The dispatcher now handles the updates of one chat one at a time (`SimpleEventIsolation`), so a double tap cannot create two tasks: the second tap finds the dialogue finished.

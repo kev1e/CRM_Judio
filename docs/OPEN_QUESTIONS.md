@@ -80,6 +80,8 @@ These are technical parameters or choices that the approved decisions leave open
 | Dates typed in the bot | `ДД.ММ.ГГГГ` and `ДД.ММ.ГГГГ ЧЧ:ММ`; the time is understood in `NOTIFICATION_TIME_ZONE` | With per-user time zones |
 | Unfinished dialogue | Forgotten after 30 minutes; the typed answers are kept in Redis until then and nowhere else | Production |
 | `/request` in a group | Ignored silently: the allowlist and the private hand-off of Q22 are not built | With Q22 |
+| `/task` in the bot: a deadline typed without a time | The end of that day (23:59) in `NOTIFICATION_TIME_ZONE` | Production |
+| `/task` in the bot: what it does not ask | Project and type (always an ordinary task without a project); both can be changed in the CRM | Production |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

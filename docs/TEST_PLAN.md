@@ -321,6 +321,18 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S6 — `/task` in the bot (`apps/telegram-bot/tests/test_task_wizard.py`)
+
+| Area | Covered |
+|---|---|
+| The whole way | Assignee, title, description, a refused and an accepted deadline, priority, summary; the task is created only after the confirmation, with the right author, assignee, deadline (zone applied) and priority; the assignee gets a notification row |
+| Short way | Description and deadline skipped; several departments → the bot asks and offers only that department's people |
+| D037 negative | An employee and an unknown sender get the same refusal; a group chat is ignored; a manager removed from the department before the confirmation creates nothing |
+| Replay | Double tap creates one task; buttons of an earlier dialogue, of the other dialogue, out-of-range choices and a premature "create" do nothing; `/cancel` ends the dialogue |
+| Deadline | `ДД.ММ.ГГГГ ЧЧ:ММ`, date only → end of day, everything else refused |
+
+Not verified: against the real Telegram API.
+
 ### S6 — the request dialogue in the bot (`apps/telegram-bot/tests/test_request_wizard.py`, `test_submissions.py`)
 
 | Area | Covered |
