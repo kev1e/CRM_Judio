@@ -30,6 +30,7 @@ function card(id: string, statusId: string): TaskCard {
     status_id: statusId,
     due_at: null,
     department: { id: "d", name: "Продажи" },
+    project: null,
     assignee: { id: "u", name: "Анна" },
     checkpoints_done: 0,
     checkpoints_total: 0,

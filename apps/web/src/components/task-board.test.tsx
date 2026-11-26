@@ -36,6 +36,7 @@ function card(overrides: Partial<TaskCard> = {}): TaskCard {
     status_id: "todo",
     due_at: "2020-01-05T09:00:00Z",
     department: { id: "d", name: "Продажи" },
+    project: null,
     assignee: { id: "u", name: "Анна Петрова" },
     checkpoints_done: 1,
     checkpoints_total: 3,
@@ -71,6 +72,7 @@ function detail(overrides: Partial<TaskDetail> = {}): TaskDetail {
       comment: true,
       comment_delete: false,
       priority: false,
+      project: false,
       reassign: false,
       archive: false,
       delete: false,
@@ -402,6 +404,19 @@ describe("TaskBoard", () => {
     expect(dialog.queryByRole("button", { name: "Удалить" })).toBeNull();
   });
 
+  it("shows the project on the card and in the task window", async () => {
+    const inProject = { project: { id: "p", name: "Запуск" } };
+    fetchMock.mockResolvedValueOnce(Response.json(detail(inProject)));
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[card(inProject)]} />);
+
+    expect(screen.getByText("Запуск · Продажи")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Подготовить предложение/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+
+    expect(dialog.getByText("Проект")).toBeInTheDocument();
+    expect(dialog.getByText("Запуск")).toBeInTheDocument();
+  });
+
   it("shows comments read-only to somebody who may not comment", async () => {
     const dialog = await openTask(
       detail({ comments: [mine], actions: { ...detail().actions, comment: false } }),
@@ -429,27 +444,39 @@ describe("TaskBoard", () => {
 
   it("creates a task and tells the author when it is not theirs to see", async () => {
     const user = userEvent.setup();
-    fetchMock
-      .mockResolvedValueOnce(Response.json({ results: [{ id: "d", name: "Продажи" }] }))
-      .mockResolvedValueOnce(Response.json({ results: [{ id: "u", name: "Анна Петрова" }] }))
-      .mockResolvedValueOnce(
-        Response.json({ id: "t-2", title: "Счёт для клиента", task: null }, { status: 201 }),
-      )
-      .mockResolvedValue(Response.json({ results: [] }));
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url === "/api/v1/task-departments") {
+        return Promise.resolve(Response.json({ results: [{ id: "d", name: "Продажи" }] }));
+      }
+      if (url === "/api/v1/task-projects") {
+        return Promise.resolve(Response.json({ results: [{ id: "p", name: "Запуск" }] }));
+      }
+      if (url.startsWith("/api/v1/task-assignees")) {
+        return Promise.resolve(Response.json({ results: [{ id: "u", name: "Анна Петрова" }] }));
+      }
+      if (url === "/api/v1/tasks" && init?.method === "POST") {
+        return Promise.resolve(
+          Response.json({ id: "t-2", title: "Счёт для клиента", task: null }, { status: 201 }),
+        );
+      }
+      return Promise.resolve(Response.json({ results: [] }));
+    });
     renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} canCreate />);
 
     await user.click(screen.getByRole("button", { name: "Новая задача" }));
     const dialog = within(await screen.findByRole("dialog", { name: "Новая задача" }));
     await user.type(dialog.getByLabelText("Название"), "Счёт для клиента");
     await user.selectOptions(await dialog.findByLabelText("Исполнитель"), "Анна Петрова");
+    await user.selectOptions(await dialog.findByLabelText("Проект (необязательно)"), "Запуск");
     await user.click(dialog.getByRole("button", { name: "Создать задачу" }));
 
     expect(
       await screen.findByText(/Задача «Счёт для клиента» создана и передана исполнителю\./),
     ).toBeInTheDocument();
-    const [url, init] = fetchMock.mock.calls[2] ?? [];
-    expect(url).toBe("/api/v1/tasks");
+    const [, init] = fetchMock.mock.calls.find(([, options]) => options?.method === "POST") ?? [];
     expect(JSON.parse(String(init?.body))).toMatchObject({
+      project_id: "p",
       title: "Счёт для клиента",
       department_id: "d",
       assignee_id: "u",

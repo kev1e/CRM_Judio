@@ -5,6 +5,7 @@ from crm.tasks.api import attachment_views, views, workflow_views
 urlpatterns = [
     path("task-statuses", views.StatusListView.as_view(), name="task-statuses"),
     path("task-departments", views.TaskDepartmentsView.as_view(), name="task-departments"),
+    path("task-projects", views.TaskProjectsView.as_view(), name="task-projects"),
     path("task-assignees", views.TaskAssigneesView.as_view(), name="task-assignees"),
     path("tasks", views.TaskCollectionView.as_view(), name="tasks"),
     path("tasks/<uuid:task_id>", views.TaskView.as_view(), name="task"),

@@ -65,6 +65,9 @@ _TASK = (
         "task.checkpoints.manage", "Rename and remove checkpoints.", _DEPARTMENT_OR_COMPANY
     ),
     PermissionDef("task.priority", "Change a task's priority.", _DEPARTMENT_OR_COMPANY),
+    PermissionDef(
+        "task.project", "Put a task into a project or take it out.", _DEPARTMENT_OR_COMPANY
+    ),
     PermissionDef("task.reassign", "Change a task's assignee.", _DEPARTMENT_OR_COMPANY),
     PermissionDef(
         "task.archive", "Archive unfinished tasks and reopen archived ones.", _DEPARTMENT_OR_COMPANY

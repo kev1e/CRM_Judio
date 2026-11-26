@@ -40,6 +40,7 @@ class TaskCardSerializer(serializers.Serializer[Any]):
     status_id = serializers.UUIDField()
     due_at = serializers.DateTimeField(allow_null=True)
     department = NamedSerializer()
+    project = NamedSerializer(allow_null=True)
     assignee = NamedSerializer()
     checkpoints_done = serializers.IntegerField()
     checkpoints_total = serializers.IntegerField()
@@ -104,6 +105,7 @@ class TaskActionsSerializer(serializers.Serializer[Any]):
     comment = serializers.BooleanField()
     comment_delete = serializers.BooleanField()
     priority = serializers.BooleanField()
+    project = serializers.BooleanField()
     reassign = serializers.BooleanField()
     archive = serializers.BooleanField()
     delete = serializers.BooleanField()
@@ -132,6 +134,7 @@ class TaskCreateSerializer(serializers.Serializer[Any]):
     assignee_id = serializers.UUIDField()
     priority = serializers.ChoiceField(choices=Priority.choices, required=False, default="normal")
     due_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    project_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     task_type = serializers.ChoiceField(choices=TaskType.choices, required=False, default="task")
 
 
@@ -149,6 +152,7 @@ class TaskUpdateSerializer(serializers.Serializer[Any]):
     description = serializers.CharField(max_length=20000, allow_blank=True, required=False)
     due_at = serializers.DateTimeField(required=False, allow_null=True)
     priority = serializers.ChoiceField(choices=Priority.choices, required=False)
+    project_id = serializers.UUIDField(required=False, allow_null=True)
     assignee_id = serializers.UUIDField(required=False)
 
 

@@ -29,6 +29,8 @@ from crm.common.actors import Actor
 from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.identity.models import User
 from crm.organization.models import Department, DepartmentMembership
+from crm.projects import services as projects
+from crm.projects.models import Project
 from crm.tasks import policy
 from crm.tasks.models import (
     Checkpoint,
@@ -138,7 +140,7 @@ def board(actor: Actor, *, view: str) -> QuerySet[Task]:
     if actor.user is None:
         return Task.objects.none()
     tasks = policy.readable(actor).select_related(
-        "status", "assignee", "responsible_department", "author"
+        "status", "assignee", "responsible_department", "author", "project"
     )
     if view == "mine":
         return tasks.filter(
@@ -164,7 +166,7 @@ def board(actor: Actor, *, view: str) -> QuerySet[Task]:
 def get_task(actor: Actor, task_id: UUID) -> Task:
     task = (
         policy.readable(actor)
-        .select_related("status", "assignee", "responsible_department", "author")
+        .select_related("status", "assignee", "responsible_department", "author", "project")
         .filter(pk=task_id)
         .first()
     )
@@ -212,6 +214,7 @@ def create_task(
     priority: str = Priority.NORMAL,
     due_at: datetime | None = None,
     task_type: str = TaskType.TASK,
+    project_id: UUID | None = None,
 ) -> Task:
     """Create a task that is assigned at once, without anybody's approval (D006)."""
     # D037: a manager creates tasks, and only for a department they manage.
@@ -229,6 +232,7 @@ def create_task(
         if department is None:
             raise DomainError("department_not_found", "No such open department.")
         assignee = _eligible_assignee(department, assignee_id)
+        project = _selectable_project(actor, project_id) if project_id else None
         first_status = (
             TaskStatus.objects.filter(is_active=True, category=StatusCategory.NEW)
             .order_by("position")
@@ -243,6 +247,7 @@ def create_task(
             description=description.strip(),
             priority=priority,
             responsible_department=department,
+            project=project,
             author=actor.user,
             assignee=assignee,
             assigned_at=now,
@@ -326,6 +331,56 @@ def change_priority(
             task.priority = priority
             _save(task, "priority")
             _log(actor, "task.priority_changed", task, before=before, after=priority)
+    return task
+
+
+def selectable_projects(actor: Actor) -> QuerySet[Project]:
+    """Projects a task may be put into by this actor: the open projects they can
+    see (those of their departments and those their employees take part in).
+
+    PROVISIONAL (docs/OPEN_QUESTIONS.md): the assignee need not take part in the
+    project, and the task's department need not be the project's.
+    """
+    if not (
+        access.department_scope(actor, "task.create")
+        or access.department_scope(actor, "task.project")
+    ):
+        raise PermissionDeniedError()
+    return projects.visible_projects(actor).filter(is_active=True).order_by("name")
+
+
+def _selectable_project(actor: Actor, project_id: UUID) -> Project:
+    project = selectable_projects(actor).filter(pk=project_id).first()
+    if project is None:
+        raise DomainError("project_not_found", "No such open project.")
+    return project
+
+
+def change_project(
+    *,
+    actor: Actor,
+    task_id: UUID,
+    project_id: UUID | None,
+    expected_version: int | None = None,
+) -> Task:
+    """Put the task into a project or take it out (`project_id=None`). The
+    manager's field, like priority. Access to the task does not change (D003)."""
+    with transaction.atomic():
+        task = _locked(actor, task_id)
+        policy.require(actor, "task.project", task)
+        _require_editable(task)
+        _check_version(task, expected_version)
+        if project_id != task.project_id:
+            before = task.project_id
+            task.project = _selectable_project(actor, project_id) if project_id else None
+            _save(task, "project")
+            _log(
+                actor,
+                "task.project_changed",
+                task,
+                before=str(before) if before else None,
+                after=str(project_id) if project_id else None,
+            )
     return task
 
 

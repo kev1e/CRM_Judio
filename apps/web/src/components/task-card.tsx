@@ -88,7 +88,9 @@ export function TaskCardView({
         </span>
       ) : null}
       <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span className="truncate">{card.department.name}</span>
+        <span className="truncate">
+          {card.project ? `${card.project.name} · ${card.department.name}` : card.department.name}
+        </span>
         <span className="truncate">{card.assignee.name}</span>
       </span>
     </button>

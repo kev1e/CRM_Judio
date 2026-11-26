@@ -48,6 +48,7 @@ _ACTION_KEYS = {
     "task.comment": "comment",
     "task.comment.delete": "comment_delete",
     "task.priority": "priority",
+    "task.project": "project",
     "task.reassign": "reassign",
     "task.archive": "archive",
     "task.delete": "delete",
@@ -76,6 +77,7 @@ def _card(task: Task, done: int, total: int) -> dict[str, Any]:
             "id": task.responsible_department_id,
             "name": task.responsible_department.name,
         },
+        "project": ({"id": task.project_id, "name": task.project.name} if task.project else None),
         "assignee": {"id": task.assignee_id, "name": task.assignee.display_name},
         "checkpoints_done": done,
         "checkpoints_total": total,
@@ -175,6 +177,19 @@ class TaskDepartmentsView(APIView):
     def get(self, request: Request) -> Response:
         departments = services.assignable_departments(_actor(request))
         return _no_store({"results": [{"id": d.pk, "name": d.name} for d in departments]})
+
+
+class TaskProjectsView(APIView):
+    """Open projects a task may be put into by the caller."""
+
+    @extend_schema(
+        operation_id="task_projects",
+        responses={200: OptionsSerializer, 403: ErrorSerializer},
+        tags=["tasks"],
+    )
+    def get(self, request: Request) -> Response:
+        projects = services.selectable_projects(_actor(request))
+        return _no_store({"results": [{"id": p.pk, "name": p.name} for p in projects]})
 
 
 class TaskAssigneesView(APIView):
@@ -278,6 +293,14 @@ class TaskView(APIView):
                     actor=actor,
                     task_id=task_id,
                     priority=data["priority"],
+                    expected_version=version,
+                )
+                version = None
+            if "project_id" in data:
+                services.change_project(
+                    actor=actor,
+                    task_id=task_id,
+                    project_id=data["project_id"],
                     expected_version=version,
                 )
                 version = None

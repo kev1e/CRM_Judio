@@ -486,6 +486,7 @@ def test_interface_hints_match_what_the_services_allow(world: World) -> None:
         "task.comment": True,
         "task.comment.delete": False,
         "task.priority": False,
+        "task.project": False,
         "task.reassign": False,
         "task.archive": False,
         "task.delete": False,

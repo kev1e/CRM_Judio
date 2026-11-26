@@ -165,6 +165,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `task.comment.delete` | managed departments, company | Yes. D038: held by the department manager; the comment's author alone cannot delete |
 | `project.manage` | managed departments, company | Yes. Held by the department manager for projects of managed departments; **not** by the administrator role |
 | `project.invitation.approve` | managed departments, company | Yes. Held by the department manager for employees taking part from managed departments; a superuser needs this separate grant (Q29) |
+| `task.project` | managed departments, company | Yes. Held by the department manager: put a task into a project or take it out. Gives no access to anybody |
 | `task.attach` | own, managed departments, company | Yes. Every active employee for own tasks, the manager for managed departments; a superuser does not (Q29). Downloading needs only `task.read` |
 | `task.attachment.delete` | managed departments, company | Yes. Held by the department manager (provisional) |
 | `task.comment` | own, managed departments, company | Yes. Every active employee holds it for the tasks assigned to them, a manager for the managed departments; a superuser does not (Q29). Editing is limited to one's own comments |

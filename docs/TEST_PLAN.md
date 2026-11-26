@@ -340,6 +340,19 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 
 Verified by hand in a browser on 2026-11-26 with three accounts: create a project, add an own employee, invite another department's employee (who sees nothing), the other manager approves from the inbox, the employee then sees the project and still no tasks; phone width.
 
+### S4 — a task's project (`apps/api/crm/tasks/tests/test_task_projects.py`, `task-board.test.tsx`)
+
+| Requirement | Covered |
+|---|---|
+| Optional project | A task is created with or without a project; the manager moves it between projects and out, each change in the history with before and after |
+| Manager's field | The assignee and the read-only superuser are refused; people who cannot see the task get "not found"; the lists of projects are refused to an employee, the administrator and the superuser |
+| Which projects | Only open projects the manager can see; another department's project becomes selectable once an own employee takes part in it (not while only invited); unknown and closed projects are "not found" |
+| **D003** | A task inside a project stays invisible to the project's other participants and to the other department's manager, on boards and by direct ID; the assignee sees it with its project without taking part |
+| Read-only states | An archived task's project cannot be changed |
+| HTTP / Web | Project on the card and in the detail, change and clear through the edit form, 403 for the assignee, 404 for an unknown project; the new-task form sends the chosen project; card shows "project · department" |
+
+Verified by hand in a browser on 2026-11-26: create a task in a project, see it on the card, clear the project in edit mode.
+
 ### S4 — files (`crm/files/tests`, `crm/tasks/tests/test_attachments.py`, `task-board.test.tsx`, `modal.test.tsx`, `api-proxy.test.ts`)
 
 | Requirement | Covered |

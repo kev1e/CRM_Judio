@@ -5,6 +5,7 @@ from django.db.models.functions import Now
 
 from crm.common.ids import new_id
 from crm.organization.models import Department
+from crm.projects.models import Project
 
 
 class StatusCategory(models.TextChoices):
@@ -93,6 +94,10 @@ class Task(models.Model):
 
     responsible_department = models.ForeignKey(
         Department, on_delete=models.PROTECT, related_name="tasks"
+    )
+    # Optional. A label for grouping: it changes nothing about who sees the task (D003).
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.PROTECT, related_name="tasks"
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="authored_tasks"

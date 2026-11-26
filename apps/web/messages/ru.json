@@ -230,7 +230,8 @@
       "due": "Срок",
       "department": "Отдел",
       "author": "Автор",
-      "created": "Создана"
+      "created": "Создана",
+      "project": "Проект"
     },
     "noDescription": "Описание не добавлено.",
     "noDue": "Без срока",
@@ -296,6 +297,7 @@
       "comment_deleted": "Удалён комментарий",
       "attachment_added": "Прикреплён файл",
       "attachment_deleted": "Убран файл",
+      "project_changed": "Изменён проект",
       "other": "Изменение"
     },
     "errors": {
@@ -321,8 +323,10 @@
       "file_empty": "Файл пустой.",
       "file_missing": "Выберите файл.",
       "storage_unavailable": "Хранилище файлов недоступно. Попробуйте позже.",
-      "attachment_not_found": "Файл не найден."
-    }
+      "attachment_not_found": "Файл не найден.",
+      "project_not_found": "Проект не найден или закрыт."
+    },
+    "noProject": "Без проекта"
   },
   "newTask": {
     "title": "Новая задача",
@@ -340,7 +344,9 @@
     "typeRequest": "Заявка",
     "create": "Создать задачу",
     "creating": "Создаём…",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "projectLabel": "Проект (необязательно)",
+    "noProject": "Без проекта"
   },
   "workflow": {
     "title": "Статусы задач",
