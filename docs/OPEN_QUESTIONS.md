@@ -69,6 +69,12 @@ These are technical parameters or choices that the approved decisions leave open
 | Changing the department list of a template | Takes effect at once for all published versions; not versioned. Requests already made are untouched | Production |
 | Form builder | A structured editor (list of fields with settings), no drag-and-drop and no live preview yet | Production |
 | Limits of a form | 50 fields, 50 options per list, 30 checkpoints, 5,000 characters per text | Production |
+| Who is notified about what (D012 lists the kinds, not the recipients) | Assignment → the assignee. Deadline changed → the department's managers and the assignee (D017). New comment → the assignee and the department's managers. Never the person who did it; never the superuser or the administrator as such; the previous assignee is not told that a task was taken away | Production |
+| Content of a notification | Title of the task, department, deadline, who did it, a link. A comment's text is never sent. Messages are protected from forwarding | Production |
+| Retry policy of notifications (Q23 leaves the numbers open) | 5 retries: 30 s, 1, 2, 4, 8 min; then the notification is marked failed and not sent later. A refusal by Telegram (bot blocked) fails at once | Production |
+| Time zone of dates in notifications (Q23: per-user zone; the default is open) | One zone for everybody from `NOTIFICATION_TIME_ZONE`, default `Europe/Moscow`, until users have their own | Before digests |
+| Alert about a notification that could not be delivered (Q23: "notify authorized operational contacts") | Only an error in the worker's log and the row's status; who the operational contact is has not been decided | S8 |
+| Notifications left pending when the queue itself is down | They stay pending; nothing re-queues them yet | S8 |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

@@ -19,6 +19,7 @@ x-backend: &backend
     TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-https://api.telegram.org}
     WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://127.0.0.1:3000}
+    NOTIFICATION_TIME_ZONE: ${NOTIFICATION_TIME_ZONE:-Europe/Moscow}
     SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
     # Attachments (D039). "local" keeps files in the crm-files volume and is for

@@ -6,6 +6,7 @@ with an unsafe default.
 """
 
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     "crm.tasks",
     "crm.projects",
     "crm.request_templates",
+    "crm.notifications",
 ]
 
 AUTH_USER_MODEL = "identity.User"
@@ -152,6 +154,14 @@ WEB_ORIGINS: list[str] = [
 ]
 # The address employees open the CRM at; used in links the bot sends. Telegram
 # does not treat `localhost` as a link, hence 127.0.0.1 for local runs.
+# PROVISIONAL: dates in Telegram messages are shown in this zone until every
+# employee has their own (Q23 leaves the default open).
+NOTIFICATION_TIME_ZONE: str = env.str("NOTIFICATION_TIME_ZONE", default="Europe/Moscow")
+try:
+    ZoneInfo(NOTIFICATION_TIME_ZONE)
+except (ZoneInfoNotFoundError, ValueError) as error:
+    raise ImproperlyConfigured("NOTIFICATION_TIME_ZONE must be an IANA time zone.") from error
+
 WEB_PUBLIC_URL: str = env.str("WEB_PUBLIC_URL", default=WEB_ORIGINS[0]).rstrip("/")
 if WEB_PUBLIC_URL not in WEB_ORIGINS:
     raise ImproperlyConfigured("WEB_PUBLIC_URL must be one of WEB_ORIGINS.")

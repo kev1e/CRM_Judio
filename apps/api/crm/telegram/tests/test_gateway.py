@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
+from aiogram.types import InlineKeyboardMarkup
 from pytest_django.fixtures import Settings
 
 from crm.telegram import gateway, texts
@@ -87,3 +88,42 @@ def test_bot_api_address_can_point_to_a_relay(settings: Settings) -> None:
 )
 def test_only_addresses_telegram_accepts_are_linkable(url: str, expected: bool) -> None:
     assert gateway.is_linkable(url) is expected
+
+
+def test_task_message_needs_a_bot_token(settings: Settings) -> None:
+    settings.TELEGRAM_BOT_TOKEN = ""
+    message = gateway.TaskMessage(chat_id=1, text="Текст", url="https://crm.example.com/?task=1")
+
+    with pytest.raises(gateway.TelegramRefusedError):
+        gateway.AiogramGateway().send_task_message(message)
+
+
+@pytest.mark.parametrize(
+    ("url", "as_button"),
+    [("https://crm.example.com/?task=1", True), ("http://localhost:3000/?task=1", False)],
+)
+def test_task_message_links_by_button_or_by_text(
+    monkeypatch: pytest.MonkeyPatch, url: str, as_button: bool
+) -> None:
+    sent: dict[str, object] = {}
+
+    async def record(self: object, **kwargs: object) -> int:
+        sent.update(kwargs)
+        return 7
+
+    monkeypatch.setattr(gateway.AiogramGateway, "_send", record)
+
+    gateway.AiogramGateway().send_task_message(
+        gateway.TaskMessage(chat_id=5, text="Текст", url=url)
+    )
+
+    assert sent["chat_id"] == 5
+    if as_button:
+        assert sent["text"] == "Текст"
+        markup = sent["reply_markup"]
+        assert isinstance(markup, InlineKeyboardMarkup)
+        assert markup.inline_keyboard[0][0].url == url
+    else:
+        # Telegram refuses a button with a dot-less host: the address goes as text.
+        assert sent["text"] == f"Текст\n\n{url}"
+        assert sent["reply_markup"] is None

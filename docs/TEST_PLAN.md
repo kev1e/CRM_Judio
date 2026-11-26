@@ -321,6 +321,20 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### S6 — Telegram notifications (`apps/api/crm/notifications/tests`, `crm/telegram/tests/test_gateway.py`)
+
+| Area | Covered |
+|---|---|
+| Recipients | New task → the assignee only; nobody about their own action; a request by a template is announced as a request; reassignment → the new assignee; deadline moved by the assignee → every manager of the department (D017), by a manager → the assignee; comment → the other side; hand-over on deactivation → the receiving manager; the superuser and the administrator get nothing |
+| Content | Exact text of an assignment; the deadline in the configured zone; the link opens the task (own board for the assignee, all tasks for a manager); a comment's text is never in the message |
+| Q23 re-check at dispatch | A manager removed from the department, a former assignee, a deactivated or unbound recipient and a task in the trash are skipped with a reason code and no message |
+| Transactions | A rolled-back change leaves no row; the message goes out after the commit; a refusal by Telegram does not fail the change |
+| Delivery | A notification is sent once however often the job runs; a permanent refusal fails at once; a temporary failure is retried and after the last retry marked failed, and is not sent late |
+| Storage | The outbox has no text column; nothing is written to the audit log |
+| Gateway | No bot token → permanent refusal; a link as a button, or as text for an address Telegram does not accept |
+
+Not verified: delivery of a notification through the real Telegram API (only the fake gateway and the recorded send were exercised).
+
 ### S5 — request templates, the administrator's side (`apps/api/crm/request_templates/tests`, `templates-panel.test.tsx`, `form-fields.test.ts`)
 
 | Requirement | Covered |

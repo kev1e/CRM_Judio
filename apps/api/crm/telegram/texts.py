@@ -69,3 +69,34 @@ def login_prompt(
         "Если это не вы, нажмите «Отклонить».",
     ]
     return "\n".join(lines)
+
+
+BUTTON_OPEN_TASK = "Открыть в CRM"
+
+
+def _quoted(title: str) -> str:
+    return f"«{title}»"
+
+
+def task_assigned(
+    *, title: str, is_request: bool, department: str, due: str | None, actor: str | None
+) -> str:
+    lines = [
+        f"Вам назначена {'заявка' if is_request else 'задача'} {_quoted(title)}.",
+        "",
+        f"Отдел: {department}",
+        f"Срок: {due or 'не указан'}",
+    ]
+    if actor:
+        lines.append(f"Назначил(а): {actor}")
+    return "\n".join(lines)
+
+
+def deadline_changed(*, title: str, due: str | None, actor: str | None) -> str:
+    who = f"{actor} изменил(а)" if actor else "Изменён"
+    return f"{who} срок задачи {_quoted(title)}.\n\nНовый срок: {due or 'без срока'}"
+
+
+def comment_added(*, title: str, actor: str | None) -> str:
+    who = f" от {actor}" if actor else ""
+    return f"Новый комментарий{who} к задаче {_quoted(title)}."

@@ -172,3 +172,13 @@ Not built: editing accounts, role assignment from the interface, the hand-over o
 - **Atomicity.** A request is created completely or not at all; objects stored before a failure are deleted.
 
 Not built: per-field visibility inside a form (every reader of the task sees all answers), default values, Telegram submissions (S6).
+
+## Implementation status (S6) — Telegram notifications
+
+- **ACL at dispatch (Q23).** A queued notification proves nothing: before sending, the recipient's account state, Telegram binding and `task.read` on the task are read again. A manager removed from the department, a former assignee, a deactivated or unbound account and a deleted task get no message.
+- **Data minimization.** A message carries the task's title, department, deadline and the name of who acted. Comment texts, descriptions, form answers and file names are never sent. Messages are sent with `protect_content`, as plain text (no markup interpretation).
+- **Storage and logs.** The outbox stores identifiers, a status and a reason code — no text. Telegram's error text is never logged or stored (it may quote the request); only the exception class name.
+- **Addressing.** Messages go to the bound numeric Telegram ID in a private chat, never to a group and never by username.
+- **Availability.** A send failure is retried a bounded number of times and never blocks or rolls back the CRM operation.
+
+Not built: operator alert on terminal failure, per-user notification settings.

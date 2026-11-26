@@ -332,3 +332,11 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Nothing typed into a form reaches the audit log: the event `request.submitted` carries the template, the version, the source and counts only.
 - Task creation, attachments, the submission row and the audit event are one transaction; files stored before a failure are removed from the storage.
 - Provisional choices are listed in `OPEN_QUESTIONS.md` (latest version only, files and their limit, numbers, required "yes / no", no editing of answers).
+
+### 2026-11-26 — Telegram notifications, first slice (S6)
+
+- An outbox (`notifications_notification`): the domain service writes a row per recipient inside its own transaction and the delivery job is queued after the commit. A rolled-back change notifies nobody; Telegram or the queue being down never fails the change (Q23).
+- The job carries only the row's ID. At send time the recipient must be active, bound to Telegram and able to read the task by the same check as the CRM (`task.read`); otherwise the row is marked skipped with a reason code. The text is composed at that moment and never stored.
+- Delivery is idempotent on the row's status under a row lock. A crash between Telegram accepting the message and the commit can still produce one duplicate — the same accepted risk as for the login prompt.
+- `TelegramRetryAfter` (flood limit) is treated as temporary, in the login prompt too.
+- Recipients, wording, retry numbers and the single time zone are provisional (`OPEN_QUESTIONS.md`). No new permission: being notified follows from being able to read the task and being its assignee or its department's manager.
