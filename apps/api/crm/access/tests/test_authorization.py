@@ -58,12 +58,13 @@ def test_administrator_holds_configuration_rights_company_wide(admin_actor: Acto
     assert services.require_permission(admin_actor, "role.assign", at_least=Scope.COMPANY)
 
 
-def test_administrator_role_grants_no_task_permission() -> None:
-    # D003: administrative rights are separate from visibility of task contents.
-    assert not [code for code in ADMINISTRATOR_GRANTS if code.startswith("task")]
-    assert not RoleGrant.objects.filter(
-        role__key="administrator", permission_code__startswith="task"
-    ).exists()
+def test_administrator_role_grants_everything_company_wide() -> None:
+    # D042 (replaces the D003 separation): the administrator may do everything.
+    assert dict.fromkeys(REGISTRY, Scope.COMPANY) == ADMINISTRATOR_GRANTS
+    stored = dict(
+        RoleGrant.objects.filter(role__key="administrator").values_list("permission_code", "scope")
+    )
+    assert stored == dict.fromkeys(REGISTRY, "company")
 
 
 def test_administrator_role_in_database_matches_the_code_definition() -> None:

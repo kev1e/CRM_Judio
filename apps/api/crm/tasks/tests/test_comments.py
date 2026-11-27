@@ -72,7 +72,7 @@ def test_comment_text_never_reaches_the_audit_log(world: World) -> None:  # noqa
         assert "Другой текст" not in str(event.metadata)
 
 
-@pytest.mark.parametrize("who", ["boris", "pavel", "vera", "admin"])
+@pytest.mark.parametrize("who", ["boris", "pavel", "vera"])
 def test_outsiders_neither_comment_nor_read(world: World, who: str) -> None:  # noqa: F811
     task = make_task(world)
     services.add_comment(actor=world.anna, task_id=task.pk, body=SECRET_TEXT)
@@ -273,7 +273,7 @@ def test_only_the_manager_deletes(world: World) -> None:  # noqa: F811
         with pytest.raises(PermissionDeniedError):
             services.delete_comment(actor=actor, task_id=task.pk, comment_id=comment.pk)
     # People who cannot see the task, a manager of another department included.
-    for actor in (world.boris, world.pavel, world.vera, world.admin):
+    for actor in (world.boris, world.pavel, world.vera):
         with pytest.raises(DomainError) as error:
             services.delete_comment(actor=actor, task_id=task.pk, comment_id=comment.pk)
         assert error.value.code == "task_not_found"

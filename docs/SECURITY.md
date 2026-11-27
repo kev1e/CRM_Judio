@@ -23,7 +23,7 @@ IDOR/record leakage, overbroad multi-department managers, creator bypass to unas
 2. Author of a task assigned to someone else cannot bypass `assignee only` rule via author ownership.
 3. Manager of department A cannot read B's tasks even when employee belongs to both.
 4. Superuser with task-read right but without admin right cannot edit role grants.
-5. Admin without superuser read right cannot browse all task bodies.
+5. ~~Admin without superuser read right cannot browse all task bodies.~~ Replaced by D042 (2026-11-27): the administrator role reads and changes every task. An administrator account is therefore the most valuable target in the system: the role must be held by as few people as possible, and its use is audited like anybody else's.
 6. Manager cannot create a new admin/superuser role grant.
 7. Permission revocation takes effect mid-session for list, detail, search, download, export, live updates.
 8. Archived/deleted records obey the same or stricter ACL.

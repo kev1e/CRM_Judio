@@ -63,16 +63,16 @@ def test_grants() -> None:
     for permission in ("project.manage", "project.invitation.approve"):
         assert DEPARTMENT_MANAGER_GRANTS[permission] is Scope.MANAGED_DEPARTMENTS
         assert permission not in BASELINE_GRANTS
-        # The administrator role configures the CRM; it does not run projects.
-        assert permission not in ADMINISTRATOR_GRANTS
+        # D042: the administrator runs any project and decides any invitation.
+        assert ADMINISTRATOR_GRANTS[permission] is Scope.COMPANY
         assert (
             Role.objects.get(key="department_manager")
             .grants.filter(permission_code=permission, scope="managed_departments")
             .exists()
         )
         assert (
-            not Role.objects.get(key="administrator")
-            .grants.filter(permission_code=permission)
+            Role.objects.get(key="administrator")
+            .grants.filter(permission_code=permission, scope="company")
             .exists()
         )
 
@@ -91,7 +91,6 @@ def test_manager_creates_a_project_for_a_managed_department(world: World) -> Non
     for actor, department in (
         (world.olga, world.support),  # another department
         (world.anna, world.sales),  # an employee
-        (world.admin, world.sales),  # the administrator
         (world.zoya, world.support),  # the read-only superuser
     ):
         with pytest.raises(PermissionDeniedError):
@@ -175,9 +174,9 @@ def test_the_employees_manager_approves_and_only_then_membership_appears(
     assert code(error) == "invitation_decided"
 
 
-@pytest.mark.parametrize("who", ["olga", "anna", "vera", "admin", "zoya"])
+@pytest.mark.parametrize("who", ["olga", "anna", "vera", "zoya"])
 def test_nobody_else_can_approve_or_decline(world: World, who: str) -> None:  # noqa: F811
-    # Not the requester, not the invited employee herself, not the administrator,
+    # Not the requester, not the invited employee herself,
     # not the superuser without the separate grant (Q29).
     target = project(world)
     invitation = invite(world, target, world.vera)
@@ -351,7 +350,7 @@ def test_who_sees_a_project(world: World) -> None:  # noqa: F811
 
     assert list(services.visible_projects(world.olga)) == [target]  # runs it
     assert list(services.visible_projects(world.anna)) == [target]  # takes part
-    for outsider in (world.boris, world.pavel, world.vera, world.zoya, world.admin):
+    for outsider in (world.boris, world.pavel, world.vera, world.zoya):
         assert list(services.visible_projects(outsider)) == []
     assert list(services.visible_projects(Actor.system("worker"))) == []
 
@@ -434,7 +433,7 @@ def test_closing_a_project_cancels_waiting_invitations(world: World) -> None:  #
 def test_candidates_are_for_those_who_run_projects(world: World) -> None:  # noqa: F811
     logins = [user.crm_login for user in services.candidates(world.olga)]
     assert {"anna", "boris", "vera", "zoya", "olga", "pavel"} <= set(logins)
-    for actor in (world.anna, world.admin, world.zoya):
+    for actor in (world.anna, world.zoya):
         with pytest.raises(PermissionDeniedError):
             services.candidates(actor)
 
@@ -523,6 +522,36 @@ def test_api_invitation_flow(world: World) -> None:  # noqa: F811
     assert closed.json()["is_active"] is False
     assert call(olga, "patch", f"/api/v1/projects/{uuid4()}", {"name": "Х"}).status_code == 404
     assert APIClient().get("/api/v1/projects").status_code == 401
+
+
+# --- The administrator (D042) -----------------------------------------------
+
+
+def test_administrator_runs_any_project_and_decides_any_invitation(world: World) -> None:  # noqa: F811
+    target = project(world)
+    assert target in services.visible_projects(world.admin)
+    assert services.can_manage(world.admin, target)
+
+    # Approves an invitation waiting for another department's manager.
+    invitation = invite(world, target, world.vera)
+    assert invitation in services.invitations_to_decide(world.admin)
+    services.approve_invitation(actor=world.admin, invitation_id=invitation.pk)
+    assert ProjectMember.objects.filter(project=target, user=world.vera.user).exists()
+
+    # Adds anybody without an approval, creates projects for any department, draws zones.
+    joined = services.add_participant(
+        actor=world.admin,
+        project_id=target.pk,
+        user_id=uid(world.zoya),
+        department_id=world.support.pk,
+    )
+    assert joined.member is not None
+    own = services.create_project(
+        actor=world.admin, name="Проект поддержки", department_id=world.support.pk
+    )
+    zone = services.create_zone(actor=world.admin, project_id=own.pk, name="Линия")
+    assert zone.project == own
+    assert AuditEvent.objects.filter(action="project.invitation_approved").count() == 1
 
 
 # --- Zones of responsibility ------------------------------------------------
@@ -629,7 +658,7 @@ def test_only_whoever_runs_the_project_changes_its_zones(world: World) -> None: 
     target = staffed(world)
     zone = services.create_zone(actor=world.olga, project_id=target.pk, name="Договоры")
 
-    # A participant, the manager of a participating department, the administrator.
+    # A participant, the manager of a participating department.
     for actor in (world.anna, world.vera, world.pavel):
         with pytest.raises(PermissionDeniedError):
             services.create_zone(actor=actor, project_id=target.pk, name="Своя")
@@ -640,10 +669,9 @@ def test_only_whoever_runs_the_project_changes_its_zones(world: World) -> None: 
         with pytest.raises(PermissionDeniedError):
             services.delete_zone(actor=actor, project_id=target.pk, zone_id=zone.pk)
     # Somebody who does not see the project: it does not exist for them.
-    for actor in (world.boris, world.admin):
-        with pytest.raises(DomainError) as error:
-            services.create_zone(actor=actor, project_id=target.pk, name="Своя")
-        assert code(error) == "project_not_found"
+    with pytest.raises(DomainError) as error:
+        services.create_zone(actor=world.boris, project_id=target.pk, name="Своя")
+    assert code(error) == "project_not_found"
     assert ProjectZone.objects.count() == 1
     assert not ZoneMember.objects.exists()
 

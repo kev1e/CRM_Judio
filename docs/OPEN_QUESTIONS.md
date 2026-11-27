@@ -83,7 +83,9 @@ These are technical parameters or choices that the approved decisions leave open
 | `/request` in a group | Ignored silently: the allowlist and the private hand-off of Q22 are not built | With Q22 |
 | `/task` in the bot: a deadline typed without a time | The end of that day (23:59) in `NOTIFICATION_TIME_ZONE` | Production |
 | `/task` in the bot: what it does not ask | Project and type (always an ordinary task without a project); both can be changed in the CRM | Production |
-| Project zones: who edits them | Whoever runs the project (manager of its department). The administrator does not run projects and therefore neither sees nor edits them, as before | Owner's confirmation |
+| Project zones: who edits them | Whoever runs the project: the manager of its department, and the administrator (D042) | Closed by D042 |
+| D042: the emergency administrator account (REC-02) | Uses the same built-in role and therefore also reaches every task; whether it should be narrower is not decided | Production |
+| D042: number of administrators | Not limited by the system; every holder reads everything | Production |
 | Project zones: are participants added to a new project automatically | No. Only placed on the picture by their department once they take part; joining still needs the invitation flow | Owner's confirmation |
 | Project zones: roles inside a zone | Two: "answers for it" (at most one) and "works in it". No consulted/informed marks | Owner's confirmation |
 | Company structure: who sees it | Whoever holds `department.read`: administrator — everything, manager — managed departments. Ordinary employees do not see the structure | Owner's confirmation |

@@ -75,7 +75,7 @@ def test_only_the_manager_chooses_the_project(world: World) -> None:  # noqa: F8
     for actor in (world.anna, world.zoya):  # the assignee, the read-only superuser
         with pytest.raises(PermissionDeniedError):
             services.change_project(actor=actor, task_id=task.pk, project_id=target.pk)
-    for actor in (world.boris, world.pavel, world.admin):  # cannot see the task
+    for actor in (world.boris, world.pavel):  # cannot see the task
         with pytest.raises(DomainError) as error:
             services.change_project(actor=actor, task_id=task.pk, project_id=target.pk)
         assert error.value.code == "task_not_found"
@@ -126,7 +126,7 @@ def test_project_of_another_department_becomes_selectable_with_an_own_participan
 
 def test_selectable_projects_are_for_those_who_place_tasks(world: World) -> None:  # noqa: F811
     sales_project(world)
-    for actor in (world.anna, world.admin, world.zoya):
+    for actor in (world.anna, world.zoya):
         with pytest.raises(PermissionDeniedError):
             services.selectable_projects(actor)
 

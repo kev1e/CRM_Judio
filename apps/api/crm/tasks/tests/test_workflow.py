@@ -88,15 +88,12 @@ def test_manager_and_employee_cannot_configure(olga: Employee, employee: Employe
     assert not AuditEvent.objects.filter(action__startswith="task_status.").exists()
 
 
-def test_configuring_gives_no_sight_of_tasks(
+def test_configuration_counts_tasks_of_every_department(
     admin_actor: Actor, olga: Employee, sales: Department
 ) -> None:
-    task = make_task(olga, sales)
+    make_task(olga, sales)
     info = {i.status.name: i for i in workflow.configuration(actor=admin_actor)}
     assert info["Нужно сделать"].task_count == 1
-    with pytest.raises(DomainError) as error:
-        services.get_task(admin_actor, task.pk)
-    assert code(error) == "task_not_found"
 
 
 # --- Creating, renaming, ordering -------------------------------------------

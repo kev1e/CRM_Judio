@@ -258,10 +258,10 @@ def test_template_is_available_to_nobody_until_departments_are_listed(world: Wor
 
     assert list(services.usable_templates(world.olga)) == [created]  # manages Sales
     assert list(services.usable_templates(world.pavel)) == []  # manages Support
-    # D040: employees do not submit requests; neither do the administrator or
-    # the read-only superuser.
-    for actor in (world.anna, world.admin, world.zoya):
+    # D040: employees do not submit requests; neither does the read-only superuser.
+    for actor in (world.anna, world.zoya):
         assert list(services.usable_templates(actor)) == []
+    assert list(services.usable_templates(world.admin)) == [created]  # D042
     event = AuditEvent.objects.get(action="request_template.departments_changed")
     assert event.metadata["added"] == [str(world.sales.pk)]
 

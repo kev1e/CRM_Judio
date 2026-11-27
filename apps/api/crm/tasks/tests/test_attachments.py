@@ -92,7 +92,7 @@ def test_file_name_and_content_never_reach_the_audit_log(world: World) -> None: 
     assert "Договор" not in str(list(AuditEvent.objects.values_list("metadata", flat=True)))
 
 
-@pytest.mark.parametrize("who", ["boris", "pavel", "vera", "admin"])
+@pytest.mark.parametrize("who", ["boris", "pavel", "vera"])
 def test_outsiders_neither_attach_nor_download(
     world: World,  # noqa: F811
     file_storage: Path,

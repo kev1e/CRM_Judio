@@ -9,7 +9,7 @@ One-company universal corporate CRM for internal tasks and standardized requests
 - Employee — executes assigned tasks, creates requests, sees own board.
 - Department manager — manages assigned departments, adds own-department employees to projects, approves cross-department invitations as defined.
 - Superuser — company-wide task visibility, with separately grantable approval powers.
-- Administrator — system configuration, departments, roles, templates, automations, users (not automatically entitled to view all tasks unless also a superuser).
+- Administrator — system configuration, departments, roles, templates, automations, users (and, since D042 of 2026-11-27, full access to every task and project).
 
 ## 2. Employees / organization
 
