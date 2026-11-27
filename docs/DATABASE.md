@@ -173,6 +173,7 @@ Concrete tables created by migrations so far. Everything above remains the logic
 
 | Table | Columns | Constraints |
 |---|---|---|
+| `organization_company_head` | One row (`id` = 1, check constraint): `title` (caption at the top of the company structure, ≤150), `user_id` (nullable; the account shown there). Descriptive only |
 | `identity_user` | `id` UUIDv7, `crm_login`, `display_name`, `responsibility` (what the employee answers for; ≤300 chars, descriptive only), `password` (Argon2id hash), `last_login`, `email`, `email_verified_at`, `email_verified_by_id`, `telegram_user_id`, `telegram_username`, `telegram_bound_at`, `is_active`, `deactivated_at`, `permissions_version`, `created_at`, `updated_at` | `crm_login` unique and format-checked; `telegram_user_id` unique when set; `email` unique when set and lowercase; verified state requires both the address and the verifying administrator; Telegram ID and binding time are set together; inactive ⇔ `deactivated_at` set |
 | `access_role` | `id`, `key`, `name`, `description`, `is_system`, `created_at` | `key` unique and format-checked |
 | `access_role_grant` | `id`, `role_id`, `permission_code`, `scope` | one row per (role, permission); `scope` ∈ `own`, `managed_departments`, `company` |

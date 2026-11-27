@@ -957,6 +957,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/structure/head:
+    get:
+      operationId: structure_head
+      description: 'The top of the company structure: a caption and, optionally, an
+        account.'
+      tags:
+      - departments
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyHead'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+    patch:
+      operationId: structure_head_update
+      description: 'The top of the company structure: a caption and, optionally, an
+        account.'
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyHeadUpdateRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyHead'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/task-assignees:
     get:
       operationId: task_assignees
@@ -2412,6 +2466,18 @@ components:
           maxLength: 5000
       required:
       - text
+    CompanyHead:
+      type: object
+      properties:
+        title:
+          type: string
+        user:
+          allOf:
+          - $ref: '#/components/schemas/Person'
+          nullable: true
+      required:
+      - title
+      - user
     CurrentUser:
       type: object
       properties:
@@ -2781,6 +2847,16 @@ components:
           type: string
           minLength: 1
           maxLength: 5000
+    PatchedCompanyHeadUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
     PatchedDepartmentUpdateRequest:
       type: object
       properties:
@@ -2880,6 +2956,26 @@ components:
             type: string
             format: uuid
           maxItems: 100
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        crm_login:
+          type: string
+        display_name:
+          type: string
+        responsibility:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - crm_login
+      - display_name
+      - id
+      - is_active
+      - responsibility
     PriorityEnum:
       enum:
       - low

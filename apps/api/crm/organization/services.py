@@ -24,7 +24,12 @@ from crm.audit import services as audit
 from crm.common.actors import Actor
 from crm.common.exceptions import DomainError
 from crm.identity.models import User
-from crm.organization.models import Department, DepartmentManager, DepartmentMembership
+from crm.organization.models import (
+    CompanyHead,
+    Department,
+    DepartmentManager,
+    DepartmentMembership,
+)
 
 _MANAGE = "department.manage"
 
@@ -353,3 +358,55 @@ def remove_manager(*, actor: Actor, department_id: UUID, user_id: UUID) -> bool:
             metadata={"department_id": str(department_id)},
         )
     return True
+
+
+# --- The top of the company structure ---------------------------------------
+
+HEAD_TITLE_MAX_LENGTH = 150
+
+
+class _Keep:
+    """Marks an argument that was not given (None means "detach the account")."""
+
+
+KEEP = _Keep()
+
+
+def company_head(*, actor: Actor) -> CompanyHead:
+    """What stands at the top of the structure, for anybody who may see departments."""
+    access.require_department_scope(actor, "department.read")
+    head = CompanyHead.objects.select_related("user").filter(pk=CompanyHead.SINGLETON_ID).first()
+    return head if head is not None else CompanyHead()
+
+
+def set_company_head(
+    *, actor: Actor, title: str | _Keep = KEEP, user_id: UUID | _Keep | None = KEEP
+) -> CompanyHead:
+    """Change the caption at the top of the structure and/or the account attached to it.
+
+    Only a picture of the company: the attached person gets no right from it.
+    """
+    _require_manage(actor)
+    with transaction.atomic():
+        head, _created = CompanyHead.objects.select_for_update().get_or_create(
+            pk=CompanyHead.SINGLETON_ID
+        )
+        before = {"title": head.title, "user_id": str(head.user_id) if head.user_id else None}
+        if not isinstance(title, _Keep):
+            clean = " ".join(title.split())
+            if len(clean) > HEAD_TITLE_MAX_LENGTH:
+                raise DomainError("invalid_head_title", "The caption is too long.")
+            head.title = clean
+        if not isinstance(user_id, _Keep):
+            head.user = None if user_id is None else _active_user(user_id)
+        after = {"title": head.title, "user_id": str(head.user_id) if head.user_id else None}
+        if after != before:
+            head.save()
+            audit.record(
+                actor=actor,
+                action="structure.head_changed",
+                entity_type="company_head",
+                entity_id=str(head.pk),
+                metadata={"before": before, "after": after},
+            )
+    return head

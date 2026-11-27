@@ -3,6 +3,7 @@ from django.urls import path
 from crm.organization.api import views
 
 urlpatterns = [
+    path("structure/head", views.CompanyHeadView.as_view(), name="structure-head"),
     path("departments", views.DepartmentCollectionView.as_view(), name="departments"),
     path("departments/<uuid:department_id>", views.DepartmentView.as_view(), name="department"),
     path(

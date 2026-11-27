@@ -48,3 +48,15 @@ class MemberAddSerializer(serializers.Serializer[Any]):
 class ManagerAddSerializer(serializers.Serializer[Any]):
     user_id = serializers.UUIDField()
     is_designated = serializers.BooleanField(required=False, default=False)
+
+
+class CompanyHeadSerializer(serializers.Serializer[Any]):
+    title = serializers.CharField(allow_blank=True)
+    user = PersonSerializer(allow_null=True)
+
+
+class CompanyHeadUpdateSerializer(serializers.Serializer[Any]):
+    title = serializers.CharField(
+        max_length=150, allow_blank=True, trim_whitespace=True, required=False
+    )
+    user_id = serializers.UUIDField(allow_null=True, required=False)
