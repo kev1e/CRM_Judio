@@ -21,10 +21,13 @@ export function TaskCardView({
   card,
   onOpen,
   now,
+  showProject = true,
 }: {
   card: Card;
   onOpen: (taskId: string) => void;
   now: Date;
+  /** False in a column whose status is set not to show projects. */
+  showProject?: boolean;
 }) {
   const t = useTranslations("board");
   const format = useFormatter();
@@ -89,7 +92,9 @@ export function TaskCardView({
       ) : null}
       <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span className="truncate">
-          {card.project ? `${card.project.name} · ${card.department.name}` : card.department.name}
+          {card.project && showProject
+            ? `${card.project.name} · ${card.department.name}`
+            : card.department.name}
         </span>
         <span className="truncate">{card.assignee.name}</span>
       </span>

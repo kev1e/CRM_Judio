@@ -197,7 +197,7 @@ export function TaskBoard({
     if (target?.category === "completed") {
       setNotice({ kind: "completed" });
     }
-    if (target?.category === "active") {
+    if (target?.group_by_project) {
       // The moved card must not seem to vanish into a folded group.
       setUnfolded((current) => new Set(current).add(`${toStatusId}:${groupKey(card)}`));
     }
@@ -295,10 +295,10 @@ export function TaskBoard({
                       count={inColumn.length}
                       highlight={allowed}
                     >
-                      {status.category === "active"
-                        ? // Work in progress is shown by project: a folded list of
-                          // the projects (and the department's own tasks) that
-                          // have something in work; a click unfolds the tasks.
+                      {status.group_by_project && status.show_project
+                        ? // The administrator set this status to be divided by
+                          // project: a folded list of the projects (and the
+                          // department's own tasks); a click unfolds the tasks.
                           groupCards(inColumn).map((group) => {
                             const key = `${status.id}:${group.key}`;
                             const open = unfolded.has(key);
@@ -331,7 +331,12 @@ export function TaskBoard({
                                 {open
                                   ? group.cards.map((card) => (
                                       <Draggable key={card.id} id={card.id} disabled={false}>
-                                        <TaskCardView card={card} onOpen={setOpenId} now={now} />
+                                        <TaskCardView
+                                          card={card}
+                                          onOpen={setOpenId}
+                                          now={now}
+                                          showProject={status.show_project}
+                                        />
                                       </Draggable>
                                     ))
                                   : null}
@@ -340,7 +345,12 @@ export function TaskBoard({
                           })
                         : inColumn.map((card) => (
                             <Draggable key={card.id} id={card.id} disabled={false}>
-                              <TaskCardView card={card} onOpen={setOpenId} now={now} />
+                              <TaskCardView
+                                card={card}
+                                onOpen={setOpenId}
+                                now={now}
+                                showProject={status.show_project}
+                              />
                             </Draggable>
                           ))}
                       {inColumn.length === 0 ? (

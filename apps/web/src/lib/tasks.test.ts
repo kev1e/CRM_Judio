@@ -19,6 +19,8 @@ const statuses: Status[] = [
     category: "new",
     position: 10,
     next_status_ids: ["work", "done"],
+    show_project: true,
+    group_by_project: false,
   },
   {
     id: "work",
@@ -26,8 +28,18 @@ const statuses: Status[] = [
     category: "active",
     position: 20,
     next_status_ids: ["todo", "done"],
+    show_project: true,
+    group_by_project: true,
   },
-  { id: "done", name: "Готово", category: "completed", position: 30, next_status_ids: [] },
+  {
+    id: "done",
+    name: "Готово",
+    category: "completed",
+    position: 30,
+    next_status_ids: [],
+    show_project: true,
+    group_by_project: false,
+  },
 ];
 
 function card(id: string, statusId: string): TaskCard {

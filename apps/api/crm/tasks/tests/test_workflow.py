@@ -452,3 +452,102 @@ def test_api_round_trip(admin_client: APIClient, olga: Employee, sales: Departme
 
     missing = call(admin_client, "patch", f"/api/v1/workflow/statuses/{uuid4()}", {"name": "Нет"})
     assert missing.status_code == 404
+
+
+# --- How the board shows a column (project on cards, division by project) ----
+
+
+def test_display_defaults_and_the_existing_board(admin_actor: Actor) -> None:
+    by_name = {info.status.name: info.status for info in workflow.configuration(actor=admin_actor)}
+
+    # The columns "in work" stay divided, as the board showed them before the setting.
+    assert by_name["В работе"].group_by_project is True
+    assert by_name["Нужно сделать"].group_by_project is False
+    assert all(item.show_project for item in by_name.values())
+    created = workflow.create_status(actor=admin_actor, name="На проверке", category="active")
+    assert (created.show_project, created.group_by_project) == (True, False)
+
+
+def test_administrator_sets_the_display_of_a_status(admin_actor: Actor) -> None:
+    created = workflow.create_status(
+        actor=admin_actor, name="На проверке", category="active", group_by_project=True
+    )
+    assert created.group_by_project is True
+
+    workflow.set_display(actor=admin_actor, status_id=created.pk, group_by_project=False)
+    workflow.set_display(actor=admin_actor, status_id=created.pk, show_project=False)
+    workflow.set_display(actor=admin_actor, status_id=created.pk, show_project=False)  # no change
+
+    created.refresh_from_db()
+    assert (created.show_project, created.group_by_project) == (False, False)
+    events = AuditEvent.objects.filter(action="task_status.display_changed")
+    assert [event.metadata["show_project"] for event in events.order_by("occurred_at")] == [
+        True,
+        False,
+    ]
+
+
+def test_division_needs_the_project_to_be_shown(admin_actor: Actor) -> None:
+    with pytest.raises(DomainError) as error:
+        workflow.create_status(
+            actor=admin_actor,
+            name="Странный",
+            category="active",
+            show_project=False,
+            group_by_project=True,
+        )
+    assert code(error) == "invalid_status_display"
+
+    divided = status("В работе")
+    with pytest.raises(DomainError) as error:
+        workflow.set_display(actor=admin_actor, status_id=divided.pk, show_project=False)
+    assert code(error) == "invalid_status_display"
+    # Both at once is fine.
+    workflow.set_display(
+        actor=admin_actor, status_id=divided.pk, show_project=False, group_by_project=False
+    )
+
+
+def test_only_the_administrator_changes_the_display(olga: Employee, employee: Employee) -> None:
+    divided = status("В работе")
+
+    for person in (olga, employee):
+        with pytest.raises(PermissionDeniedError):
+            workflow.set_display(
+                actor=Actor.for_user(person.user), status_id=divided.pk, show_project=False
+            )
+
+    divided.refresh_from_db()
+    assert divided.show_project is True
+
+
+def test_api_carries_the_display_settings(admin_client: APIClient, olga: Employee) -> None:
+    admin = admin_client
+
+    created = call(
+        admin,
+        "post",
+        "/api/v1/workflow/statuses",
+        {"name": "На проверке", "category": "active", "group_by_project": True},
+    )
+    assert created.status_code == 201
+    row = next(item for item in created.json()["results"] if item["name"] == "На проверке")
+    assert (row["show_project"], row["group_by_project"]) == (True, True)
+
+    refused = call(
+        admin, "patch", f"/api/v1/workflow/statuses/{row['id']}", {"show_project": False}
+    )
+    assert (refused.status_code, refused.json()["error"]["code"]) == (400, "invalid_status_display")
+    changed = call(
+        admin,
+        "patch",
+        f"/api/v1/workflow/statuses/{row['id']}",
+        {"show_project": False, "group_by_project": False},
+    )
+    assert changed.status_code == 200
+
+    # The board of an ordinary user learns the settings with the statuses.
+    board = sign_in(olga).get("/api/v1/task-statuses").json()["results"]
+    seen = {item["name"]: (item["show_project"], item["group_by_project"]) for item in board}
+    assert seen["На проверке"] == (False, False)
+    assert seen["В работе"] == (True, True)

@@ -2814,6 +2814,10 @@ components:
           type: string
           minLength: 1
           maxLength: 80
+        show_project:
+          type: boolean
+        group_by_project:
+          type: boolean
         next_status_ids:
           type: array
           items:
@@ -3061,12 +3065,20 @@ components:
             type: string
             format: uuid
           description: Statuses a task may be moved to from this one.
+        show_project:
+          type: boolean
+          description: Whether cards in this column show their project.
+        group_by_project:
+          type: boolean
+          description: Whether the column is divided into folded lists by project.
       required:
       - category
+      - group_by_project
       - id
       - name
       - next_status_ids
       - position
+      - show_project
     StatusList:
       type: object
       properties:
@@ -3620,6 +3632,12 @@ components:
             type: string
             format: uuid
           description: Statuses a task may be moved to from this one.
+        show_project:
+          type: boolean
+          description: Whether cards in this column show their project.
+        group_by_project:
+          type: boolean
+          description: Whether the column is divided into folded lists by project.
         is_active:
           type: boolean
           description: False for a retired status.
@@ -3629,11 +3647,13 @@ components:
             is shown.'
       required:
       - category
+      - group_by_project
       - id
       - is_active
       - name
       - next_status_ids
       - position
+      - show_project
       - task_count
     WorkflowStatusCreateRequest:
       type: object
@@ -3644,6 +3664,12 @@ components:
           maxLength: 80
         category:
           $ref: '#/components/schemas/CategoryEnum'
+        show_project:
+          type: boolean
+          default: true
+        group_by_project:
+          type: boolean
+          default: false
       required:
       - category
       - name

@@ -161,6 +161,8 @@ class StatusListView(APIView):
                         "category": item.category,
                         "position": item.position,
                         "next_status_ids": moves.get(item.pk, []),
+                        "show_project": item.show_project,
+                        "group_by_project": item.group_by_project,
                     }
                     for item in services.statuses()
                 ]

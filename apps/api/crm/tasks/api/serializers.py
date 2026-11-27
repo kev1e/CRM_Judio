@@ -15,6 +15,12 @@ class StatusSerializer(serializers.Serializer[Any]):
     next_status_ids = serializers.ListField(
         child=serializers.UUIDField(), help_text="Statuses a task may be moved to from this one."
     )
+    show_project = serializers.BooleanField(
+        help_text="Whether cards in this column show their project."
+    )
+    group_by_project = serializers.BooleanField(
+        help_text="Whether the column is divided into folded lists by project."
+    )
 
 
 class StatusListSerializer(serializers.Serializer[Any]):
@@ -183,10 +189,14 @@ class WorkflowSerializer(serializers.Serializer[Any]):
 class WorkflowStatusCreateSerializer(serializers.Serializer[Any]):
     name = serializers.CharField(max_length=80, trim_whitespace=True)
     category = serializers.ChoiceField(choices=StatusCategory.choices)
+    show_project = serializers.BooleanField(required=False, default=True)
+    group_by_project = serializers.BooleanField(required=False, default=False)
 
 
 class WorkflowStatusUpdateSerializer(serializers.Serializer[Any]):
     name = serializers.CharField(max_length=80, trim_whitespace=True, required=False)
+    show_project = serializers.BooleanField(required=False)
+    group_by_project = serializers.BooleanField(required=False)
     next_status_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, max_length=100
     )

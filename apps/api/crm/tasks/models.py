@@ -27,12 +27,22 @@ class TaskStatus(models.Model):
     category = models.CharField(max_length=16, choices=StatusCategory.choices)
     position = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
+    # How the board shows this column (the administrator's choice):
+    # whether cards here show their project at all, and whether the column is
+    # divided into folded lists by project. Presentation only — no rule of
+    # access or workflow depends on them.
+    show_project = models.BooleanField(default=True)
+    group_by_project = models.BooleanField(default=False)
     created_at = models.DateTimeField(db_default=Now())
 
     class Meta:
         db_table = "tasks_status"
         ordering = ["position", "name"]
         constraints = [
+            models.CheckConstraint(
+                condition=Q(group_by_project=False) | Q(show_project=True),
+                name="tasks_status_grouping_needs_project",
+            ),
             models.CheckConstraint(
                 condition=Q(category__in=[c.value for c in StatusCategory]),
                 name="tasks_status_category",

@@ -378,3 +378,12 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Built: in every status of the category "active" the column lists the department (tasks without a project) and each project that has tasks in that status, folded, with a count; a click unfolds the tasks. Groups are stacked, so the column keeps its ordinary width.
 - A card moved into such a status unfolds its group, so it does not seem to vanish. What is unfolded is kept while the page is open, not between visits.
 - Interpretation, to be confirmed by the owner: unfolding a project shows its tasks **in that status** (in work), not its tasks from "Нужно сделать".
+
+### 2026-11-27 — per-status project settings (owner's request)
+
+- The owner asked for a checkbox "divide tasks by project" when creating and editing a status, and for a setting "whether there is a project in the status at all".
+- Built as two settings of a status, managed with `workflow.manage` (administrator) and audited (`task_status.display_changed`): `show_project` — whether cards in the column name their project; `group_by_project` — whether the column is the folded list by project. Dividing requires showing (service check and database constraint).
+- They replace the fixed rule "statuses of the category *active* are divided". The migration keeps today's picture: existing *active* statuses start divided; everything shows the project. A new status is not divided unless asked.
+- Presentation only: no rule of access, workflow or notification depends on them. The task window still shows the task's project to whoever may read the task.
+- Interpretation, to be confirmed by the owner: "whether there is a project in the status" is taken as "whether cards in this column show the project". It does not forbid a task with a project from being in the status.
+- The settings are not offered for a status of the category *completed*: a completed task leaves the board at once.

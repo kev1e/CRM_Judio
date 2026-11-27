@@ -18,6 +18,7 @@ const ERROR_KEYS = [
   "replacement_required",
   "invalid_replacement",
   "unsafe_replacement",
+  "invalid_status_display",
   "permission_denied",
   "unavailable",
 ] as const;
@@ -54,6 +55,10 @@ export function WorkflowPanel({ initialStatuses }: { initialStatuses: WorkflowSt
   const [renaming, setRenaming] = useState<string | null>(null);
   const [retiring, setRetiring] = useState<string | null>(null);
   const createRef = useRef<HTMLFormElement>(null);
+  // The new status: whether its cards show the project and whether the column
+  // is divided by project (which needs the project to be shown).
+  const [newShow, setNewShow] = useState(true);
+  const [newGroup, setNewGroup] = useState(false);
 
   const active = statuses.filter((status) => status.is_active);
   const retired = statuses.filter((status) => !status.is_active);
@@ -83,9 +88,13 @@ export function WorkflowPanel({ initialStatuses }: { initialStatuses: WorkflowSt
     void change(API_PATHS.workflowStatuses, "POST", {
       name: String(data.get("name") ?? ""),
       category: String(data.get("category") ?? "active"),
+      show_project: newShow,
+      group_by_project: newShow && newGroup,
     }).then((ok) => {
       if (ok) {
         createRef.current?.reset();
+        setNewShow(true);
+        setNewGroup(false);
       }
     });
   }
@@ -160,6 +169,26 @@ export function WorkflowPanel({ initialStatuses }: { initialStatuses: WorkflowSt
             ))}
           </select>
         </label>
+        <fieldset className="flex w-full flex-col gap-2">
+          <legend className="mb-2 text-sm font-medium">{t("projectsTitle")}</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={newShow}
+              onChange={(event) => setNewShow(event.target.checked)}
+            />
+            {t("showProject")}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={newShow && newGroup}
+              disabled={!newShow}
+              onChange={(event) => setNewGroup(event.target.checked)}
+            />
+            {t("groupByProject")}
+          </label>
+        </fieldset>
         <button type="submit" disabled={busy} className={primaryClass}>
           {t("create")}
         </button>
@@ -282,6 +311,43 @@ export function WorkflowPanel({ initialStatuses }: { initialStatuses: WorkflowSt
                 </div>
               </form>
             ) : null}
+
+            {status.category === "completed" ? null : (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-medium">{t("projectsTitle")}</legend>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    disabled={busy}
+                    checked={status.show_project}
+                    onChange={(event) =>
+                      // Without the project there is nothing to divide by.
+                      void change(
+                        pathOf(status),
+                        "PATCH",
+                        event.target.checked
+                          ? { show_project: true }
+                          : { show_project: false, group_by_project: false },
+                      )
+                    }
+                  />
+                  {t("showProject")}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    disabled={busy || !status.show_project}
+                    checked={status.group_by_project}
+                    onChange={(event) =>
+                      void change(pathOf(status), "PATCH", {
+                        group_by_project: event.target.checked,
+                      })
+                    }
+                  />
+                  {t("groupByProject")}
+                </label>
+              </fieldset>
+            )}
 
             {status.category === "completed" ? (
               <p className="text-sm text-muted-foreground">{t("completedHint")}</p>

@@ -16,6 +16,8 @@ const statuses: Status[] = [
     category: "new",
     position: 10,
     next_status_ids: ["work", "done"],
+    show_project: true,
+    group_by_project: false,
   },
   {
     id: "work",
@@ -23,8 +25,18 @@ const statuses: Status[] = [
     category: "active",
     position: 20,
     next_status_ids: ["todo", "done"],
+    show_project: true,
+    group_by_project: true,
   },
-  { id: "done", name: "Готово", category: "completed", position: 30, next_status_ids: [] },
+  {
+    id: "done",
+    name: "Готово",
+    category: "completed",
+    position: 30,
+    next_status_ids: [],
+    show_project: true,
+    group_by_project: false,
+  },
 ];
 
 function card(overrides: Partial<TaskCard> = {}): TaskCard {
@@ -465,6 +477,41 @@ describe("TaskBoard", () => {
 
     await user.click(work.getByRole("button", { name: /Проект Запуск/ }));
     expect(work.queryByRole("button", { name: /^Запуск в работе/ })).not.toBeInTheDocument();
+  });
+
+  it("follows each status's own settings, whatever its type", async () => {
+    const launch = { id: "p1", name: "Запуск" };
+    const custom = statuses.map((status) =>
+      status.id === "todo"
+        ? { ...status, group_by_project: true }
+        : status.id === "work"
+          ? { ...status, group_by_project: false, show_project: false }
+          : status,
+    );
+    renderWithIntl(
+      <TaskBoard
+        view="all"
+        statuses={custom}
+        initialCards={[
+          card({ id: "a", title: "Новая по запуску", project: launch }),
+          card({ id: "b", title: "В работе по запуску", project: launch, status_id: "work" }),
+        ]}
+      />,
+    );
+
+    // "Нужно сделать" is divided now, though it is not "in work".
+    const todo = within(screen.getByRole("region", { name: /^Нужно сделать/ }));
+    await userEvent.click(todo.getByRole("button", { name: /Проект Запуск/ }));
+    expect(todo.getByRole("button", { name: /^Новая по запуску/ })).toHaveTextContent(
+      "Запуск · Продажи",
+    );
+
+    // "В работе" is a plain list and its cards do not name the project.
+    const work = within(screen.getByRole("region", { name: /^В работе/ }));
+    expect(work.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+    const plain = work.getByRole("button", { name: /^В работе по запуску/ });
+    expect(plain).toHaveTextContent("Продажи");
+    expect(plain).not.toHaveTextContent("Запуск ·");
   });
 
   it("lists only what is in work and shows an empty column as empty", () => {
