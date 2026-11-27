@@ -178,12 +178,10 @@ DEPARTMENT_MANAGER_GRANTS: dict[str, Scope] = dict.fromkeys(
     Scope.MANAGED_DEPARTMENTS,
 )
 
-# Configuration rights only. Deliberately no task permission: being an administrator
-# does not make task contents visible (D003). Nor a project permission: running
-# projects is the managers' business and needs an explicit grant for anybody else.
-ADMINISTRATOR_GRANTS: dict[str, Scope] = {
-    p.code: Scope.COMPANY for p in _ALL if not p.code.startswith(("task.", "project."))
-}
+# D042 (owner's decision, 2026-11-27): the administrator may do everything in the
+# CRM, company-wide — configuration, every task and every project. It replaces the
+# earlier rule "administrator rights are separate from seeing tasks".
+ADMINISTRATOR_GRANTS: dict[str, Scope] = {p.code: Scope.COMPANY for p in _ALL}
 
 # What every active employee may do without any role (D002, Q19): work with the
 # tasks assigned to them. Creating tasks is the manager's (D037).

@@ -129,8 +129,8 @@ No group approval, shared view or queue payload may extend recipient record ACL.
 |---|---|---|---|
 | Verify/confirm employee recovery email | Yes (administrator only) | No | No; superuser grant is not administrator identity |
 | Manually authorize account recovery | Yes, following separately specified identity-check procedure | No | No, unless also separately an administrator under an approved configuration |
-| Read tasks across all departments | Not by admin role alone | Yes | Yes |
-| Change task, priority, assignee, status, completion | Only with task-specific rights, not by admin role alone | No | Only relevant action(s) and applicable scope |
+| Read tasks across all departments | Yes (D042) | Yes | Yes |
+| Change task, priority, assignee, status, completion | Yes (D042) | No | Only relevant action(s) and applicable scope |
 | Approve cross-department invitation | Per independently granted business authority | No | Only separate project invitation-approval grant |
 | Audit log view / manual archive / Trash actions / permanent purge | Existing separate rules apply | No | Only individually permitted operations; permanent purge remains administrator-only |
 
@@ -177,7 +177,7 @@ Rules enforced by the service and covered by tests:
 
 - A user without roles, a deactivated user, and every non-user actor (worker, CLI) hold no permissions.
 - Several roles combine; the widest scope per permission wins. A department-scoped grant never satisfies a company-level check.
-- The built-in `administrator` role holds every code above company-wide and **no task permission**; it cannot be edited or deleted at runtime.
+- The built-in `administrator` role holds **every code of the catalogue company-wide, task and project permissions included (D042, 2026-11-27)**; it cannot be edited or deleted at runtime. Rows and notes in this document that say "not by admin role alone" describe the rule before D042 and no longer hold for the administrator.
 - Only a holder of `role.assign` can give or take roles; nobody can raise their own rights. The last active administrator cannot lose the role.
 - Every role creation, grant change, assignment and revocation is audited and bumps `permissions_version` of the affected users in the same transaction.
 

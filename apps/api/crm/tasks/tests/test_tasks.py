@@ -119,8 +119,22 @@ def test_built_in_roles_match_the_catalogue(world: World) -> None:
     assert access.effective_grants(world.zoya.user) == {**BASELINE_GRANTS, **SUPERUSER_GRANTS}  # type: ignore[arg-type]
     # Q29: the superuser role reads everything and may do nothing more.
     assert SUPERUSER_GRANTS == {"task.read": Scope.COMPANY}
-    # D003: being an administrator shows no tasks beyond one's own.
-    assert access.scope_for(world.admin, "task.read") is Scope.OWN
+    # D042: the administrator reads every task.
+    assert access.scope_for(world.admin, "task.read") is Scope.COMPANY
+
+
+def test_administrator_may_do_everything_with_any_task(world: World) -> None:
+    """D042: every task is the administrator's to read and to change."""
+    task = make_task(world)  # Sales, assigned to Anna; the administrator is in no department
+
+    assert services.get_task(world.admin, task.pk) == task
+    assert all(policy.actions(world.admin, task).values())
+    services.update_content(actor=world.admin, task_id=task.pk, title="Новое название")
+    services.reassign(actor=world.admin, task_id=task.pk, assignee_id=uid(world.boris))
+    created = make_task(world, author=world.admin)
+    assert created.author == world.admin.user
+    assert set(services.assignable_departments(world.admin)) == {world.sales, world.support}
+    assert "task.reassigned" in actions_on(task)
 
 
 def test_default_board_has_one_starting_and_one_completed_status(db: None) -> None:
@@ -150,7 +164,7 @@ def test_visibility_follows_assignee_department_manager_and_superuser(world: Wor
     assert not sees(world.boris)  # same department, not the assignee
     assert not sees(world.pavel)  # manager of another department
     assert not sees(world.vera)
-    assert not sees(world.admin)  # D003
+    assert sees(world.admin)  # D042
     assert not sees(Actor.system("worker"))
 
 
@@ -284,8 +298,8 @@ def test_only_a_manager_creates_tasks(world: World) -> None:
     assert "task.create" not in BASELINE_GRANTS
     assert DEPARTMENT_MANAGER_GRANTS["task.create"] is Scope.MANAGED_DEPARTMENTS
     # An employee cannot create a task, not even for themselves; nor can the
-    # administrator or the read-only superuser.
-    for actor in (world.anna, world.admin, world.zoya):
+    # read-only superuser.
+    for actor in (world.anna, world.zoya):
         with pytest.raises(PermissionDeniedError):
             make_task(world, author=actor)
         with pytest.raises(PermissionDeniedError):
@@ -417,7 +431,7 @@ def test_the_manager_of_the_department_may_do_everything(world: World, operation
 
 
 @pytest.mark.parametrize("operation", sorted(OPERATIONS))
-@pytest.mark.parametrize("who", ["boris", "pavel", "vera", "admin"])
+@pytest.mark.parametrize("who", ["boris", "pavel", "vera"])
 def test_people_who_cannot_see_the_task_can_do_nothing(
     world: World, operation: str, who: str
 ) -> None:

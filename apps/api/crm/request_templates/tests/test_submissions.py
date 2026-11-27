@@ -199,9 +199,9 @@ def test_nothing_typed_reaches_the_audit_log(world: World) -> None:  # noqa: F81
 # --- Who may submit (D040, Q21) ---------------------------------------------
 
 
-@pytest.mark.parametrize("who", ["anna", "admin", "zoya", "pavel"])
+@pytest.mark.parametrize("who", ["anna", "zoya", "pavel"])
 def test_only_who_creates_tasks_for_the_department_submits(world: World, who: str) -> None:  # noqa: F811
-    # An employee, the administrator, the superuser, a manager of another department.
+    # An employee, the superuser, a manager of another department.
     template = published(world)
 
     with pytest.raises(PermissionDeniedError):
@@ -239,8 +239,11 @@ def test_offers_list_the_form_and_the_callers_departments(world: World) -> None:
     assert for_olga.version.number == 1
     assert for_olga.departments == [world.sales]
     assert for_vera.departments == [world.support, world.sales]
-    for nobody in (world.anna, world.admin, world.zoya):
+    for nobody in (world.anna, world.zoya):
         assert submissions.offers(nobody) == []
+    # D042: the administrator submits for any department.
+    (for_admin,) = submissions.offers(world.admin)
+    assert set(for_admin.departments) == {world.sales, world.support}
 
 
 def test_creator_outside_the_department_gets_no_access_to_the_request(world: World) -> None:  # noqa: F811
@@ -514,8 +517,8 @@ def test_form_is_read_by_who_reads_the_task(world: World) -> None:  # noqa: F811
         assert answers["comment"].filled is False
         assert answers["comment"].value is None
 
-    # A colleague of the same department, another manager, the administrator.
-    for stranger in (world.boris, world.pavel, world.admin):
+    # A colleague of the same department, another manager.
+    for stranger in (world.boris, world.pavel):
         with pytest.raises(DomainError) as error:
             submissions.submitted_form(stranger, task.pk)
         assert error.value.code == "task_not_found"

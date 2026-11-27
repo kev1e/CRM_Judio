@@ -19,6 +19,7 @@ Status: **APPROVED** unless marked `PROPOSED` / `OPEN`.
 | D013 | Employee own analytics, manager managed dept, superuser company; 5 KPIs; visual dashboard builder; Excel/CSV; extensible filters | APPROVED |
 | D014 | Admin-only automation configuration; reminders, overdue escalation, reassign on deactivation, scheduled digests | APPROVED |
 | D015 | All checkpoints completed do NOT change status automatically; supersedes earlier optional checkpoint-triggered status automation | APPROVED |
+| D042 | **The administrator has every permission company-wide**: reads and changes every task, runs every project, decides every invitation, on top of configuration. Replaces "administrator rights are separate from task visibility" (part of D003/D032 and the admin rows of Q29) | APPROVED (2026-11-27, owner) |
 | D041 | **A completed task stays in its column for a month, then goes to the archive automatically; "return to work" stays.** Replaces the "immediate automatic archive" part of D016 | APPROVED (2026-11-27) |
 | D016 | ~~Enter completed status -> immediate automatic archive~~ (**superseded by D041 on 2026-11-27**); manager/superuser authorized manual archive action; distinct soft-delete Trash and restore | APPROVED |
 | D017 | Assignee can change deadline; audit and notify manager | APPROVED |
@@ -398,6 +399,16 @@ The owner asked for "a hierarchy tree: who is a manager, who is that manager's e
 - Changing who is in which department and who manages it stays on the «Отделы» screen (`department.manage`); the tree links there.
 - Visibility follows the existing `department.read`: the administrator sees the whole company (and the list of people in no department), a manager sees the managed departments, an ordinary employee does not see the screen. No new permission was invented.
 - Interpretations to be confirmed by the owner: see `OPEN_QUESTIONS.md` ("Company structure").
+
+### 2026-11-27 — D042: the administrator has access to everything (owner's decision)
+
+The owner, working as the administrator, could not approve an invitation into a project and asked first "let the administrator approve", then: "change the rule — the administrator has all access to everything".
+
+- The built-in `administrator` role now holds **every** permission of the catalogue with the `COMPANY` scope: all `task.*` and both `project.*` codes were added to the configuration rights it had (`access.0013_administrator_full_access`; holders' permission versions are bumped).
+- Consequences, all intended: an administrator sees «Все задачи» with the tasks of every department, their comments, files and request forms; may create, edit, reassign, complete, archive and delete any task; creates projects for any department, adds anybody to a project **without the approval of that person's manager**, decides any waiting invitation, edits zones; submits requests by any template.
+- This replaces the earlier separation "administrative rights ≠ visibility of tasks" for the administrator role only. Unchanged: an employee sees assigned tasks, a manager — managed departments, the superuser role is read-only (Q29), project membership opens no task (D003), every action is still authorized through `crm.access` and audited under the administrator's name.
+- Risk recorded for the owner: an administrator account is now a single key to all data. Whoever gets the role, or steals its session, reads everything. Give the role sparingly; the Telegram confirmation at login matters more than before. The emergency administrator account (REC-02) inherits the same reach — to be reconsidered before production.
+- No code path was special-cased: only the role's grants changed.
 
 ### 2026-11-27 — Zones of responsibility of a project, drawn as overlapping departments (owner's request)
 
