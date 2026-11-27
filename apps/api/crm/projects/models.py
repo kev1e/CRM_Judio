@@ -120,3 +120,51 @@ class ProjectInvitation(models.Model):
 
     def __str__(self) -> str:
         return f"invitation:{self.pk}"
+
+
+class ProjectZone(models.Model):
+    """An area of responsibility inside a project: who answers for it and who
+    works in it. A picture of the project only — it opens no task (D003)."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="zones")
+    name = models.CharField(max_length=150)
+    created_at = models.DateTimeField(db_default=Now())
+
+    class Meta:
+        db_table = "projects_zone"
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                "project", Lower("name"), name="projects_zone_name_unique_in_project"
+            ),
+            models.CheckConstraint(condition=~Q(name=""), name="projects_zone_name_not_empty"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class ZoneMember(models.Model):
+    """A participant of the project works in a zone; at most one of them answers
+    for it. Tied to the participation, so leaving the project leaves its zones."""
+
+    id = models.UUIDField(primary_key=True, default=new_id, editable=False)
+    zone = models.ForeignKey(ProjectZone, on_delete=models.CASCADE, related_name="members")
+    member = models.ForeignKey(ProjectMember, on_delete=models.CASCADE, related_name="zones")
+    is_responsible = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "projects_zone_member"
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(fields=["zone", "member"], name="projects_zone_member_unique"),
+            models.UniqueConstraint(
+                fields=["zone"],
+                condition=Q(is_responsible=True),
+                name="projects_zone_one_responsible",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.zone_id}:{self.member_id}"

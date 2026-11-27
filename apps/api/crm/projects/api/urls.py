@@ -15,6 +15,26 @@ urlpatterns = [
         views.ProjectMemberView.as_view(),
         name="project-member",
     ),
+    path(
+        "projects/<uuid:project_id>/zones",
+        views.ProjectZonesView.as_view(),
+        name="project-zones",
+    ),
+    path(
+        "projects/<uuid:project_id>/zones/<uuid:zone_id>",
+        views.ProjectZoneView.as_view(),
+        name="project-zone",
+    ),
+    path(
+        "projects/<uuid:project_id>/zones/<uuid:zone_id>/members",
+        views.ProjectZoneMembersView.as_view(),
+        name="project-zone-members",
+    ),
+    path(
+        "projects/<uuid:project_id>/zones/<uuid:zone_id>/members/<uuid:user_id>",
+        views.ProjectZoneMemberView.as_view(),
+        name="project-zone-member",
+    ),
     path("project-candidates", views.ProjectCandidatesView.as_view(), name="project-candidates"),
     path(
         "project-invitations/<uuid:invitation_id>/approve",

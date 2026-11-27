@@ -399,6 +399,17 @@ The owner asked for "a hierarchy tree: who is a manager, who is that manager's e
 - Visibility follows the existing `department.read`: the administrator sees the whole company (and the list of people in no department), a manager sees the managed departments, an ordinary employee does not see the screen. No new permission was invented.
 - Interpretations to be confirmed by the owner: see `OPEN_QUESTIONS.md` ("Company structure").
 
+### 2026-11-27 — Zones of responsibility of a project, drawn as overlapping departments (owner's request)
+
+The owner chose, out of six sketches, the Euler picture "departments and shared zones" and asked for it in every project: "when a project is created it must have this picture at once, with employees placed by their departments".
+
+- Every project shows the picture; nothing has to be created for it. Circles are the departments taking part (the project's own department first); a participant stands in the circle of the department they take part from (`projects_member.participation_department`, Q10) — automatically.
+- New data: `projects_zone` (a named area inside a project) and `projects_zone_member` (a participant works in the zone; at most one per zone answers for it). A zone whose people come from several departments is drawn on the overlap. Leaving the project removes the person from its zones (cascade).
+- Whoever runs the project (`project.manage` for its department) edits zones; everybody who sees the project sees them. Audited: `project.zone_created/renamed/deleted`, `project.zone_member_set/removed`.
+- **Access is not touched**: a zone is a description. Standing in a zone, even answering for it, shows no task (D003; tested).
+- Drawing limits: one, two and three departments are true overlapping circles. With four or more, every combination of overlaps cannot be drawn on a plane with circles, so each department gets its own circle and shared zones are listed under them.
+- Interpretation, to be confirmed: "add employees according to departments" is taken as *placing* the project's participants into the circles. Nobody is added to a project automatically — that still goes through adding a participant and, for another department, its manager's approval (D018, Q10).
+
 ### 2026-11-27 — Company structure: a drawn tree, its top, and editing in place (owner's requests)
 
 - "It must be drawn as a tree": the screen draws top → departments → managers → employees with connecting lines.

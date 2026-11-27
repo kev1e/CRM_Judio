@@ -23,7 +23,15 @@ from crm.conftest import STRONG_PASSWORD, Employee
 from crm.identity import users
 from crm.organization import services as org
 from crm.projects import services
-from crm.projects.models import InvitationState, Project, ProjectInvitation, ProjectMember
+from crm.projects.models import (
+    InvitationState,
+    Project,
+    ProjectInvitation,
+    ProjectMember,
+    ProjectZone,
+    ZoneMember,
+)
+from crm.tasks import policy
 from crm.tasks import services as tasks
 from crm.tasks.tests.test_tasks import World, make_task, uid, world  # noqa: F401
 from crm.tasks.tests.test_tasks_api import call, sign_in
@@ -515,3 +523,217 @@ def test_api_invitation_flow(world: World) -> None:  # noqa: F811
     assert closed.json()["is_active"] is False
     assert call(olga, "patch", f"/api/v1/projects/{uuid4()}", {"name": "Х"}).status_code == 404
     assert APIClient().get("/api/v1/projects").status_code == 401
+
+
+# --- Zones of responsibility ------------------------------------------------
+
+
+def staffed(world: World) -> Project:  # noqa: F811
+    """A Sales project with Anna (Sales) and Vera (Support, approved by Pavel)."""
+    target = project(world)
+    services.add_participant(
+        actor=world.olga,
+        project_id=target.pk,
+        user_id=uid(world.anna),
+        department_id=world.sales.pk,
+    )
+    services.approve_invitation(
+        actor=world.pavel, invitation_id=invite(world, target, world.vera).pk
+    )
+    return target
+
+
+def test_whoever_runs_the_project_draws_its_zones(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+
+    zone = services.create_zone(actor=world.olga, project_id=target.pk, name="  Договоры ")
+    assert zone.name == "Договоры"
+    services.put_into_zone(
+        actor=world.olga,
+        project_id=target.pk,
+        zone_id=zone.pk,
+        user_id=uid(world.anna),
+        responsible=True,
+    )
+    services.put_into_zone(
+        actor=world.olga, project_id=target.pk, zone_id=zone.pk, user_id=uid(world.vera)
+    )
+    assert ZoneMember.objects.filter(zone=zone).count() == 2
+
+    # Only one person answers for a zone: the mark moves.
+    services.put_into_zone(
+        actor=world.olga,
+        project_id=target.pk,
+        zone_id=zone.pk,
+        user_id=uid(world.vera),
+        responsible=True,
+    )
+    marks = {
+        link.member.user_id: link.is_responsible for link in ZoneMember.objects.filter(zone=zone)
+    }
+    assert marks == {uid(world.anna): False, uid(world.vera): True}
+
+    services.rename_zone(actor=world.olga, project_id=target.pk, zone_id=zone.pk, name="Контракты")
+    services.take_out_of_zone(
+        actor=world.olga, project_id=target.pk, zone_id=zone.pk, user_id=uid(world.anna)
+    )
+    actions = list(
+        AuditEvent.objects.filter(action__startswith="project.zone").values_list(
+            "action", flat=True
+        )
+    )
+    assert actions.count("project.zone_member_set") == 3
+    assert {"project.zone_created", "project.zone_renamed", "project.zone_member_removed"} <= set(
+        actions
+    )
+
+    services.delete_zone(actor=world.olga, project_id=target.pk, zone_id=zone.pk)
+    assert not ProjectZone.objects.exists()
+    assert not ZoneMember.objects.exists()
+
+
+def test_zone_refusals(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+    zone = services.create_zone(actor=world.olga, project_id=target.pk, name="Договоры")
+
+    with pytest.raises(DomainError) as error:
+        services.create_zone(actor=world.olga, project_id=target.pk, name="договоры")
+    assert code(error) == "zone_name_taken"
+    with pytest.raises(DomainError) as error:
+        services.create_zone(actor=world.olga, project_id=target.pk, name=" ")
+    assert code(error) == "invalid_zone_name"
+    # Somebody who does not take part in the project cannot stand in its zone.
+    with pytest.raises(DomainError) as error:
+        services.put_into_zone(
+            actor=world.olga, project_id=target.pk, zone_id=zone.pk, user_id=uid(world.boris)
+        )
+    assert code(error) == "member_not_found"
+    with pytest.raises(DomainError) as error:
+        services.take_out_of_zone(
+            actor=world.olga, project_id=target.pk, zone_id=zone.pk, user_id=uid(world.anna)
+        )
+    assert code(error) == "zone_member_not_found"
+    # A zone of another project is not found through this one.
+    other = project(world, "Другой проект")
+    with pytest.raises(DomainError) as error:
+        services.rename_zone(actor=world.olga, project_id=other.pk, zone_id=zone.pk, name="Х")
+    assert code(error) == "zone_not_found"
+
+    services.set_project_active(actor=world.olga, project_id=target.pk, active=False)
+    with pytest.raises(DomainError) as error:
+        services.create_zone(actor=world.olga, project_id=target.pk, name="Новая")
+    assert code(error) == "project_closed"
+
+
+def test_only_whoever_runs_the_project_changes_its_zones(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+    zone = services.create_zone(actor=world.olga, project_id=target.pk, name="Договоры")
+
+    # A participant, the manager of a participating department, the administrator.
+    for actor in (world.anna, world.vera, world.pavel):
+        with pytest.raises(PermissionDeniedError):
+            services.create_zone(actor=actor, project_id=target.pk, name="Своя")
+        with pytest.raises(PermissionDeniedError):
+            services.put_into_zone(
+                actor=actor, project_id=target.pk, zone_id=zone.pk, user_id=uid(world.anna)
+            )
+        with pytest.raises(PermissionDeniedError):
+            services.delete_zone(actor=actor, project_id=target.pk, zone_id=zone.pk)
+    # Somebody who does not see the project: it does not exist for them.
+    for actor in (world.boris, world.admin):
+        with pytest.raises(DomainError) as error:
+            services.create_zone(actor=actor, project_id=target.pk, name="Своя")
+        assert code(error) == "project_not_found"
+    assert ProjectZone.objects.count() == 1
+    assert not ZoneMember.objects.exists()
+
+
+def test_leaving_the_project_leaves_its_zones(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+    zone = services.create_zone(actor=world.olga, project_id=target.pk, name="Договоры")
+    services.put_into_zone(
+        actor=world.olga,
+        project_id=target.pk,
+        zone_id=zone.pk,
+        user_id=uid(world.anna),
+        responsible=True,
+    )
+
+    services.remove_participant(actor=world.olga, project_id=target.pk, user_id=uid(world.anna))
+
+    assert not ZoneMember.objects.exists()
+    assert ProjectZone.objects.filter(pk=zone.pk).exists()
+
+
+def test_standing_in_a_zone_shows_no_task(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+    hidden = make_task(world, assignee=world.boris)
+    tasks.change_project(actor=world.olga, task_id=hidden.pk, project_id=target.pk)
+    zone = services.create_zone(actor=world.olga, project_id=target.pk, name="Договоры")
+    services.put_into_zone(
+        actor=world.olga,
+        project_id=target.pk,
+        zone_id=zone.pk,
+        user_id=uid(world.vera),
+        responsible=True,
+    )
+
+    # Vera answers for a zone of the project and still sees none of its tasks.
+    assert not policy.readable(world.vera).filter(pk=hidden.pk).exists()
+
+
+def client_of(actor: Actor) -> APIClient:
+    assert actor.user is not None
+    assert actor.user.telegram_user_id is not None
+    return sign_in(
+        Employee(
+            user=actor.user, password=STRONG_PASSWORD, telegram_user_id=actor.user.telegram_user_id
+        )
+    )
+
+
+def test_zones_over_http(world: World) -> None:  # noqa: F811
+    target = staffed(world)
+    olga = client_of(world.olga)
+    base = f"/api/v1/projects/{target.pk}"
+    assert world.vera.user is not None
+    vera_name = world.vera.user.display_name
+
+    created = call(olga, "post", f"{base}/zones", {"name": "Договоры"})
+    assert created.status_code == 200
+    zone_id = created.json()["zones"][0]["id"]
+    put = call(
+        olga,
+        "post",
+        f"{base}/zones/{zone_id}/members",
+        {"user_id": str(uid(world.vera)), "is_responsible": True},
+    )
+    assert put.json()["zones"] == [
+        {
+            "id": zone_id,
+            "name": "Договоры",
+            "members": [
+                {
+                    "user": {"id": str(uid(world.vera)), "name": vera_name},
+                    "is_responsible": True,
+                }
+            ],
+        }
+    ]
+
+    # A participant sees the zones and cannot change them.
+    anna = client_of(world.anna)
+    seen = next(row for row in anna.get("/api/v1/projects").json()["results"])
+    assert [zone["name"] for zone in seen["zones"]] == ["Договоры"]
+    assert call(anna, "post", f"{base}/zones", {"name": "Своя"}).status_code == 403
+    assert call(anna, "delete", f"{base}/zones/{zone_id}").status_code == 403
+    # An outsider gets "not found".
+    boris = client_of(world.boris)
+    assert call(boris, "post", f"{base}/zones", {"name": "Своя"}).status_code == 404
+
+    renamed = call(olga, "patch", f"{base}/zones/{zone_id}", {"name": "Контракты"})
+    assert renamed.json()["zones"][0]["name"] == "Контракты"
+    out = call(olga, "delete", f"{base}/zones/{zone_id}/members/{uid(world.vera)}")
+    assert out.json()["zones"][0]["members"] == []
+    assert call(olga, "delete", f"{base}/zones/{zone_id}").json()["zones"] == []
+    assert call(olga, "delete", f"{base}/zones/{zone_id}").status_code == 404

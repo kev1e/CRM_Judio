@@ -173,6 +173,8 @@ Concrete tables created by migrations so far. Everything above remains the logic
 
 | Table | Columns | Constraints |
 |---|---|---|
+| `projects_zone` | `id`, `project_id` (cascade), `name` (≤150, unique in the project ignoring case, not empty), `created_at`. An area of responsibility inside a project; descriptive only |
+| `projects_zone_member` | `id`, `zone_id` (cascade), `member_id` → `projects_member` (cascade), `is_responsible`; one row per (zone, member), at most one responsible per zone |
 | `organization_company_head` | One row (`id` = 1, check constraint): `title` (caption at the top of the company structure, ≤150), `user_id` (nullable; the account shown there). Descriptive only |
 | `identity_user` | `id` UUIDv7, `crm_login`, `display_name`, `responsibility` (what the employee answers for; ≤300 chars, descriptive only), `password` (Argon2id hash), `last_login`, `email`, `email_verified_at`, `email_verified_by_id`, `telegram_user_id`, `telegram_username`, `telegram_bound_at`, `is_active`, `deactivated_at`, `permissions_version`, `created_at`, `updated_at` | `crm_login` unique and format-checked; `telegram_user_id` unique when set; `email` unique when set and lowercase; verified state requires both the address and the verifying administrator; Telegram ID and binding time are set together; inactive ⇔ `deactivated_at` set |
 | `access_role` | `id`, `key`, `name`, `description`, `is_system`, `created_at` | `key` unique and format-checked |

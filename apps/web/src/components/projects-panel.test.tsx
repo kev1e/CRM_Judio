@@ -20,6 +20,7 @@ const launch: Project = {
   department: sales,
   is_active: true,
   members: [],
+  zones: [],
   pending_invitations: [],
   can_manage: true,
 };

@@ -37,6 +37,8 @@ def test_schema_contains_only_own_tables() -> None:
         "projects_invitation",
         "projects_member",
         "projects_project",
+        "projects_zone",
+        "projects_zone_member",
         "request_templates_department",
         "request_templates_submission",
         "request_templates_template",

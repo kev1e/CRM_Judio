@@ -32,7 +32,14 @@ from crm.common.actors import Actor
 from crm.common.exceptions import DomainError, PermissionDeniedError
 from crm.identity.models import User
 from crm.organization.models import Department, DepartmentMembership
-from crm.projects.models import InvitationState, Project, ProjectInvitation, ProjectMember
+from crm.projects.models import (
+    InvitationState,
+    Project,
+    ProjectInvitation,
+    ProjectMember,
+    ProjectZone,
+    ZoneMember,
+)
 
 MANAGE = "project.manage"
 APPROVE = "project.invitation.approve"
@@ -379,4 +386,118 @@ def cancel_invitation(*, actor: Actor, invitation_id: UUID) -> None:
             invitation.project,
             invitation_id=str(invitation.pk),
             user_id=str(invitation.user_id),
+        )
+
+
+# --- Zones of responsibility ------------------------------------------------
+#
+# A project's own map: which areas it has, who works in each and who answers for
+# it. Whoever runs the project draws it; everybody who sees the project sees it.
+# It describes the project and opens nothing: no task becomes visible through it.
+
+
+def _clean_zone_name(raw: str) -> str:
+    name = " ".join(raw.split())
+    if not name or len(name) > 150:
+        raise DomainError("invalid_zone_name", "A zone needs a name of up to 150 characters.")
+    return name
+
+
+def _zone(project: Project, zone_id: UUID) -> ProjectZone:
+    zone = ProjectZone.objects.select_for_update().filter(project=project, pk=zone_id).first()
+    if zone is None:
+        raise DomainError("zone_not_found", "No such zone in the project.")
+    return zone
+
+
+def create_zone(*, actor: Actor, project_id: UUID, name: str) -> ProjectZone:
+    clean = _clean_zone_name(name)
+    try:
+        with transaction.atomic():
+            project = _managed(actor, project_id)
+            _open(project)
+            zone = ProjectZone.objects.create(project=project, name=clean)
+            _log(actor, "project.zone_created", project, zone_id=str(zone.pk), name=clean)
+    except IntegrityError as error:
+        raise DomainError("zone_name_taken", "The project already has such a zone.") from error
+    return zone
+
+
+def rename_zone(*, actor: Actor, project_id: UUID, zone_id: UUID, name: str) -> ProjectZone:
+    clean = _clean_zone_name(name)
+    try:
+        with transaction.atomic():
+            project = _managed(actor, project_id)
+            _open(project)
+            zone = _zone(project, zone_id)
+            if zone.name != clean:
+                before, zone.name = zone.name, clean
+                zone.save(update_fields=["name"])
+                _log(
+                    actor,
+                    "project.zone_renamed",
+                    project,
+                    zone_id=str(zone.pk),
+                    before=before,
+                    after=clean,
+                )
+    except IntegrityError as error:
+        raise DomainError("zone_name_taken", "The project already has such a zone.") from error
+    return zone
+
+
+def delete_zone(*, actor: Actor, project_id: UUID, zone_id: UUID) -> None:
+    with transaction.atomic():
+        project = _managed(actor, project_id)
+        zone = _zone(project, zone_id)
+        _log(actor, "project.zone_deleted", project, zone_id=str(zone.pk), name=zone.name)
+        zone.delete()
+
+
+def put_into_zone(
+    *, actor: Actor, project_id: UUID, zone_id: UUID, user_id: UUID, responsible: bool = False
+) -> ZoneMember:
+    """Put a participant of the project into a zone, or change whether they
+    answer for it. Making somebody responsible takes that mark off the previous one."""
+    with transaction.atomic():
+        project = _managed(actor, project_id)
+        _open(project)
+        zone = _zone(project, zone_id)
+        member = ProjectMember.objects.filter(project=project, user_id=user_id).first()
+        if member is None:
+            raise DomainError("member_not_found", "The employee does not take part in the project.")
+        link = ZoneMember.objects.filter(zone=zone, member=member).first()
+        if link is not None and link.is_responsible == responsible:
+            return link
+        if responsible:
+            ZoneMember.objects.filter(zone=zone, is_responsible=True).update(is_responsible=False)
+        if link is None:
+            link = ZoneMember.objects.create(zone=zone, member=member, is_responsible=responsible)
+        else:
+            link.is_responsible = responsible
+            link.save(update_fields=["is_responsible"])
+        _log(
+            actor,
+            "project.zone_member_set",
+            project,
+            zone_id=str(zone.pk),
+            user_id=str(user_id),
+            is_responsible=responsible,
+        )
+    return link
+
+
+def take_out_of_zone(*, actor: Actor, project_id: UUID, zone_id: UUID, user_id: UUID) -> None:
+    with transaction.atomic():
+        project = _managed(actor, project_id)
+        zone = _zone(project, zone_id)
+        deleted, _ = ZoneMember.objects.filter(zone=zone, member__user_id=user_id).delete()
+        if not deleted:
+            raise DomainError("zone_member_not_found", "The employee is not in this zone.")
+        _log(
+            actor,
+            "project.zone_member_removed",
+            project,
+            zone_id=str(zone.pk),
+            user_id=str(user_id),
         )
