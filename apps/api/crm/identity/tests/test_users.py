@@ -355,6 +355,7 @@ def test_administrator_lists_accounts_without_secrets(
         "id": str(employee.user.pk),
         "crm_login": "anna.petrova",
         "display_name": employee.user.display_name,
+        "responsibility": "",
         "email": None,
         "is_active": True,
         "telegram_bound": True,

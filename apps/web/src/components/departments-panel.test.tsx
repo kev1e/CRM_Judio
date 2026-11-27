@@ -9,8 +9,20 @@ import { DepartmentsPanel, type Person } from "./departments-panel";
 
 const fetchMock = vi.fn<typeof fetch>();
 
-const anna = { id: "u-anna", crm_login: "anna", display_name: "Анна Петрова", is_active: true };
-const olga = { id: "u-olga", crm_login: "olga", display_name: "Ольга Смирнова", is_active: true };
+const anna = {
+  id: "u-anna",
+  crm_login: "anna",
+  display_name: "Анна Петрова",
+  responsibility: "",
+  is_active: true,
+};
+const olga = {
+  id: "u-olga",
+  crm_login: "olga",
+  display_name: "Ольга Смирнова",
+  responsibility: "",
+  is_active: true,
+};
 const people: Person[] = [anna, olga];
 
 const sales: Department = {

@@ -36,6 +36,8 @@ Q01–Q03, Q08, Q14 and Q29 are approved. Departments, multi-membership, manager
 
 **Exit:** employee, manager, superuser, admin privileges distinct and measurable via APIs; access revokes immediately.
 
+**Added 2026-11-27 (owner's request):** the company structure screen — a tree derived from departments, with an editable note on what each person answers for.
+
 **Status (2026-11-25):** departments, memberships with one primary department, managers with one designated manager, the built-in `department_manager` role, resolution of `MANAGED_DEPARTMENTS`, department-scoped account management, and the Departments screen are done. **Not done from the S2 list:** the role administration screen (the service exists; custom roles and role assignment have no API yet), scoped reading of the audit log (Q14; nothing reads the log over the API yet), and the superuser role (it has no meaning before task permissions exist — it arrives with S3).
 
 ## S3 — canonical tasks & personal boards

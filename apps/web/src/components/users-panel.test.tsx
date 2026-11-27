@@ -14,6 +14,7 @@ function account(overrides: Partial<User>): User {
     id: "u-1",
     crm_login: "anna.petrova",
     display_name: "Анна Петрова",
+    responsibility: "",
     email: null,
     is_active: true,
     telegram_bound: true,

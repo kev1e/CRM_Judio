@@ -389,6 +389,16 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Interpretation, to be confirmed by the owner: "whether there is a project in the status" is taken as "whether cards in this column show the project". It does not forbid a task with a project from being in the status.
 - The settings are not offered for a status of the category *completed*: a completed task leaves the board at once.
 
+### 2026-11-27 — Company structure (owner's request)
+
+The owner asked for "a hierarchy tree: who is a manager, who is that manager's employee, who answers for what; editable, and people get into it automatically".
+
+- Built as the screen «Структура»: open departments, their managers (the designated one first) and, under them, the department's employees. It is **derived from the departments**, not stored separately, so an employee appears in it the moment they are put into a department and moves with every change of members or managers. A second, independent "who reports to whom" table was deliberately not introduced: it would diverge from the departments that define access.
+- "Who answers for what" is a new free-text note on the account, `identity_user.responsibility` (up to 300 characters), edited in the tree. It is a description only: no right depends on it. Changing it is `user.update` (administrator) and is audited (`user.responsibility_changed`).
+- Changing who is in which department and who manages it stays on the «Отделы» screen (`department.manage`); the tree links there.
+- Visibility follows the existing `department.read`: the administrator sees the whole company (and the list of people in no department), a manager sees the managed departments, an ordinary employee does not see the screen. No new permission was invented.
+- Interpretations to be confirmed by the owner: see `OPEN_QUESTIONS.md` ("Company structure").
+
 ### 2026-11-27 — D041: a completed task stays on the board for a month (owner's decision)
 
 - **Owner, 2026-11-27:** "сделать так чтобы задача в готово лежала месяц после чего она улетала в архив, но оставить функцию вернуть в работу". This replaces the part of D016 "enter completed status → immediate automatic archive" and the matching line of `CLAUDE.md` and PRD §Q04. The rest of D016 stands: manual archive by a manager, Trash separate.
