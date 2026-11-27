@@ -16,7 +16,7 @@ function toErrorKey(code: string): ErrorKey {
 
 const buttonClass =
   "h-8 rounded-md border border-border px-2 text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60";
-const branchClass = "ml-3 flex flex-col gap-2 border-l border-border pl-4";
+const boxClass = "w-56 rounded-md border border-border bg-surface px-3 py-2 text-center";
 
 type Role = "designated" | "manager" | "employee" | "none";
 
@@ -70,15 +70,18 @@ export function StructureTree({
     const note = notes[one.id] ?? one.responsibility;
     const key = `${place}:${one.id}`;
     return (
-      <div className="flex flex-col gap-1 rounded-md border border-border bg-surface px-3 py-2">
-        <div className="flex flex-wrap items-baseline gap-x-2">
+      <div className={`${boxClass} flex flex-col items-center gap-1`}>
+        <div className="flex flex-col">
           <span className="font-medium">{one.display_name}</span>
           {role === "none" ? null : (
             <span className="text-xs text-muted-foreground">{t(`roles.${role}`)}</span>
           )}
         </div>
         {editing === key ? (
-          <form onSubmit={(event) => save(event, one)} className="flex flex-wrap gap-2">
+          <form
+            onSubmit={(event) => save(event, one)}
+            className="flex w-full flex-wrap justify-center gap-2"
+          >
             <input
               name="responsibility"
               defaultValue={note}
@@ -86,7 +89,7 @@ export function StructureTree({
               autoComplete="off"
               autoFocus
               aria-label={`${t("responsibility")}: ${one.display_name}`}
-              className="h-8 min-w-48 flex-1 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
             <button type="submit" disabled={busy} className={buttonClass}>
               {t("save")}
@@ -101,7 +104,7 @@ export function StructureTree({
             </button>
           </form>
         ) : (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-col items-center gap-1 text-sm">
             <span className={note ? "" : "text-muted-foreground"}>
               {note ? `${t("responsibility")}: ${note}` : t("noResponsibility")}
             </span>
@@ -126,10 +129,10 @@ export function StructureTree({
 
   function employees(node: DepartmentNode) {
     if (node.employees.length === 0) {
-      return <p className="ml-3 pl-4 text-sm text-muted-foreground">{t("noEmployees")}</p>;
+      return null;
     }
     return (
-      <ul aria-label={`${t("employees")}: ${node.name}`} className={branchClass}>
+      <ul aria-label={`${t("employees")}: ${node.name}`}>
         {node.employees.map((employee) => (
           <li key={employee.id}>{row(employee, "employee", node.id)}</li>
         ))}
@@ -145,47 +148,57 @@ export function StructureTree({
         </p>
       ) : null}
 
-      {initialTree.length === 0 ? <p className="text-muted-foreground">{t("empty")}</p> : null}
-
-      {initialTree.map((node) => {
-        const [head, ...others] = node.managers;
-        return (
-          <section
-            key={node.id}
-            aria-labelledby={`structure-${node.id}`}
-            className="flex flex-col gap-2"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id={`structure-${node.id}`} className="text-lg font-semibold">
-                {node.name}
-              </h2>
-              {canManage ? (
-                <a
-                  href={`/departments#department-${node.id}`}
-                  className="text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  {t("changeStaff")}
-                </a>
-              ) : null}
-            </div>
-            <ul aria-label={`${t("managers")}: ${node.name}`} className={branchClass}>
-              {others.map((manager) => (
-                <li key={manager.id}>{row(manager, "manager", node.id)}</li>
-              ))}
-              <li className="flex flex-col gap-2">
-                {head ? (
-                  row(head, head.is_designated ? "designated" : "manager", node.id)
-                ) : (
-                  <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-                    {t("noManager")}
-                  </p>
-                )}
-                {employees(node)}
-              </li>
-            </ul>
-          </section>
-        );
-      })}
+      {initialTree.length === 0 ? (
+        <p className="text-muted-foreground">{t("empty")}</p>
+      ) : (
+        // A wide company does not fit a screen: the tree scrolls sideways.
+        <div className="overflow-x-auto pb-4">
+          <ul className="org-tree w-max min-w-full">
+            <li>
+              <div className={`${boxClass} font-semibold`}>{t("company")}</div>
+              <ul aria-label={t("departments")}>
+                {initialTree.map((node) => {
+                  const [head, ...others] = node.managers;
+                  return (
+                    <li key={node.id}>
+                      <div className={`${boxClass} flex flex-col gap-1`}>
+                        <span className="text-xs text-muted-foreground">{t("department")}</span>
+                        <span className="font-semibold">{node.name}</span>
+                        {canManage ? (
+                          <a
+                            href={`/departments#department-${node.id}`}
+                            aria-label={`${t("changeStaff")}: ${node.name}`}
+                            className="text-xs underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            {t("changeStaff")}
+                          </a>
+                        ) : null}
+                      </div>
+                      <ul aria-label={`${t("managers")}: ${node.name}`}>
+                        <li>
+                          {head ? (
+                            row(head, head.is_designated ? "designated" : "manager", node.id)
+                          ) : (
+                            <p
+                              className={`${boxClass} border-dashed text-sm text-muted-foreground`}
+                            >
+                              {t("noManager")}
+                            </p>
+                          )}
+                          {employees(node)}
+                        </li>
+                        {others.map((manager) => (
+                          <li key={manager.id}>{row(manager, "manager", node.id)}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          </ul>
+        </div>
+      )}
 
       {initialUnplaced && initialUnplaced.length > 0 ? (
         <section aria-labelledby="structure-unplaced" className="flex flex-col gap-2">
@@ -193,7 +206,7 @@ export function StructureTree({
             {t("unplaced")}
           </h2>
           <p className="text-sm text-muted-foreground">{t("unplacedHint")}</p>
-          <ul className={branchClass}>
+          <ul className="flex flex-wrap gap-3">
             {initialUnplaced.map((one) => (
               <li key={one.id}>{row(one, "none", "unplaced")}</li>
             ))}

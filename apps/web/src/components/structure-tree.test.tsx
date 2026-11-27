@@ -28,10 +28,6 @@ const sales: DepartmentNode = {
 };
 const support: DepartmentNode = { id: "d-support", name: "Поддержка", managers: [], employees: [] };
 
-function department(name: string) {
-  return within(screen.getByRole("region", { name }));
-}
-
 function answer(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -54,7 +50,9 @@ describe("StructureTree", () => {
       <StructureTree initialTree={[sales, support]} initialUnplaced={null} canEdit canManage />,
     );
 
-    const managers = department("Продажи").getByRole("list", { name: "Руководители: Продажи" });
+    // Company -> departments -> managers -> employees, each a branch of the one above.
+    const departments = screen.getByRole("list", { name: "Отделы" });
+    const managers = within(departments).getByRole("list", { name: "Руководители: Продажи" });
     expect(within(managers).getByText("Павел Орлов")).toBeInTheDocument();
     expect(within(managers).getByText("руководитель, ответственный")).toBeInTheDocument();
     expect(within(managers).getByText("Отвечает за: План продаж")).toBeInTheDocument();
@@ -65,8 +63,9 @@ describe("StructureTree", () => {
     expect(within(staff).getByText("Анна Петрова")).toBeInTheDocument();
     expect(within(staff).getByText("Зона ответственности не указана")).toBeInTheDocument();
 
-    expect(department("Поддержка").getByText("Руководитель не назначен")).toBeInTheDocument();
-    expect(department("Поддержка").getByText("Сотрудников пока нет")).toBeInTheDocument();
+    const empty = within(departments).getByRole("list", { name: "Руководители: Поддержка" });
+    expect(within(empty).getByText("Руководитель не назначен")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Сотрудники: Поддержка" })).not.toBeInTheDocument();
   });
 
   it("saves what a person answers for", async () => {
@@ -115,7 +114,7 @@ describe("StructureTree", () => {
     );
 
     expect(screen.queryByRole("button", { name: /Изменить/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Изменить состав" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Изменить состав/ })).not.toBeInTheDocument();
   });
 
   it("lists the employees who are in no department yet", () => {
@@ -128,8 +127,10 @@ describe("StructureTree", () => {
       />,
     );
 
-    expect(department("Без отдела").getByText("Вера Лаптева")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Изменить состав" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("region", { name: "Без отдела" })).getByText("Вера Лаптева"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Изменить состав: Продажи" })).toHaveAttribute(
       "href",
       "/departments#department-d-sales",
     );

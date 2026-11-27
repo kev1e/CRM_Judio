@@ -48,7 +48,7 @@ export default async function StructurePage() {
 
   return (
     <AppShell me={session.me} active="structure">
-      <main className="mx-auto flex max-w-4xl flex-col gap-6 p-4">
+      <main className="flex flex-col gap-6 p-4">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
         <StructureTree
           initialTree={buildTree(list.results)}

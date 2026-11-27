@@ -63,3 +63,70 @@ body {
     Arial,
     sans-serif;
 }
+
+/*
+ * The company structure drawn as a tree: every nested list hangs under its
+ * parent's box and is joined to it with lines.
+ */
+.org-tree,
+.org-tree ul {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.org-tree ul {
+  padding-top: 1.25rem;
+}
+
+.org-tree li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 1.25rem 0.5rem 0;
+}
+
+.org-tree > li {
+  padding-top: 0;
+}
+
+/* The horizontal bar above siblings and the drop from it to each box. */
+.org-tree ul > li::before,
+.org-tree ul > li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 1.25rem;
+  border-top: 1px solid var(--muted-foreground);
+}
+
+.org-tree ul > li::after {
+  right: auto;
+  left: 50%;
+  border-left: 1px solid var(--muted-foreground);
+}
+
+.org-tree ul > li:first-child::before,
+.org-tree ul > li:last-child::after {
+  border-top: 0;
+}
+
+.org-tree ul > li:only-child::before {
+  display: none;
+}
+
+/* The line from a parent's box down to the bar of its children. */
+.org-tree ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 1.25rem;
+  border-left: 1px solid var(--muted-foreground);
+}
