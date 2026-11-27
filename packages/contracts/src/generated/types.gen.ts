@@ -82,6 +82,11 @@ export type CommentWriteRequest = {
     text: string;
 };
 
+export type CompanyHead = {
+    title: string;
+    user: Person | null;
+};
+
 export type CurrentUser = {
     id: string;
     crm_login: string;
@@ -258,6 +263,11 @@ export type PatchedCommentWriteRequest = {
     text?: string;
 };
 
+export type PatchedCompanyHeadUpdateRequest = {
+    title?: string;
+    user_id?: string | null;
+};
+
 export type PatchedDepartmentUpdateRequest = {
     name?: string;
     is_active?: boolean;
@@ -301,6 +311,14 @@ export type PatchedWorkflowStatusUpdateRequest = {
     show_project?: boolean;
     group_by_project?: boolean;
     next_status_ids?: Array<string>;
+};
+
+export type Person = {
+    id: string;
+    crm_login: string;
+    display_name: string;
+    responsibility: string;
+    is_active: boolean;
 };
 
 /**
@@ -1310,6 +1328,45 @@ export type RequestsSubmitResponses = {
 };
 
 export type RequestsSubmitResponse = RequestsSubmitResponses[keyof RequestsSubmitResponses];
+
+export type StructureHeadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/structure/head';
+};
+
+export type StructureHeadErrors = {
+    403: Error;
+};
+
+export type StructureHeadError = StructureHeadErrors[keyof StructureHeadErrors];
+
+export type StructureHeadResponses = {
+    200: CompanyHead;
+};
+
+export type StructureHeadResponse = StructureHeadResponses[keyof StructureHeadResponses];
+
+export type StructureHeadUpdateData = {
+    body?: PatchedCompanyHeadUpdateRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/structure/head';
+};
+
+export type StructureHeadUpdateErrors = {
+    400: Error;
+    403: Error;
+};
+
+export type StructureHeadUpdateError = StructureHeadUpdateErrors[keyof StructureHeadUpdateErrors];
+
+export type StructureHeadUpdateResponses = {
+    200: CompanyHead;
+};
+
+export type StructureHeadUpdateResponse = StructureHeadUpdateResponses[keyof StructureHeadUpdateResponses];
 
 export type TaskAssigneesData = {
     body?: never;

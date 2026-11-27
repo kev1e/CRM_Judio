@@ -1,4 +1,4 @@
-import { API_PATHS, type DepartmentList, type UserList } from "@crm/contracts";
+import { API_PATHS, type CompanyHead, type DepartmentList, type UserList } from "@crm/contracts";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -7,7 +7,6 @@ import { AppShell } from "@/components/app-shell";
 import { StructureTree } from "@/components/structure-tree";
 import { getApiInternalUrl } from "@/lib/env";
 import { fetchCurrentSession } from "@/lib/session";
-import { buildTree, withoutDepartment } from "@/lib/structure";
 
 export const dynamic = "force-dynamic";
 
@@ -46,15 +45,19 @@ export default async function StructurePage() {
       ? await fetchJson<UserList>(API_PATHS.users, cookieHeader)
       : null;
 
+  const head = await fetchJson<CompanyHead>(API_PATHS.structureHead, cookieHeader);
+  const canManage = permissions["department.manage"] === "company";
+
   return (
     <AppShell me={session.me} active="structure">
       <main className="flex flex-col gap-6 p-4">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
         <StructureTree
-          initialTree={buildTree(list.results)}
-          initialUnplaced={users ? withoutDepartment(list.results, users.results) : null}
+          initialDepartments={list.results}
+          users={users?.results ?? null}
           canEdit={permissions["user.update"] === "company"}
-          canManage={permissions["department.manage"] === "company"}
+          canManage={canManage}
+          initialHead={head ?? { title: "", user: null }}
         />
       </main>
     </AppShell>

@@ -399,6 +399,13 @@ The owner asked for "a hierarchy tree: who is a manager, who is that manager's e
 - Visibility follows the existing `department.read`: the administrator sees the whole company (and the list of people in no department), a manager sees the managed departments, an ordinary employee does not see the screen. No new permission was invented.
 - Interpretations to be confirmed by the owner: see `OPEN_QUESTIONS.md` ("Company structure").
 
+### 2026-11-27 — Company structure: a drawn tree, its top, and editing in place (owner's requests)
+
+- "It must be drawn as a tree": the screen draws top → departments → managers → employees with connecting lines.
+- "Put … at the very top, later I want to attach his account": the top of the tree is one stored row, `organization_company_head` — a caption written by the administrator and an optional account. **The caption is data, typed on the screen; it is not written into the code or a migration.** Standing at the top grants nothing (tested): rights still come only from roles and from managing departments. Changing it is `department.manage`, audited as `structure.head_changed`.
+- "I add an employee and it happens automatically, and I can edit the links": links are still derived from departments, and the administrator now changes them in the tree itself — add an employee to a department, move to another department (added there as the primary one, then removed from the old one), make a manager, make designated, take off managing, remove from the department. These are the existing department operations (`department.manage`, same audit events); no new rule of access. The link to «Отделы» was removed from the tree.
+- Not built: drawing a link between two arbitrary people that does not follow from a department. It would be a second source of truth next to the departments that define access.
+
 ### 2026-11-27 — D041: a completed task stays on the board for a month (owner's decision)
 
 - **Owner, 2026-11-27:** "сделать так чтобы задача в готово лежала месяц после чего она улетала в архив, но оставить функцию вернуть в работу". This replaces the part of D016 "enter completed status → immediate automatic archive" and the matching line of `CLAUDE.md` and PRD §Q04. The rest of D016 stands: manual archive by a manager, Trash separate.

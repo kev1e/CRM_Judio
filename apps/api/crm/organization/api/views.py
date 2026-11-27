@@ -13,6 +13,8 @@ from crm.identity.api.serializers import ErrorSerializer
 from crm.identity.models import User
 from crm.organization import services
 from crm.organization.api.serializers import (
+    CompanyHeadSerializer,
+    CompanyHeadUpdateSerializer,
     DepartmentCreateSerializer,
     DepartmentListSerializer,
     DepartmentSerializer,
@@ -20,7 +22,7 @@ from crm.organization.api.serializers import (
     ManagerAddSerializer,
     MemberAddSerializer,
 )
-from crm.organization.models import Department
+from crm.organization.models import CompanyHead, Department
 
 # Every view needs a session (the API default). What the signed-in user may see
 # or change is decided by the domain services.
@@ -182,3 +184,39 @@ class DepartmentManagerView(APIView):
         _visible(actor, department_id)
         services.remove_manager(actor=actor, department_id=department_id, user_id=user_id)
         return _respond(actor, department_id)
+
+
+def _head_response(head: CompanyHead) -> Response:
+    body = {"title": head.title, "user": _person(head.user) if head.user else None}
+    response = Response(body)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+class CompanyHeadView(APIView):
+    """The top of the company structure: a caption and, optionally, an account."""
+
+    @extend_schema(
+        operation_id="structure_head",
+        responses={200: CompanyHeadSerializer, 403: ErrorSerializer},
+        tags=["departments"],
+    )
+    def get(self, request: Request) -> Response:
+        return _head_response(services.company_head(actor=_actor(request)))
+
+    @extend_schema(
+        operation_id="structure_head_update",
+        request=CompanyHeadUpdateSerializer,
+        responses={200: CompanyHeadSerializer, 400: ErrorSerializer, 403: ErrorSerializer},
+        tags=["departments"],
+    )
+    def patch(self, request: Request) -> Response:
+        serializer = CompanyHeadUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        head = services.set_company_head(
+            actor=_actor(request),
+            title=data.get("title", services.KEEP),
+            user_id=data.get("user_id", services.KEEP),
+        )
+        return _head_response(head)

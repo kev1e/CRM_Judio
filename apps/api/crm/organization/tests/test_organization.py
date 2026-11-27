@@ -634,3 +634,80 @@ def test_structure_over_http(
 
     employee.user.refresh_from_db()
     assert employee.user.responsibility == "Обрабатывает входящие заявки"
+
+
+# --- The top of the company structure ---------------------------------------
+
+
+def test_administrator_names_the_top_of_the_structure_and_attaches_an_account(
+    admin_actor: Actor, employee: Employee
+) -> None:
+    assert org.company_head(actor=admin_actor).title == ""
+
+    org.set_company_head(actor=admin_actor, title="  Директор ")
+    head = org.company_head(actor=admin_actor)
+    assert (head.title, head.user) == ("Директор", None)
+
+    # The account is attached later and separately; the caption stays.
+    org.set_company_head(actor=admin_actor, user_id=employee.user.pk)
+    head = org.company_head(actor=admin_actor)
+    assert (head.title, head.user) == ("Директор", employee.user)
+    assert AuditEvent.objects.filter(action="structure.head_changed").count() == 2
+
+    # Nothing changes — nothing is recorded.
+    org.set_company_head(actor=admin_actor, title="Директор")
+    assert AuditEvent.objects.filter(action="structure.head_changed").count() == 2
+
+    org.set_company_head(actor=admin_actor, user_id=None)
+    assert org.company_head(actor=admin_actor).user is None
+
+
+def test_standing_at_the_top_gives_no_rights(admin_actor: Actor, employee: Employee) -> None:
+    before = access.effective_grants(employee.user)
+    org.set_company_head(actor=admin_actor, title="Директор", user_id=employee.user.pk)
+
+    assert access.effective_grants(employee.user) == before
+    with pytest.raises(PermissionDeniedError):
+        org.company_head(actor=Actor.for_user(employee.user))
+
+
+def test_the_top_refuses_bad_values(
+    admin_actor: Actor, make_user: UserFactory, administrator: User
+) -> None:
+    with pytest.raises(DomainError) as too_long:
+        org.set_company_head(actor=admin_actor, title="я" * 151)
+    assert too_long.value.code == "invalid_head_title"
+
+    gone = make_user("gone.person")
+    users.deactivate_user(actor=admin_actor, user=gone)
+    with pytest.raises(DomainError) as inactive:
+        org.set_company_head(actor=admin_actor, user_id=gone.pk)
+    assert inactive.value.code == "user_inactive"
+    assert not AuditEvent.objects.filter(action="structure.head_changed").exists()
+
+
+def test_the_top_of_the_structure_over_http(
+    administrator: User, manager: Employee, employee: Employee
+) -> None:
+    User.objects.filter(pk=administrator.pk).update(
+        telegram_user_id=424242, telegram_bound_at=administrator.created_at
+    )
+    admin = sign_in(Employee(administrator, STRONG_PASSWORD, 424242))
+    path = "/api/v1/structure/head"
+
+    assert admin.get(path).json() == {"title": "", "user": None}
+    named = call(admin, "patch", path, {"title": "Директор"})
+    assert named.status_code == 200
+    attached = call(admin, "patch", path, {"user_id": str(manager.user.pk)}).json()
+    assert attached["title"] == "Директор"
+    assert attached["user"]["crm_login"] == manager.user.crm_login
+
+    # A manager sees it and cannot change it; an employee sees nothing.
+    boss = sign_in(manager)
+    assert boss.get(path).json()["title"] == "Директор"
+    assert call(boss, "patch", path, {"title": "Я"}).status_code == 403
+    staff = sign_in(employee)
+    assert staff.get(path).status_code == 403
+    assert call(staff, "patch", path, {"title": "Я"}).status_code == 403
+
+    assert call(admin, "patch", path, {"user_id": None}).json()["user"] is None

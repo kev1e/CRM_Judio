@@ -88,3 +88,33 @@ class DepartmentManager(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} manages {self.department_id}"
+
+
+class CompanyHead(models.Model):
+    """The top of the company structure: one row. A caption written by the
+    administrator and, optionally, the account of the person it stands for.
+
+    Presentation only: standing at the top grants nothing — rights come from
+    roles and from managing departments, never from this row.
+    """
+
+    SINGLETON_ID = 1
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=SINGLETON_ID)
+    title = models.CharField(max_length=150, blank=True, default="")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+
+    class Meta:
+        db_table = "organization_company_head"
+        constraints = [
+            models.CheckConstraint(condition=Q(id=1), name="organization_company_head_single_row"),
+        ]
+
+    def __str__(self) -> str:
+        return self.title or "company head"

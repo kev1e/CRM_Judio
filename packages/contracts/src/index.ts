@@ -13,6 +13,7 @@ export const API_PATHS = {
   passwordSetup: "/api/v1/auth/password/setup",
   users: "/api/v1/users",
   departments: "/api/v1/departments",
+  structureHead: "/api/v1/structure/head",
   projects: "/api/v1/projects",
   projectCandidates: "/api/v1/project-candidates",
   projectInvitations: "/api/v1/project-invitations",
