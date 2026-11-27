@@ -89,7 +89,7 @@ End-to-end employee journey: authenticate with Telegram confirmation, open My Ta
 
 - Each active employee has exactly one administrator-designated primary department. The other memberships are unlimited. If an employee is deactivated, tasks go to the designated responsible manager of that primary dept, else the designated authorized superuser; if neither exists, block deactivation and notify admin.
 - Task creator receives only a creation receipt, not ongoing read/edit permissions, when assigning to another employee. Each task has exactly one assignee in v1, with future extension possible.
-- Multiple `completed` statuses are allowed, all auto-archive on entry. `cancelled` is separate, must not count as completed. Checkpoint completion alone never transitions status.
+- Multiple `completed` statuses are allowed; a task that enters one stays on the board for a month and is then archived automatically (D041, 2026-11-27; earlier: archived on entry). `cancelled` is separate, must not count as completed. Checkpoint completion alone never transitions status.
 - Archive is distinct from completion. Manager/superuser can archive unfinished tasks manually. Archived tasks can be reopened only by an authorized manager/superuser into their previous valid non-completed status; if retired, require explicit mapping. Incomplete manual archives remain incomplete.
 - Trash has no automatic expiry; privileged deletion/restoration and admin-only purge. In-use status removal requires explicit mapping with audit/history preservation.
 - Every user has unique stable CRM login; Telegram mutable username is only a suggestion at enrollment. Bound Telegram numeric user ID is the identity link.

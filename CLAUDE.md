@@ -16,7 +16,7 @@ You are a principal full-stack engineer and software architect implementing an i
 - Staff see tasks **only when they are assignees**. Department managers see tasks of departments they *manage*; superusers see tasks across the company. Admin rights are separate from global visibility.
 - Every task has exactly one responsible department; users can belong to several departments and have several roles.
 - Task/request is one entity with task type; task checklists are checkpoints, completion does **not** change task status.
-- Marking a task as completed triggers **immediate automatic archival** of that task. Manual archive/unarchive action is restricted to authorized manager/superuser where applicable. Archive and soft-delete trash are separate.
+- A completed task stays in its column for a month (30 days, configurable) and is then archived automatically; until it is reopened it is read-only (**D041, 2026-11-27, replaces the earlier "immediate automatic archival" of D016**). Manual archive/unarchive action is restricted to authorized manager/superuser where applicable. Archive and soft-delete trash are separate.
 - Author, assignee, and department manager may edit task content **only when they already have permitted read access and appropriate edit permissions**. Changing assignee is reserved for manager/superuser in scope.
 - Existing request instances keep the original published template version.
 - Telegram: authorized company employees create requests via bot wizard or Mini App, from supported private/group contexts; no CRM chat viewer, no mirroring group conversations, no request-linked chat transcripts. Telegram bot is also used for notifications and login confirmation.

@@ -32,6 +32,7 @@ const BOARD_ERRORS = [
   "task_changed",
   "task_not_found",
   "task_archived",
+  "task_completed",
   "task_deleted",
   "unavailable",
 ] as const;
@@ -249,17 +250,9 @@ export function TaskBoard({
       ) : null}
       {notice ? (
         <p role="status" className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
-          {notice.kind === "completed" ? (
-            <>
-              {t("completedNotice")}{" "}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full load re-reads the archive */}
-              <a href="/?view=archive" className="underline underline-offset-4">
-                {t("openArchive")}
-              </a>
-            </>
-          ) : (
-            t("createdForOther", { title: notice.title })
-          )}
+          {notice.kind === "completed"
+            ? t("completedNotice")
+            : t("createdForOther", { title: notice.title })}
         </p>
       ) : null}
 

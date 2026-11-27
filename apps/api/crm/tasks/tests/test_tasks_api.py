@@ -197,7 +197,7 @@ def test_edit_form_is_saved_whole_or_not_at_all(
     assert stale.json()["error"]["code"] == "task_changed"
 
 
-def test_completing_moves_the_task_to_the_archive(
+def test_completing_keeps_the_task_on_the_board(
     team: dict[str, Employee], sales: Department
 ) -> None:
     anna = sign_in(team["anna"])
@@ -212,12 +212,19 @@ def test_completing_moves_the_task_to_the_archive(
     done = call(anna, "post", f"{base}/transitions", {"status_id": board["Готово"]["id"]})
 
     assert done.status_code == 200
-    assert (done.json()["is_completed"], done.json()["is_archived"]) == (True, True)
-    assert anna.get("/api/v1/tasks").json()["results"] == []
-    assert [c["id"] for c in anna.get("/api/v1/tasks?view=archive").json()["results"]] == [task_id]
-    # Seeing the archive gives no right to reopen (Q24).
+    # D041: completed, still on the board, not in the archive.
+    assert (done.json()["is_completed"], done.json()["is_archived"]) == (True, False)
+    assert [c["id"] for c in anna.get("/api/v1/tasks").json()["results"]] == [task_id]
+    assert anna.get("/api/v1/tasks?view=archive").json()["results"] == []
+    edit = call(anna, "post", f"{base}/comments", {"text": "Ещё"})
+    assert (edit.status_code, edit.json()["error"]["code"]) == (400, "task_completed")
+    # Seeing the task gives no right to reopen (Q24).
     assert call(anna, "post", f"{base}/reopen").status_code == 403
-    assert call(sign_in(team["olga"]), "post", f"{base}/reopen").json()["is_archived"] is False
+    olga = sign_in(team["olga"])
+    archived = call(olga, "post", f"{base}/archive")
+    assert (archived.json()["is_completed"], archived.json()["is_archived"]) == (True, True)
+    reopened = call(olga, "post", f"{base}/reopen").json()
+    assert (reopened["is_completed"], reopened["is_archived"]) == (False, False)
 
 
 def test_checkpoints_over_http_do_not_touch_the_status(

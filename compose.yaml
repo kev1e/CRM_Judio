@@ -20,6 +20,7 @@ x-backend: &backend
     WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://127.0.0.1:3000}
     NOTIFICATION_TIME_ZONE: ${NOTIFICATION_TIME_ZONE:-Europe/Moscow}
+    COMPLETED_TASK_ARCHIVE_AFTER_DAYS: ${COMPLETED_TASK_ARCHIVE_AFTER_DAYS:-30}
     SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
     # Attachments (D039). "local" keeps files in the crm-files volume and is for
@@ -127,6 +128,28 @@ services:
       timeout: 15s
       retries: 5
       start_period: 20s
+    restart: unless-stopped
+
+  # The scheduler: starts periodic jobs (D041: archiving tasks completed a
+  # month ago). One instance only. Its schedule file lives in memory.
+  beat:
+    <<: *backend
+    command:
+      [
+        "celery",
+        "--app",
+        "crm_worker.app",
+        "beat",
+        "--loglevel",
+        "INFO",
+        "--schedule",
+        "/tmp/celerybeat-schedule",
+      ]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   # The Telegram bot (long polling). It needs TELEGRAM_BOT_TOKEN in `.env` and

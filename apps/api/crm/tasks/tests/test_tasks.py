@@ -4,10 +4,10 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from crm.access import services as access
@@ -591,20 +591,102 @@ def test_only_configured_moves_are_allowed(world: World) -> None:
     assert reload(task).status == todo
 
 
-def test_completion_archives_the_task_in_the_same_step(world: World) -> None:
+def test_completed_task_stays_on_the_board(world: World) -> None:
+    # D041 (replaces D016): completion no longer archives.
     task = make_task(world)
     services.change_status(actor=world.anna, task_id=task.pk, status_id=status("В работе").pk)
 
     done = services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
 
     assert done.completed_at is not None
-    assert done.archived_at == done.completed_at  # D016
-    assert done.status.name == "Готово"  # the archive keeps the completed status
+    assert done.archived_at is None
+    assert done.status.name == "Готово"
     assert done.status_before_completion == status("В работе")
-    assert list(services.board(world.anna, view="mine")) == []
-    assert list(services.board(world.olga, view="all")) == []
-    assert set(services.board(world.anna, view="archive")) == {task}  # Q24
+    assert list(services.board(world.anna, view="mine")) == [task]
+    assert list(services.board(world.olga, view="all")) == [task]
+    assert list(services.board(world.anna, view="archive")) == []
     assert actions_on(task)[-1] == "task.completed"
+
+
+def test_completed_task_is_read_only_until_reopened(world: World) -> None:
+    task = make_task(world)
+    services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
+
+    changes: list[Callable[[], object]] = [
+        lambda: services.update_content(actor=world.olga, task_id=task.pk, title="Другое"),
+        lambda: services.change_deadline(actor=world.anna, task_id=task.pk, due_at=None),
+        lambda: services.add_comment(actor=world.anna, task_id=task.pk, body="Ещё"),
+        lambda: services.add_checkpoint(actor=world.olga, task_id=task.pk, label="Пункт"),
+        lambda: services.reassign(actor=world.olga, task_id=task.pk, assignee_id=uid(world.boris)),
+    ]
+    for change in changes:
+        with pytest.raises(DomainError) as error:
+            change()
+        assert error.value.code == "task_completed"
+
+
+def test_completed_task_returns_to_work_from_the_board(world: World) -> None:
+    task = make_task(world)
+    services.change_status(actor=world.anna, task_id=task.pk, status_id=status("В работе").pk)
+    services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
+
+    # The assignee may not; the manager may (as from the archive, Q05).
+    with pytest.raises(PermissionDeniedError):
+        services.reopen_task(actor=world.anna, task_id=task.pk)
+    reopened = services.reopen_task(actor=world.olga, task_id=task.pk)
+
+    assert reopened.status == status("В работе")
+    assert (reopened.completed_at, reopened.archived_at) == (None, None)
+    assert actions_on(task)[-1] == "task.reopened"
+    # A task that is neither completed nor archived has nothing to reopen.
+    with pytest.raises(DomainError) as error:
+        services.reopen_task(actor=world.olga, task_id=task.pk)
+    assert error.value.code == "task_not_archived"
+
+
+def test_completed_tasks_are_archived_after_the_retention_period(
+    world: World, settings: Any
+) -> None:
+    settings.COMPLETED_TASK_ARCHIVE_AFTER_DAYS = 30
+    old, fresh, open_task, trashed = (make_task(world) for _ in range(4))
+    for task in (old, fresh, trashed):
+        services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
+    long_ago = timezone.now() - timedelta(days=30, minutes=1)
+    Task.objects.filter(pk__in=[old.pk, trashed.pk]).update(completed_at=long_ago)
+    Task.objects.filter(pk=fresh.pk).update(completed_at=timezone.now() - timedelta(days=29))
+    services.trash_task(actor=world.olga, task_id=trashed.pk)
+
+    assert services.archive_completed() == 1
+    assert services.archive_completed() == 0  # nothing left to do
+
+    assert reload(old).archived_at is not None
+    assert reload(old).status.name == "Готово"
+    assert reload(fresh).archived_at is None
+    assert reload(open_task).archived_at is None
+    assert reload(trashed).archived_at is None
+    event = AuditEvent.objects.filter(entity_id=str(old.pk)).latest("occurred_at")
+    assert event.action == "task.archived"
+    assert event.metadata["reason"] == "retention"
+    assert event.actor_id is None  # done by the system, not by a person
+    # Q24: everybody who could see the task finds it in the archive, and the
+    # manager can still return it to work.
+    assert set(services.board(world.anna, view="archive")) == {old}
+    assert services.reopen_task(actor=world.olga, task_id=old.pk).archived_at is None
+
+
+def test_manager_archives_a_completed_task_early(world: World) -> None:
+    task = make_task(world)
+    services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
+
+    with pytest.raises(PermissionDeniedError):
+        services.archive_task(actor=world.anna, task_id=task.pk)
+    archived = services.archive_task(actor=world.olga, task_id=task.pk)
+
+    assert archived.archived_at is not None
+    assert archived.completed_at is not None
+    with pytest.raises(DomainError) as error:
+        services.archive_task(actor=world.olga, task_id=task.pk)
+    assert error.value.code == "task_archived"
 
 
 def test_cancelled_is_not_completed_and_is_not_archived(world: World) -> None:
@@ -619,11 +701,18 @@ def test_cancelled_is_not_completed_and_is_not_archived(world: World) -> None:
     assert set(services.board(world.anna, view="mine")) == {task}
 
 
-def test_database_refuses_a_completed_task_that_is_not_archived(world: World) -> None:
-    task = make_task(world)
+def test_scheduled_job_runs_the_archiving(world: World, settings: Any) -> None:
+    from crm.tasks.tasks import archive_completed
 
-    with pytest.raises(IntegrityError), transaction.atomic():
-        Task.objects.filter(pk=task.pk).update(completed_at=timezone.now())
+    task = make_task(world)
+    services.change_status(actor=world.anna, task_id=task.pk, status_id=status("Готово").pk)
+    Task.objects.filter(pk=task.pk).update(completed_at=timezone.now() - timedelta(days=31))
+
+    assert archive_completed.apply().get() == 1
+    assert (
+        settings.CELERY_BEAT_SCHEDULE["archive-completed-tasks"]["task"] == archive_completed.name
+    )
+    assert reload(task).archived_at is not None
 
 
 def test_checkpoints_never_change_the_status(world: World) -> None:
@@ -749,7 +838,7 @@ def test_reopening_is_refused_when_the_previous_status_is_gone(world: World) -> 
         services.reopen_task(actor=world.olga, task_id=task.pk)
 
     assert error.value.code == "previous_status_unavailable"
-    assert reload(task).archived_at is not None
+    assert reload(task).completed_at is not None
 
 
 # --- Trash (Q06) ------------------------------------------------------------

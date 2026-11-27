@@ -305,7 +305,7 @@ def test_completed_status_is_replaced_by_a_completed_one(
     task.refresh_from_db()
     assert task.status_id == accepted.pk
     assert task.completed_at == completed_at
-    assert task.archived_at is not None
+    assert task.archived_at is None  # D041: still on the board
 
 
 def test_replacement_must_be_another_active_status(admin_actor: Actor) -> None:

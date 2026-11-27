@@ -15,6 +15,7 @@ const ERRORS = [
   "task_changed",
   "task_not_found",
   "task_archived",
+  "task_completed",
   "task_deleted",
   "invalid_title",
   "assignee_not_eligible",
@@ -265,18 +266,21 @@ export function TaskModal({
     );
   }
 
-  const locked = task.is_deleted || task.is_archived;
+  // D041: a completed task waits in its column, read-only, until it is reopened.
+  const locked = task.is_deleted || task.is_archived || task.is_completed;
   const current = statuses.find((status) => status.id === task.status_id);
   const nextStatuses = statuses.filter((status) => current?.next_status_ids.includes(status.id));
   const statusReason = task.is_deleted
     ? "deleted"
     : task.is_archived
       ? "archived"
-      : !task.actions.status
-        ? "noRight"
-        : nextStatuses.length === 0
-          ? "noMoves"
-          : null;
+      : task.is_completed
+        ? "completed"
+        : !task.actions.status
+          ? "noRight"
+          : nextStatuses.length === 0
+            ? "noMoves"
+            : null;
   const canEditAnything =
     !locked &&
     (task.actions.edit || task.actions.deadline || task.actions.priority || task.actions.reassign);
@@ -484,16 +488,24 @@ export function TaskModal({
                 {t("edit")}
               </button>
             ) : null}
-            {task.actions.archive && !task.is_deleted ? (
+            {task.actions.archive && !task.is_deleted && (task.is_archived || task.is_completed) ? (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() =>
-                  void run(`${base}/${task.is_archived ? "reopen" : "archive"}`, "POST")
-                }
+                onClick={() => void run(`${base}/reopen`, "POST")}
                 className={buttonClass}
               >
-                {task.is_archived ? t("reopen") : t("archive")}
+                {t("reopen")}
+              </button>
+            ) : null}
+            {task.actions.archive && !task.is_deleted && !task.is_archived ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(`${base}/archive`, "POST")}
+                className={buttonClass}
+              >
+                {t("archive")}
               </button>
             ) : null}
             {task.actions.delete ? (

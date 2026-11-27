@@ -83,6 +83,10 @@ These are technical parameters or choices that the approved decisions leave open
 | `/request` in a group | Ignored silently: the allowlist and the private hand-off of Q22 are not built | With Q22 |
 | `/task` in the bot: a deadline typed without a time | The end of that day (23:59) in `NOTIFICATION_TIME_ZONE` | Production |
 | `/task` in the bot: what it does not ask | Project and type (always an ordinary task without a project); both can be changed in the CRM | Production |
+| D041: length of "a month" | 30 days, counted from the moment of completion; `COMPLETED_TASK_ARCHIVE_AFTER_DAYS`. Checked hourly, so the move may come up to an hour later | Production |
+| D041: what can be done with a completed task while it waits in its column | Nothing but reading, "Вернуть в работу" and "В архив" (both the manager's). No edits, comments, files or checkpoint ticks | Production |
+| D041: who returns a completed task to work | The manager of the task's department (as from the archive, Q05). The assignee cannot undo their own completion | Production |
+| D041: several bot or scheduler processes | Exactly one `beat` process must run; two would only run the idempotent job twice | S8 |
 | Board refresh | The board reloads after the viewer's own actions; other people's changes appear on the next page load. Live updates need the transport decision above | First real-time feature |
 | How a manager gets a manager's rights (the capability matrix lists them, the mechanism is not specified) | Automatically: the built-in `department_manager` role follows the fact of managing a department | Production |
 | Who may change memberships and managers | Administrator only (`department.manage`), also inside a manager's own department | Production |

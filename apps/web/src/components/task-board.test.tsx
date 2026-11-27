@@ -196,11 +196,11 @@ describe("TaskBoard", () => {
     fetchMock
       .mockResolvedValueOnce(Response.json(detail()))
       .mockResolvedValueOnce(
-        Response.json(
-          detail({ status_id: "done", is_completed: true, is_archived: true, version: 2 }),
-        ),
+        Response.json(detail({ status_id: "done", is_completed: true, version: 2 })),
       )
-      .mockResolvedValue(Response.json({ results: [] }));
+      .mockResolvedValue(
+        Response.json({ results: [card({ status_id: "done", is_completed: true, version: 2 })] }),
+      );
     renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[card()]} />);
     await user.click(screen.getByRole("button", { name: /Подготовить предложение/ }));
     const dialog = within(await screen.findByRole("dialog"));
@@ -210,11 +210,62 @@ describe("TaskBoard", () => {
     const [url, init] = fetchMock.mock.calls[1] ?? [];
     expect(url).toBe("/api/v1/tasks/t-1/transitions");
     expect(JSON.parse(String(init?.body))).toEqual({ status_id: "done", version: 1 });
-    // Archived now: the status cannot be changed and the window says why.
-    expect(await dialog.findByText(/задача в архиве/)).toBeInTheDocument();
+    // Completed: the status cannot be changed and the window says why.
+    expect(await dialog.findByText(/задача завершена; вернуть её в работу/)).toBeInTheDocument();
+    // The task did not leave the board: it lies in the column of completed tasks.
     await waitFor(() =>
-      expect(column("Нужно сделать").queryByRole("button")).not.toBeInTheDocument(),
+      expect(
+        column("Готово").getByRole("button", { name: /Подготовить предложение/ }),
+      ).toBeInTheDocument(),
     );
+    expect(column("Нужно сделать").queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("lets a manager return a completed task to work or archive it at once", async () => {
+    const user = userEvent.setup();
+    const completed = detail({ status_id: "done", is_completed: true });
+    const manager = { ...completed, actions: { ...completed.actions, archive: true } };
+    fetchMock
+      .mockResolvedValueOnce(Response.json(manager))
+      .mockResolvedValueOnce(Response.json(detail()))
+      .mockResolvedValue(Response.json({ results: [card()] }));
+    renderWithIntl(
+      <TaskBoard
+        view="all"
+        statuses={statuses}
+        initialCards={[card({ status_id: "done", is_completed: true })]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Подготовить предложение/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+
+    // Read-only while completed; both ways out are offered.
+    expect(dialog.queryByRole("button", { name: "Редактировать" })).not.toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Вернуть в работу" }));
+
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/tasks/t-1/reopen");
+    await waitFor(() =>
+      expect(dialog.queryByRole("button", { name: "Вернуть в работу" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("offers a completed task's reader no way to reopen it", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json(detail({ status_id: "done", is_completed: true })),
+    );
+    renderWithIntl(
+      <TaskBoard
+        view="mine"
+        statuses={statuses}
+        initialCards={[card({ status_id: "done", is_completed: true })]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Подготовить предложение/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+
+    expect(dialog.queryByRole("button", { name: "Вернуть в работу" })).not.toBeInTheDocument();
+    expect(dialog.queryByRole("button", { name: "В архив" })).not.toBeInTheDocument();
   });
 
   it("ticks a checkpoint without touching the status", async () => {
