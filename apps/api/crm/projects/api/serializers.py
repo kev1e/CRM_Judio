@@ -21,12 +21,35 @@ class ProjectInvitationSerializer(serializers.Serializer[Any]):
     created_at = serializers.DateTimeField()
 
 
+class ZoneMemberSerializer(serializers.Serializer[Any]):
+    user = NamedSerializer()
+    is_responsible = serializers.BooleanField()
+
+
+class ProjectZoneSerializer(serializers.Serializer[Any]):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    members = ZoneMemberSerializer(many=True)
+
+
+class ZoneNameSerializer(serializers.Serializer[Any]):
+    name = serializers.CharField(max_length=150, trim_whitespace=True)
+
+
+class ZoneMemberSetSerializer(serializers.Serializer[Any]):
+    user_id = serializers.UUIDField()
+    is_responsible = serializers.BooleanField(required=False, default=False)
+
+
 class ProjectSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     name = serializers.CharField()
     department = NamedSerializer()
     is_active = serializers.BooleanField()
     members = ProjectMemberSerializer(many=True)
+    zones = ProjectZoneSerializer(
+        many=True, help_text="Areas of responsibility inside the project and who is in each."
+    )
     pending_invitations = ProjectInvitationSerializer(
         many=True, help_text="Shown only to somebody who runs the project."
     )

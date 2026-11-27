@@ -11,6 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { type FormEvent, useRef, useState } from "react";
 
+import { ProjectZones } from "@/components/project-zones";
 import { callApi } from "@/lib/api-client";
 
 const ERROR_KEYS = [
@@ -25,6 +26,10 @@ const ERROR_KEYS = [
   "member_not_found",
   "invitation_not_found",
   "invitation_decided",
+  "invalid_zone_name",
+  "zone_name_taken",
+  "zone_not_found",
+  "zone_member_not_found",
   "permission_denied",
   "unavailable",
 ] as const;
@@ -439,6 +444,8 @@ export function ProjectsPanel({
                 <p className="text-xs text-muted-foreground">{t("addHint")}</p>
               </form>
             ) : null}
+
+            <ProjectZones project={project} editable={editable} busy={busy} change={change} />
           </section>
         );
       })}

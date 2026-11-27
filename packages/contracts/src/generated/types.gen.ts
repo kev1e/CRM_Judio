@@ -313,6 +313,10 @@ export type PatchedWorkflowStatusUpdateRequest = {
     next_status_ids?: Array<string>;
 };
 
+export type PatchedZoneNameRequest = {
+    name?: string;
+};
+
 export type Person = {
     id: string;
     crm_login: string;
@@ -335,6 +339,10 @@ export type Project = {
     department: Named;
     is_active: boolean;
     members: Array<ProjectMember>;
+    /**
+     * Areas of responsibility inside the project and who is in each.
+     */
+    zones: Array<ProjectZone>;
     /**
      * Shown only to somebody who runs the project.
      */
@@ -379,6 +387,12 @@ export type ProjectMember = {
      * False when the account is deactivated.
      */
     is_active: boolean;
+};
+
+export type ProjectZone = {
+    id: string;
+    name: string;
+    members: Array<ZoneMember>;
 };
 
 export type Readiness = {
@@ -715,6 +729,20 @@ export type WorkflowStatusCreateRequest = {
     category: CategoryEnum;
     show_project?: boolean;
     group_by_project?: boolean;
+};
+
+export type ZoneMember = {
+    user: Named;
+    is_responsible: boolean;
+};
+
+export type ZoneMemberSetRequest = {
+    user_id: string;
+    is_responsible?: boolean;
+};
+
+export type ZoneNameRequest = {
+    name: string;
 };
 
 export type LoginRequestRequestWritable = {
@@ -1187,6 +1215,126 @@ export type ProjectsRemoveParticipantResponses = {
 };
 
 export type ProjectsRemoveParticipantResponse = ProjectsRemoveParticipantResponses[keyof ProjectsRemoveParticipantResponses];
+
+export type ProjectsCreateZoneData = {
+    body: ZoneNameRequest;
+    path: {
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/zones';
+};
+
+export type ProjectsCreateZoneErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsCreateZoneError = ProjectsCreateZoneErrors[keyof ProjectsCreateZoneErrors];
+
+export type ProjectsCreateZoneResponses = {
+    200: Project;
+};
+
+export type ProjectsCreateZoneResponse = ProjectsCreateZoneResponses[keyof ProjectsCreateZoneResponses];
+
+export type ProjectsDeleteZoneData = {
+    body?: never;
+    path: {
+        project_id: string;
+        zone_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/zones/{zone_id}';
+};
+
+export type ProjectsDeleteZoneErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsDeleteZoneError = ProjectsDeleteZoneErrors[keyof ProjectsDeleteZoneErrors];
+
+export type ProjectsDeleteZoneResponses = {
+    200: Project;
+};
+
+export type ProjectsDeleteZoneResponse = ProjectsDeleteZoneResponses[keyof ProjectsDeleteZoneResponses];
+
+export type ProjectsRenameZoneData = {
+    body?: PatchedZoneNameRequest;
+    path: {
+        project_id: string;
+        zone_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/zones/{zone_id}';
+};
+
+export type ProjectsRenameZoneErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsRenameZoneError = ProjectsRenameZoneErrors[keyof ProjectsRenameZoneErrors];
+
+export type ProjectsRenameZoneResponses = {
+    200: Project;
+};
+
+export type ProjectsRenameZoneResponse = ProjectsRenameZoneResponses[keyof ProjectsRenameZoneResponses];
+
+export type ProjectsPutIntoZoneData = {
+    body: ZoneMemberSetRequest;
+    path: {
+        project_id: string;
+        zone_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/zones/{zone_id}/members';
+};
+
+export type ProjectsPutIntoZoneErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsPutIntoZoneError = ProjectsPutIntoZoneErrors[keyof ProjectsPutIntoZoneErrors];
+
+export type ProjectsPutIntoZoneResponses = {
+    200: Project;
+};
+
+export type ProjectsPutIntoZoneResponse = ProjectsPutIntoZoneResponses[keyof ProjectsPutIntoZoneResponses];
+
+export type ProjectsTakeOutOfZoneData = {
+    body?: never;
+    path: {
+        project_id: string;
+        user_id: string;
+        zone_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/zones/{zone_id}/members/{user_id}';
+};
+
+export type ProjectsTakeOutOfZoneErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type ProjectsTakeOutOfZoneError = ProjectsTakeOutOfZoneErrors[keyof ProjectsTakeOutOfZoneErrors];
+
+export type ProjectsTakeOutOfZoneResponses = {
+    200: Project;
+};
+
+export type ProjectsTakeOutOfZoneResponse = ProjectsTakeOutOfZoneResponses[keyof ProjectsTakeOutOfZoneResponses];
 
 export type ReadyData = {
     body?: never;

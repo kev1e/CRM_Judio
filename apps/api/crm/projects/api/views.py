@@ -24,6 +24,8 @@ from crm.projects.api.serializers import (
     ProjectListSerializer,
     ProjectSerializer,
     ProjectUpdateSerializer,
+    ZoneMemberSetSerializer,
+    ZoneNameSerializer,
 )
 from crm.projects.models import InvitationState, Project, ProjectInvitation
 
@@ -88,6 +90,22 @@ def _project(actor: Actor, project: Project) -> dict[str, Any]:
                 "is_active": m.user.is_active,
             }
             for m in members
+        ],
+        "zones": [
+            {
+                "id": zone.pk,
+                "name": zone.name,
+                "members": [
+                    {
+                        "user": _named(link.member.user_id, link.member.user.display_name),
+                        "is_responsible": link.is_responsible,
+                    }
+                    for link in zone.members.select_related("member__user").order_by(
+                        "-is_responsible", "member__user__display_name"
+                    )
+                ],
+            }
+            for zone in project.zones.all()
         ],
         "pending_invitations": [_invitation(i) for i in pending],
         "can_manage": manages,
@@ -262,3 +280,84 @@ class ProjectCandidatesView(APIView):
                 ]
             }
         )
+
+
+_ZONE_RESPONSES = {200: ProjectSerializer, **_ERRORS}
+
+
+class ProjectZonesView(APIView):
+    @extend_schema(
+        operation_id="projects_create_zone",
+        request=ZoneNameSerializer,
+        responses=_ZONE_RESPONSES,
+        tags=["projects"],
+    )
+    def post(self, request: Request, project_id: UUID) -> Response:
+        serializer = ZoneNameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        services.create_zone(
+            actor=actor, project_id=project_id, name=serializer.validated_data["name"]
+        )
+        return _respond(actor, project_id)
+
+
+class ProjectZoneView(APIView):
+    @extend_schema(
+        operation_id="projects_rename_zone",
+        request=ZoneNameSerializer,
+        responses=_ZONE_RESPONSES,
+        tags=["projects"],
+    )
+    def patch(self, request: Request, project_id: UUID, zone_id: UUID) -> Response:
+        serializer = ZoneNameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        services.rename_zone(
+            actor=actor,
+            project_id=project_id,
+            zone_id=zone_id,
+            name=serializer.validated_data["name"],
+        )
+        return _respond(actor, project_id)
+
+    @extend_schema(
+        operation_id="projects_delete_zone", responses=_ZONE_RESPONSES, tags=["projects"]
+    )
+    def delete(self, request: Request, project_id: UUID, zone_id: UUID) -> Response:
+        actor = _actor(request)
+        services.delete_zone(actor=actor, project_id=project_id, zone_id=zone_id)
+        return _respond(actor, project_id)
+
+
+class ProjectZoneMembersView(APIView):
+    @extend_schema(
+        operation_id="projects_put_into_zone",
+        request=ZoneMemberSetSerializer,
+        responses=_ZONE_RESPONSES,
+        tags=["projects"],
+    )
+    def post(self, request: Request, project_id: UUID, zone_id: UUID) -> Response:
+        serializer = ZoneMemberSetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        services.put_into_zone(
+            actor=actor,
+            project_id=project_id,
+            zone_id=zone_id,
+            user_id=serializer.validated_data["user_id"],
+            responsible=serializer.validated_data["is_responsible"],
+        )
+        return _respond(actor, project_id)
+
+
+class ProjectZoneMemberView(APIView):
+    @extend_schema(
+        operation_id="projects_take_out_of_zone", responses=_ZONE_RESPONSES, tags=["projects"]
+    )
+    def delete(self, request: Request, project_id: UUID, zone_id: UUID, user_id: UUID) -> Response:
+        actor = _actor(request)
+        services.take_out_of_zone(
+            actor=actor, project_id=project_id, zone_id=zone_id, user_id=user_id
+        )
+        return _respond(actor, project_id)
