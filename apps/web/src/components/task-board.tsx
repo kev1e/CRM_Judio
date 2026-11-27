@@ -94,7 +94,7 @@ function Column({
     <section
       ref={setNodeRef}
       aria-labelledby={`column-${status.id}`}
-      className={`flex min-w-72 shrink-0 flex-col gap-2 rounded-lg border border-t-4 border-border bg-surface p-2 ${columnTone[status.category]} ${isOver && highlight ? "outline-2 outline-ring" : ""}`}
+      className={`flex w-72 shrink-0 flex-col gap-2 rounded-lg border border-t-4 border-border bg-surface p-2 ${columnTone[status.category]} ${isOver && highlight ? "outline-2 outline-ring" : ""}`}
     >
       <h2
         id={`column-${status.id}`}
@@ -135,10 +135,18 @@ export function TaskBoard({
   // A small movement starts a drag; a plain click still opens the card.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const isBoard = view === "mine" || view === "all";
-  // Every status is divided the same way: the department's own tasks, then each
-  // project — whatever groups the tasks on this board belong to.
-  const groups = groupCards(cards);
-  const split = groups.length > 0;
+  // Groups of the "in work" statuses the viewer has unfolded (project or department).
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
+
+  function toggleGroup(key: string) {
+    setUnfolded((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) {
+        next.add(key);
+      }
+      return next;
+    });
+  }
 
   // The open task is part of the address, so it can be bookmarked and sent as a link.
   useEffect(() => {
@@ -185,8 +193,13 @@ export function TaskBoard({
       );
       return;
     }
-    if (statuses.find((status) => status.id === toStatusId)?.category === "completed") {
+    const target = statuses.find((status) => status.id === toStatusId);
+    if (target?.category === "completed") {
       setNotice({ kind: "completed" });
+    }
+    if (target?.category === "active") {
+      // The moved card must not seem to vanish into a folded group.
+      setUnfolded((current) => new Set(current).add(`${toStatusId}:${groupKey(card)}`));
     }
     await reload();
   }
@@ -282,60 +295,55 @@ export function TaskBoard({
                       count={inColumn.length}
                       highlight={allowed}
                     >
-                      {split ? (
-                        // Inside a status: tasks of the department apart from
-                        // the tasks of each project.
-                        <div className="flex items-start gap-2">
-                          {groups.map((board) => {
-                            const group = {
-                              ...board,
-                              cards: inColumn.filter((card) => groupKey(card) === board.key),
-                            };
+                      {status.category === "active"
+                        ? // Work in progress is shown by project: a folded list of
+                          // the projects (and the department's own tasks) that
+                          // have something in work; a click unfolds the tasks.
+                          groupCards(inColumn).map((group) => {
+                            const key = `${status.id}:${group.key}`;
+                            const open = unfolded.has(key);
                             return (
                               <section
                                 key={group.key}
-                                aria-label={t(
-                                  group.isProject ? "groupProject" : "groupDepartment",
-                                  {
-                                    name: group.name,
-                                    status: status.name,
-                                  },
-                                )}
-                                className="flex w-60 shrink-0 flex-col gap-2 rounded-md bg-muted/40 p-1.5"
+                                className="flex flex-col gap-2 rounded-md bg-muted/40 p-1.5"
                               >
-                                <h3 className="flex items-baseline justify-between gap-2 px-1 text-xs font-medium">
-                                  <span className="break-words">
-                                    <span className="text-muted-foreground">
-                                      {t(group.isProject ? "projectPrefix" : "departmentPrefix")}
-                                    </span>{" "}
-                                    {group.name}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {group.cards.length}
-                                  </span>
+                                <h3>
+                                  <button
+                                    type="button"
+                                    aria-expanded={open}
+                                    onClick={() => toggleGroup(key)}
+                                    className="flex min-h-9 w-full items-center justify-between gap-2 rounded px-1 text-left text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                  >
+                                    <span className="break-words">
+                                      <span aria-hidden="true" className="text-muted-foreground">
+                                        {open ? "▾" : "▸"}{" "}
+                                      </span>
+                                      <span className="font-normal text-muted-foreground">
+                                        {t(group.isProject ? "projectPrefix" : "departmentPrefix")}
+                                      </span>{" "}
+                                      {group.name}
+                                    </span>
+                                    <span className="font-normal text-muted-foreground">
+                                      {group.cards.length}
+                                    </span>
+                                  </button>
                                 </h3>
-                                {group.cards.map((card) => (
-                                  <Draggable key={card.id} id={card.id} disabled={false}>
-                                    <TaskCardView card={card} onOpen={setOpenId} now={now} />
-                                  </Draggable>
-                                ))}
-                                {group.cards.length === 0 ? (
-                                  <p className="px-1 py-2 text-xs text-muted-foreground">
-                                    {t("emptyColumn")}
-                                  </p>
-                                ) : null}
+                                {open
+                                  ? group.cards.map((card) => (
+                                      <Draggable key={card.id} id={card.id} disabled={false}>
+                                        <TaskCardView card={card} onOpen={setOpenId} now={now} />
+                                      </Draggable>
+                                    ))
+                                  : null}
                               </section>
                             );
-                          })}
-                        </div>
-                      ) : (
-                        inColumn.map((card) => (
-                          <Draggable key={card.id} id={card.id} disabled={false}>
-                            <TaskCardView card={card} onOpen={setOpenId} now={now} />
-                          </Draggable>
-                        ))
-                      )}
-                      {inColumn.length === 0 && (!split || status.category === "completed") ? (
+                          })
+                        : inColumn.map((card) => (
+                            <Draggable key={card.id} id={card.id} disabled={false}>
+                              <TaskCardView card={card} onOpen={setOpenId} now={now} />
+                            </Draggable>
+                          ))}
+                      {inColumn.length === 0 ? (
                         <p className="px-1 py-3 text-xs text-muted-foreground">
                           {status.category === "completed" ? t("dropToComplete") : t("emptyColumn")}
                         </p>
