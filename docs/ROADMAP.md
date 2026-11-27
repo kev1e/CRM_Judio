@@ -42,7 +42,7 @@ Q01–Q03, Q08, Q14 and Q29 are approved. Departments, multi-membership, manager
 
 Q01–Q09 and Q30 have been resolved; resolve Q19 (field-level permissions) before implementing edits. Tasks, assignee, single responsible dept, status/transition admin UI, checkpoints, due date, audit, archive/trash, modal details/edit mode, personal Kanban, drag-and-drop, responsive UX, light/dark and i18n structure.
 
-**Exit:** employee cannot enumerate others' tasks; completion auto-archives; checkboxes do not change status; unauthorized transitions denied; history and archive/trash tested.
+**Exit:** employee cannot enumerate others' tasks; a completed task is archived automatically after a month (D041; originally: at once); checkboxes do not change status; unauthorized transitions denied; history and archive/trash tested.
 
 **Status (2026-11-25):** the core is done — tasks with one department and one assignee, statuses with allowed moves (seeded defaults), checkpoints, deadline with history, field permissions of Q19, automatic archive on completion, manual archive and reopening, trash and restore, hand-over on deactivation, the personal board "Мои задачи" with drag-and-drop, the "Все задачи" board for managers and superusers, Archive, Trash, the task window with a separate edit mode, the common frame with a sidebar. The administrator's Statuses screen (2026-11-25, second slice): create, rename, order, allowed moves, retiring a status with an explicit replacement (Q09) and returning it. **Not done from the S3 list:** permanent purge by an administrator (Q06), the designated-superuser fallback of the hand-over (Q08), live updates of the board, filters and search (S7).
 

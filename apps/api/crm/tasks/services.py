@@ -16,9 +16,10 @@ Rules that are easy to get wrong:
 """
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Max, Q, QuerySet
 from django.utils import timezone
@@ -83,6 +84,9 @@ def _require_editable(task: Task) -> None:
         raise DomainError("task_deleted", "The task is in the trash. Restore it first.")
     if task.archived_at is not None:
         raise DomainError("task_archived", "The task is archived. Reopen it first.")
+    if task.completed_at is not None:
+        # D041: a finished task waits in its column; only reopening changes it.
+        raise DomainError("task_completed", "The task is completed. Reopen it first.")
 
 
 def _check_version(task: Task, expected_version: int | None) -> None:
@@ -421,7 +425,8 @@ def reassign(
 def change_status(
     *, actor: Actor, task_id: UUID, status_id: UUID, expected_version: int | None = None
 ) -> Task:
-    """Move the task along an allowed transition. Completion archives it at once."""
+    """Move the task along an allowed transition. A completed task stays on the
+    board and is archived later (D041)."""
     with transaction.atomic():
         task = _locked(actor, task_id)
         policy.require(actor, "task.status", task)
@@ -444,9 +449,10 @@ def change_status(
         if target.category == StatusCategory.COMPLETED:
             now = timezone.now()
             task.status_before_completion_id = before
+            # D041: the task stays in its column; `archive_completed` moves it
+            # to the archive after the retention period.
             task.completed_at = now
-            task.archived_at = now
-            fields += ["status_before_completion", "completed_at", "archived_at"]
+            fields += ["status_before_completion", "completed_at"]
         task.status = target
         _save(task, *fields)
         _log(
@@ -461,20 +467,55 @@ def change_status(
 
 
 def archive_task(*, actor: Actor, task_id: UUID) -> Task:
-    """Q05: a manager or an authorized superuser archives an unfinished task.
-    The task is not completed by this and counts in no completion figure."""
+    """Q05: a manager or an authorized superuser archives a task — an unfinished
+    one (it is not completed by this and counts in no completion figure) or a
+    completed one that should not wait for the automatic archive (D041)."""
     with transaction.atomic():
         task = _locked(actor, task_id)
         policy.require(actor, "task.archive", task)
-        _require_editable(task)
+        if task.deleted_at is not None:
+            raise DomainError("task_deleted", "The task is in the trash. Restore it first.")
+        if task.archived_at is not None:
+            raise DomainError("task_archived", "The task is archived. Reopen it first.")
         task.archived_at = timezone.now()
         _save(task, "archived_at")
-        _log(actor, "task.archived", task, completed=False)
+        _log(actor, "task.archived", task, completed=task.completed_at is not None)
     return task
 
 
+def archive_completed(*, now: datetime | None = None) -> int:
+    """D041: move to the archive the tasks that were completed more than
+    `COMPLETED_TASK_ARCHIVE_AFTER_DAYS` days ago and are still on the board.
+    Run periodically by the worker; safe to run any number of times."""
+    cutoff = (now or timezone.now()) - timedelta(days=settings.COMPLETED_TASK_ARCHIVE_AFTER_DAYS)
+    system = Actor.system("completed-task-retention")
+    archived = 0
+    due = Task.objects.filter(
+        completed_at__lte=cutoff, archived_at__isnull=True, deleted_at__isnull=True
+    ).values_list("pk", flat=True)
+    for task_id in list(due):
+        with transaction.atomic():
+            task = (
+                Task.objects.select_for_update()
+                .filter(
+                    pk=task_id,
+                    completed_at__lte=cutoff,
+                    archived_at__isnull=True,
+                    deleted_at__isnull=True,
+                )
+                .first()
+            )
+            if task is None:  # reopened, archived or deleted meanwhile
+                continue
+            task.archived_at = timezone.now()
+            _save(task, "archived_at")
+            _log(system, "task.archived", task, completed=True, reason="retention")
+            archived += 1
+    return archived
+
+
 def reopen_task(*, actor: Actor, task_id: UUID) -> Task:
-    """Bring an archived task back to the board (Q05).
+    """Bring an archived or a completed task back to work (Q05, D041).
 
     A completed task returns to the status it had before completion; if that
     status no longer exists the reopening is refused — a replacement is never
@@ -485,10 +526,10 @@ def reopen_task(*, actor: Actor, task_id: UUID) -> Task:
         policy.require(actor, "task.archive", task)
         if task.deleted_at is not None:
             raise DomainError("task_deleted", "The task is in the trash. Restore it first.")
-        if task.archived_at is None:
-            raise DomainError("task_not_archived", "The task is not archived.")
-        fields = ["archived_at"]
         was_completed = task.completed_at is not None
+        if task.archived_at is None and not was_completed:
+            raise DomainError("task_not_archived", "The task is neither archived nor completed.")
+        fields = ["archived_at"]
         if was_completed:
             previous = task.status_before_completion
             if (

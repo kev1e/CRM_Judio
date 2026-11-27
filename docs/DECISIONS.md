@@ -19,7 +19,8 @@ Status: **APPROVED** unless marked `PROPOSED` / `OPEN`.
 | D013 | Employee own analytics, manager managed dept, superuser company; 5 KPIs; visual dashboard builder; Excel/CSV; extensible filters | APPROVED |
 | D014 | Admin-only automation configuration; reminders, overdue escalation, reassign on deactivation, scheduled digests | APPROVED |
 | D015 | All checkpoints completed do NOT change status automatically; supersedes earlier optional checkpoint-triggered status automation | APPROVED |
-| D016 | Enter completed status -> **immediate automatic archive**; manager/superuser authorized manual archive action; distinct soft-delete Trash and restore | APPROVED |
+| D041 | **A completed task stays in its column for a month, then goes to the archive automatically; "return to work" stays.** Replaces the "immediate automatic archive" part of D016 | APPROVED (2026-11-27) |
+| D016 | ~~Enter completed status -> immediate automatic archive~~ (**superseded by D041 on 2026-11-27**); manager/superuser authorized manual archive action; distinct soft-delete Trash and restore | APPROVED |
 | D017 | Assignee can change deadline; audit and notify manager | APPROVED |
 | D018 | Admin and managers of own dept can create staff; own-dept project invites direct; other-dept requires approval by target-dept manager or privileged superuser | APPROVED |
 | D019 | Deactivation reassigns open tasks to manager of employee's primary dept; if none active, authorized superuser fallback | APPROVED |
@@ -387,3 +388,14 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - Presentation only: no rule of access, workflow or notification depends on them. The task window still shows the task's project to whoever may read the task.
 - Interpretation, to be confirmed by the owner: "whether there is a project in the status" is taken as "whether cards in this column show the project". It does not forbid a task with a project from being in the status.
 - The settings are not offered for a status of the category *completed*: a completed task leaves the board at once.
+
+### 2026-11-27 — D041: a completed task stays on the board for a month (owner's decision)
+
+- **Owner, 2026-11-27:** "сделать так чтобы задача в готово лежала месяц после чего она улетала в архив, но оставить функцию вернуть в работу". This replaces the part of D016 "enter completed status → immediate automatic archive" and the matching line of `CLAUDE.md` and PRD §Q04. The rest of D016 stands: manual archive by a manager, Trash separate.
+- Completing sets `completed_at` and keeps the task in its column on both boards. The database constraint "completed ⇒ archived" is removed.
+- The worker's scheduler (new `beat` service) runs `tasks.archive_completed` every hour: tasks completed more than `COMPLETED_TASK_ARCHIVE_AFTER_DAYS` (30) days ago are archived, each with an audit event `task.archived` (`completed: true`, `reason: retention`, no human actor). Tasks in the Trash are left alone.
+- "Вернуть в работу" works from the column and from the archive alike, with the same right as before (`task.archive`: the department's manager; Q05, Q24). The task returns to the status it had before completion (Q07 unchanged).
+- A manager may also send a completed task to the archive at once.
+- Analytics are unaffected: completion time is still `completed_at` (Q17, Q18).
+
+PROVISIONAL (see `OPEN_QUESTIONS.md`): "a month" is 30 days; a completed task is read-only until reopened (no edits, comments, files or checkpoint ticks); the assignee cannot reopen their own completed task.

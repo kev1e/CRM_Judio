@@ -364,7 +364,7 @@ def test_status_change_notifies_the_other_side(world: World) -> None:  # noqa: F
     assert message.url.endswith(f"/?view=all&task={task.pk}")
 
 
-def test_completion_is_announced_with_a_link_to_the_archive(world: World) -> None:  # noqa: F811
+def test_completion_is_announced(world: World) -> None:  # noqa: F811
     task = make_task(world)
     task_services.change_status(
         actor=world.anna, task_id=task.pk, status_id=status_named("В работе").pk
@@ -378,8 +378,9 @@ def test_completion_is_announced_with_a_link_to_the_archive(world: World) -> Non
 
     (message,) = FakeGateway.messages
     assert message.chat_id == chat(world.olga)
-    assert "завершил(а) задачу «Подготовить коммерческое предложение»" in message.text
-    assert message.url.endswith(f"/?view=archive&task={task.pk}")
+    assert message.text.endswith("завершил(а) задачу «Подготовить коммерческое предложение».")
+    # D041: the completed task is still on the board.
+    assert message.url.endswith(f"/?view=all&task={task.pk}")
 
 
 def test_manager_changing_the_status_notifies_the_assignee(world: World) -> None:  # noqa: F811

@@ -106,7 +106,7 @@ def comment_added(*, title: str, actor: str | None) -> str:
 def status_changed(*, title: str, status: str, completed: bool, actor: str | None) -> str:
     if completed:
         who = f"{actor} завершил(а)" if actor else "Завершена"
-        return f"{who} задачу {_quoted(title)}. Она перенесена в архив."
+        return f"{who} задачу {_quoted(title)}."
     who = f"{actor} перевёл(а)" if actor else "Переведена"
     return f"{who} задачу {_quoted(title)} в статус «{status}»."
 

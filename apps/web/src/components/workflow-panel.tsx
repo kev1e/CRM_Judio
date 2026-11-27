@@ -312,42 +312,40 @@ export function WorkflowPanel({ initialStatuses }: { initialStatuses: WorkflowSt
               </form>
             ) : null}
 
-            {status.category === "completed" ? null : (
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 text-sm font-medium">{t("projectsTitle")}</legend>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    disabled={busy}
-                    checked={status.show_project}
-                    onChange={(event) =>
-                      // Without the project there is nothing to divide by.
-                      void change(
-                        pathOf(status),
-                        "PATCH",
-                        event.target.checked
-                          ? { show_project: true }
-                          : { show_project: false, group_by_project: false },
-                      )
-                    }
-                  />
-                  {t("showProject")}
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    disabled={busy || !status.show_project}
-                    checked={status.group_by_project}
-                    onChange={(event) =>
-                      void change(pathOf(status), "PATCH", {
-                        group_by_project: event.target.checked,
-                      })
-                    }
-                  />
-                  {t("groupByProject")}
-                </label>
-              </fieldset>
-            )}
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-medium">{t("projectsTitle")}</legend>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  disabled={busy}
+                  checked={status.show_project}
+                  onChange={(event) =>
+                    // Without the project there is nothing to divide by.
+                    void change(
+                      pathOf(status),
+                      "PATCH",
+                      event.target.checked
+                        ? { show_project: true }
+                        : { show_project: false, group_by_project: false },
+                    )
+                  }
+                />
+                {t("showProject")}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  disabled={busy || !status.show_project}
+                  checked={status.group_by_project}
+                  onChange={(event) =>
+                    void change(pathOf(status), "PATCH", {
+                      group_by_project: event.target.checked,
+                    })
+                  }
+                />
+                {t("groupByProject")}
+              </label>
+            </fieldset>
 
             {status.category === "completed" ? (
               <p className="text-sm text-muted-foreground">{t("completedHint")}</p>

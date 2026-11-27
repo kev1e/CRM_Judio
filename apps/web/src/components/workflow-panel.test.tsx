@@ -61,8 +61,13 @@ describe("WorkflowPanel", () => {
   it("offers no moves out of a completed status", () => {
     renderWithIntl(<WorkflowPanel initialStatuses={all} />);
 
-    expect(section("Готово").queryByRole("checkbox")).toBeNull();
-    expect(section("Готово").getByText(/Вернуть её можно только/)).toBeInTheDocument();
+    // Only how the column shows projects can be set; there are no moves out of it.
+    expect(
+      section("Готово")
+        .getAllByRole("checkbox")
+        .map((box) => box.closest("label")?.textContent),
+    ).toEqual(["Показывать проект на карточках", expect.stringMatching(/^Разделять задачи/)]);
+    expect(section("Готово").getByText(/остаётся в этой колонке месяц/)).toBeInTheDocument();
   });
 
   it("adds a status", async () => {

@@ -154,6 +154,16 @@ WEB_ORIGINS: list[str] = [
 ]
 # The address employees open the CRM at; used in links the bot sends. Telegram
 # does not treat `localhost` as a link, hence 127.0.0.1 for local runs.
+# D041: how long a completed task stays in its column before the worker moves it
+# to the archive. "A month" in the owner's words; 30 days.
+COMPLETED_TASK_ARCHIVE_AFTER_DAYS: int = env.int("COMPLETED_TASK_ARCHIVE_AFTER_DAYS", default=30)
+if COMPLETED_TASK_ARCHIVE_AFTER_DAYS < 1:
+    raise ImproperlyConfigured("COMPLETED_TASK_ARCHIVE_AFTER_DAYS must be at least 1.")
+
+CELERY_BEAT_SCHEDULE = {
+    "archive-completed-tasks": {"task": "tasks.archive_completed", "schedule": 60 * 60},
+}
+
 # PROVISIONAL: dates in Telegram messages are shown in this zone until every
 # employee has their own (Q23 leaves the default open).
 NOTIFICATION_TIME_ZONE: str = env.str("NOTIFICATION_TIME_ZONE", default="Europe/Moscow")

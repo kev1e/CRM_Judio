@@ -91,3 +91,7 @@ Document: local setup, staging deploy, production deploy, migrations, secrets ro
 - Production CI/CD gate: required automated tests and staging smoke checks green, immutable artifact/digest reviewed, then **explicit manual administrator approval** captured by GitHub protected environment or equivalent. Only after approval may an automated deployment runner act; record approver/time/version, backup/migration precautions, post-deploy health check and rollback path.
 - Exact SLA measurement definition, monitoring alert thresholds, production capacity proof, maintenance/exclusions, approver identity and release evidence policy remain OPEN before production promises. Do not present 99.5% as a contractual provider SLA.
 - Backup, data residency, international staff, file policy and legal readiness remain per approved Q15/Q16/Q25; do not alter them based on target uptime.
+
+## Scheduler (2026-11-27)
+
+`compose.yaml` has a `beat` service: `celery beat` over the same application as the worker. It only puts periodic jobs on the queue; the worker executes them. Jobs: `tasks.archive_completed`, hourly (D041). Run exactly one instance. Its schedule file is kept in memory (`/tmp`), so after a restart every job simply runs at its next interval; the jobs are idempotent.

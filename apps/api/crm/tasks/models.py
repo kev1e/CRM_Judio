@@ -159,11 +159,8 @@ class Task(models.Model):
             models.CheckConstraint(
                 condition=Q(task_type__in=[t.value for t in TaskType]), name="tasks_task_type"
             ),
-            # D016: a completed task is always archived, in the same transaction.
-            models.CheckConstraint(
-                condition=Q(completed_at__isnull=True) | Q(archived_at__isnull=False),
-                name="tasks_task_completed_is_archived",
-            ),
+            # D041 (replaces D016): a completed task stays on the board for a
+            # while and is archived later, so completion no longer implies archive.
             models.CheckConstraint(
                 condition=(
                     Q(deleted_at__isnull=True, deleted_by__isnull=True)
