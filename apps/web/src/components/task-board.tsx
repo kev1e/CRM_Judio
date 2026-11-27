@@ -135,9 +135,10 @@ export function TaskBoard({
   // A small movement starts a drag; a plain click still opens the card.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const isBoard = view === "mine" || view === "all";
-  // Sub-columns appear only when there is something to tell apart: tasks of
-  // several projects, or of a project and of a department.
-  const split = new Set(cards.map(groupKey)).size > 1;
+  // Every status is divided the same way: the department's own tasks, then each
+  // project — whatever groups the tasks on this board belong to.
+  const groups = groupCards(cards);
+  const split = groups.length > 0;
 
   // The open task is part of the address, so it can be bookmarked and sent as a link.
   useEffect(() => {
@@ -285,31 +286,47 @@ export function TaskBoard({
                         // Inside a status: tasks of the department apart from
                         // the tasks of each project.
                         <div className="flex items-start gap-2">
-                          {groupCards(inColumn).map((group) => (
-                            <section
-                              key={group.key}
-                              aria-label={t(group.isProject ? "groupProject" : "groupDepartment", {
-                                name: group.name,
-                                status: status.name,
-                              })}
-                              className="flex w-64 shrink-0 flex-col gap-2 rounded-md bg-muted/40 p-1.5"
-                            >
-                              <h3 className="flex items-baseline justify-between gap-2 px-1 text-xs font-medium">
-                                <span className="break-words">
+                          {groups.map((board) => {
+                            const group = {
+                              ...board,
+                              cards: inColumn.filter((card) => groupKey(card) === board.key),
+                            };
+                            return (
+                              <section
+                                key={group.key}
+                                aria-label={t(
+                                  group.isProject ? "groupProject" : "groupDepartment",
+                                  {
+                                    name: group.name,
+                                    status: status.name,
+                                  },
+                                )}
+                                className="flex w-60 shrink-0 flex-col gap-2 rounded-md bg-muted/40 p-1.5"
+                              >
+                                <h3 className="flex items-baseline justify-between gap-2 px-1 text-xs font-medium">
+                                  <span className="break-words">
+                                    <span className="text-muted-foreground">
+                                      {t(group.isProject ? "projectPrefix" : "departmentPrefix")}
+                                    </span>{" "}
+                                    {group.name}
+                                  </span>
                                   <span className="text-muted-foreground">
-                                    {t(group.isProject ? "projectPrefix" : "departmentPrefix")}
-                                  </span>{" "}
-                                  {group.name}
-                                </span>
-                                <span className="text-muted-foreground">{group.cards.length}</span>
-                              </h3>
-                              {group.cards.map((card) => (
-                                <Draggable key={card.id} id={card.id} disabled={false}>
-                                  <TaskCardView card={card} onOpen={setOpenId} now={now} />
-                                </Draggable>
-                              ))}
-                            </section>
-                          ))}
+                                    {group.cards.length}
+                                  </span>
+                                </h3>
+                                {group.cards.map((card) => (
+                                  <Draggable key={card.id} id={card.id} disabled={false}>
+                                    <TaskCardView card={card} onOpen={setOpenId} now={now} />
+                                  </Draggable>
+                                ))}
+                                {group.cards.length === 0 ? (
+                                  <p className="px-1 py-2 text-xs text-muted-foreground">
+                                    {t("emptyColumn")}
+                                  </p>
+                                ) : null}
+                              </section>
+                            );
+                          })}
                         </div>
                       ) : (
                         inColumn.map((card) => (
@@ -318,7 +335,7 @@ export function TaskBoard({
                           </Draggable>
                         ))
                       )}
-                      {inColumn.length === 0 ? (
+                      {inColumn.length === 0 && (!split || status.category === "completed") ? (
                         <p className="px-1 py-3 text-xs text-muted-foreground">
                           {status.category === "completed" ? t("dropToComplete") : t("emptyColumn")}
                         </p>
