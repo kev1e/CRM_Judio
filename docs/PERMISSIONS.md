@@ -154,7 +154,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `department.read` | managed departments, company | Yes |
 | `department.manage` | company | No — built-in roles only |
 | `user.read` | managed departments, company | Yes |
-| `user.update` | company | Yes |
+| `user.update` | company | Yes (the note "what the employee answers for" in the company structure) |
 | `user.deactivate` | company | Yes |
 | `user.email.verify` | company | **No** — administrator only (Q28) |
 | `user.recovery.manage` | company | **No** — administrator only (Q12, Q28, REC-01) |

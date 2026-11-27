@@ -13,6 +13,7 @@ export type NavKey =
   | "projects"
   | "users"
   | "departments"
+  | "structure"
   | "workflow"
   | "templates";
 
@@ -43,6 +44,7 @@ export async function AppShell({
     { key: "projects", href: "/projects", show: true },
     { key: "users", href: "/users", show: Boolean(permissions["user.read"]) },
     { key: "departments", href: "/departments", show: Boolean(permissions["department.read"]) },
+    { key: "structure", href: "/structure", show: Boolean(permissions["department.read"]) },
     { key: "workflow", href: "/statuses", show: Boolean(permissions["workflow.manage"]) },
     { key: "templates", href: "/templates", show: Boolean(permissions["template.manage"]) },
   ];

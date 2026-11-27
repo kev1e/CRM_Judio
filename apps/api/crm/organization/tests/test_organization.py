@@ -471,6 +471,7 @@ def test_administrator_manages_departments_over_http(
             "id": str(employee.user.pk),
             "crm_login": "anna.petrova",
             "display_name": employee.user.display_name,
+            "responsibility": "",
             "is_active": True,
             "is_primary": True,
         }
@@ -539,3 +540,97 @@ def test_manager_over_http_sees_own_department_and_cannot_change_it(
         {"crm_login": "xx1", "display_name": "X", "department_id": str(support.pk)},
     )
     assert elsewhere.status_code == 403
+
+
+# --- Company structure: what each person answers for -------------------------
+
+
+def test_administrator_writes_what_an_employee_answers_for(
+    admin_actor: Actor, employee: Employee
+) -> None:
+    users.set_responsibility(
+        actor=admin_actor, user=employee.user, text="  Ведёт   ключевых клиентов "
+    )
+
+    employee.user.refresh_from_db()
+    assert employee.user.responsibility == "Ведёт ключевых клиентов"
+    event = AuditEvent.objects.get(action="user.responsibility_changed")
+    assert event.entity_id == str(employee.user.pk)
+    assert event.metadata == {"before": "", "after": "Ведёт ключевых клиентов"}
+
+    # Saving the same text again changes nothing and records nothing.
+    users.set_responsibility(actor=admin_actor, user=employee.user, text="Ведёт ключевых клиентов")
+    assert AuditEvent.objects.filter(action="user.responsibility_changed").count() == 1
+
+
+def test_responsibility_is_limited_in_length(admin_actor: Actor, employee: Employee) -> None:
+    with pytest.raises(DomainError) as refusal:
+        users.set_responsibility(actor=admin_actor, user=employee.user, text="я" * 301)
+    assert refusal.value.code == "invalid_responsibility"
+
+
+def test_only_an_administrator_edits_responsibilities(
+    manager: Employee, employee: Employee, admin_actor: Actor, sales: Department
+) -> None:
+    org.add_member(actor=admin_actor, department_id=sales.pk, user_id=employee.user.pk)
+
+    # Neither the employee's own manager nor the employee themselves.
+    for somebody in (manager, employee):
+        with pytest.raises(PermissionDeniedError):
+            users.set_responsibility(
+                actor=Actor.for_user(somebody.user), user=employee.user, text="Всё"
+            )
+    employee.user.refresh_from_db()
+    assert employee.user.responsibility == ""
+    assert not AuditEvent.objects.filter(action="user.responsibility_changed").exists()
+
+
+def test_structure_over_http(
+    administrator: User,
+    manager: Employee,
+    employee: Employee,
+    admin_actor: Actor,
+    sales: Department,
+    support: Department,
+) -> None:
+    org.add_member(actor=admin_actor, department_id=sales.pk, user_id=employee.user.pk)
+    User.objects.filter(pk=administrator.pk).update(
+        telegram_user_id=424242, telegram_bound_at=administrator.created_at
+    )
+    admin = sign_in(Employee(administrator, STRONG_PASSWORD, 424242))
+    path = f"/api/v1/users/{employee.user.pk}"
+
+    saved = call(admin, "patch", path, {"responsibility": "Обрабатывает входящие заявки"})
+    assert saved.status_code == 200
+    assert saved.json()["responsibility"] == "Обрабатывает входящие заявки"
+
+    # The department shows it for members and managers alike.
+    department = next(
+        row
+        for row in admin.get("/api/v1/departments").json()["results"]
+        if row["id"] == str(sales.pk)
+    )
+    by_login = {row["crm_login"]: row for row in department["members"]}
+    assert by_login[employee.user.crm_login]["responsibility"] == "Обрабатывает входящие заявки"
+    assert department["managers"][0]["responsibility"] == ""
+
+    too_long = call(admin, "patch", path, {"responsibility": "я" * 301})
+    assert too_long.status_code == 400
+    missing = call(
+        admin, "patch", "/api/v1/users/019ab3c4-0000-7000-8000-000000000001", {"responsibility": ""}
+    )
+    assert missing.status_code == 404
+
+    # The manager sees the structure of the managed department, read-only.
+    boss = sign_in(manager)
+    seen = boss.get("/api/v1/departments").json()["results"]
+    assert [row["id"] for row in seen] == [str(sales.pk)]
+    assert call(boss, "patch", path, {"responsibility": "Моё"}).status_code == 403
+
+    # An ordinary employee has no access to it at all.
+    staff = sign_in(employee)
+    assert staff.get("/api/v1/departments").status_code == 403
+    assert call(staff, "patch", path, {"responsibility": "Моё"}).status_code == 403
+
+    employee.user.refresh_from_db()
+    assert employee.user.responsibility == "Обрабатывает входящие заявки"

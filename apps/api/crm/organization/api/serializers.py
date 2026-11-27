@@ -7,6 +7,7 @@ class PersonSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     crm_login = serializers.CharField()
     display_name = serializers.CharField()
+    responsibility = serializers.CharField(allow_blank=True)
     is_active = serializers.BooleanField()
 
 

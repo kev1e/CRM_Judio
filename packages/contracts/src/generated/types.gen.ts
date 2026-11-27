@@ -181,6 +181,7 @@ export type Manager = {
     id: string;
     crm_login: string;
     display_name: string;
+    responsibility: string;
     is_active: boolean;
     is_designated: boolean;
 };
@@ -205,6 +206,7 @@ export type Member = {
     id: string;
     crm_login: string;
     display_name: string;
+    responsibility: string;
     is_active: boolean;
     is_primary: boolean;
 };
@@ -288,6 +290,10 @@ export type PatchedTemplateUpdateRequest = {
     draft_checkpoints?: Array<string>;
     department_ids?: Array<string>;
     is_active?: boolean;
+};
+
+export type PatchedUserUpdateRequestRequest = {
+    responsibility?: string;
 };
 
 export type PatchedWorkflowStatusUpdateRequest = {
@@ -612,6 +618,7 @@ export type User = {
     id: string;
     crm_login: string;
     display_name: string;
+    responsibility: string;
     email: string | null;
     is_active: boolean;
     telegram_bound: boolean;
@@ -1852,6 +1859,29 @@ export type UsersCreateResponses = {
 };
 
 export type UsersCreateResponse = UsersCreateResponses[keyof UsersCreateResponses];
+
+export type UsersUpdateData = {
+    body?: PatchedUserUpdateRequestRequest;
+    path: {
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}';
+};
+
+export type UsersUpdateErrors = {
+    400: Error;
+    403: Error;
+    404: Error;
+};
+
+export type UsersUpdateError = UsersUpdateErrors[keyof UsersUpdateErrors];
+
+export type UsersUpdateResponses = {
+    200: User;
+};
+
+export type UsersUpdateResponse = UsersUpdateResponses[keyof UsersUpdateResponses];
 
 export type UsersBindingCodeData = {
     body?: never;

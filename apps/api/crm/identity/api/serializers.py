@@ -60,6 +60,7 @@ class UserSerializer(serializers.Serializer[Any]):
     id = serializers.UUIDField()
     crm_login = serializers.CharField()
     display_name = serializers.CharField()
+    responsibility = serializers.CharField(allow_blank=True)
     email = serializers.EmailField(allow_null=True)
     is_active = serializers.BooleanField()
     telegram_bound = serializers.BooleanField()
@@ -79,6 +80,12 @@ class UserCreateRequestSerializer(serializers.Serializer[Any]):
         max_length=254, required=False, allow_null=True, allow_blank=True
     )
     department_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class UserUpdateRequestSerializer(serializers.Serializer[Any]):
+    responsibility = serializers.CharField(
+        max_length=300, allow_blank=True, trim_whitespace=True, required=False
+    )
 
 
 class BindingCodeSerializer(serializers.Serializer[Any]):

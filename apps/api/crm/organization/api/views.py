@@ -37,6 +37,7 @@ def _person(user: User) -> dict[str, Any]:
         "id": user.pk,
         "crm_login": user.crm_login,
         "display_name": user.display_name,
+        "responsibility": user.responsibility,
         "is_active": user.is_active,
     }
 

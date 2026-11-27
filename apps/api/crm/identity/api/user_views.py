@@ -17,6 +17,7 @@ from crm.identity.api.serializers import (
     UserCreateRequestSerializer,
     UserListSerializer,
     UserSerializer,
+    UserUpdateRequestSerializer,
 )
 from crm.identity.models import User
 
@@ -33,6 +34,7 @@ def _user_body(user: User) -> dict[str, Any]:
         "id": user.pk,
         "crm_login": user.crm_login,
         "display_name": user.display_name,
+        "responsibility": user.responsibility,
         "email": user.email,
         "is_active": user.is_active,
         "telegram_bound": user.telegram_user_id is not None,
@@ -124,6 +126,30 @@ class UserCollectionView(APIView):
             "binding": _binding_body(provisioned.binding_token),
         }
         return _no_store(Response(body, status=status.HTTP_201_CREATED))
+
+
+class UserView(APIView):
+    @extend_schema(
+        operation_id="users_update",
+        request=UserUpdateRequestSerializer,
+        responses={
+            200: UserSerializer,
+            400: ErrorSerializer,
+            403: ErrorSerializer,
+            404: ErrorSerializer,
+        },
+        tags=["users"],
+    )
+    def patch(self, request: Request, user_id: UUID) -> Response:
+        serializer = UserUpdateRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        actor = _actor(request)
+        user = _get_user(actor, user_id)
+        if "responsibility" in serializer.validated_data:
+            users.set_responsibility(
+                actor=actor, user=user, text=serializer.validated_data["responsibility"]
+            )
+        return _no_store(Response(_user_body(user)))
 
 
 class UserBindingCodeView(APIView):

@@ -5,6 +5,7 @@ from crm.identity.api.user_views import (
     UserCollectionView,
     UserDeactivateView,
     UserReactivateView,
+    UserView,
 )
 from crm.identity.api.views import (
     LoginCompleteView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view(), name="auth-logout"),
     path("auth/password/setup", PasswordSetupView.as_view(), name="auth-password-setup"),
     path("users", UserCollectionView.as_view(), name="users"),
+    path("users/<uuid:user_id>", UserView.as_view(), name="user"),
     path(
         "users/<uuid:user_id>/binding-code",
         UserBindingCodeView.as_view(),

@@ -1883,6 +1883,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
+  /api/v1/users/{user_id}:
+    patch:
+      operationId: users_update
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequestRequest'
+      security:
+      - sessionCookie: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /api/v1/users/{user_id}/binding-code:
     post:
       operationId: users_binding_code
@@ -2573,6 +2617,8 @@ components:
           type: string
         display_name:
           type: string
+        responsibility:
+          type: string
         is_active:
           type: boolean
         is_designated:
@@ -2583,6 +2629,7 @@ components:
       - id
       - is_active
       - is_designated
+      - responsibility
     ManagerAddRequest:
       type: object
       properties:
@@ -2628,6 +2675,8 @@ components:
           type: string
         display_name:
           type: string
+        responsibility:
+          type: string
         is_active:
           type: boolean
         is_primary:
@@ -2638,6 +2687,7 @@ components:
       - id
       - is_active
       - is_primary
+      - responsibility
     MemberAddRequest:
       type: object
       properties:
@@ -2807,6 +2857,12 @@ components:
           maxItems: 500
         is_active:
           type: boolean
+    PatchedUserUpdateRequestRequest:
+      type: object
+      properties:
+        responsibility:
+          type: string
+          maxLength: 300
     PatchedWorkflowStatusUpdateRequest:
       type: object
       properties:
@@ -3497,6 +3553,8 @@ components:
           type: string
         display_name:
           type: string
+        responsibility:
+          type: string
         email:
           type: string
           format: email
@@ -3523,6 +3581,7 @@ components:
       - has_password
       - id
       - is_active
+      - responsibility
       - telegram_bound
     UserCreateRequestRequest:
       type: object

@@ -28,6 +28,9 @@ class User(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=new_id, editable=False)
     crm_login = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=150)
+    # What the employee answers for, in the company's own words. Shown in the
+    # company structure; it grants nothing and restricts nothing.
+    responsibility = models.CharField(max_length=300, blank=True, default="")
 
     # Recovery contact (Q28). Verified only by an administrator action.
     email = models.EmailField(max_length=254, null=True, blank=True)  # noqa: DJ001 - NULL means "no email", required by the partial unique constraint

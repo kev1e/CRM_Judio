@@ -22,6 +22,8 @@ from crm.identity import enrollment, services, sessions
 from crm.identity.models import PasswordSetupToken, TelegramEnrollmentToken, User
 from crm.organization import services as organization
 
+RESPONSIBILITY_MAX_LENGTH = 300
+
 
 @dataclass(frozen=True, slots=True)
 class ProvisionedUser:
@@ -152,6 +154,33 @@ def reactivate_user(*, actor: Actor, user: User) -> bool:
         )
     user.is_active, user.deactivated_at = True, None
     return True
+
+
+def set_responsibility(*, actor: Actor, user: User, text: str) -> User:
+    """Write down what the employee answers for (shown in the company structure).
+
+    A description only: it changes nobody's rights. Editing account details is
+    `user.update` (administrator).
+    """
+    access.require_permission(actor, "user.update", at_least=Scope.COMPANY)
+    clean = " ".join(text.split())
+    if len(clean) > RESPONSIBILITY_MAX_LENGTH:
+        raise DomainError("invalid_responsibility", "The description is too long.")
+    with transaction.atomic():
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if target.responsibility != clean:
+            before = target.responsibility
+            target.responsibility = clean
+            target.save(update_fields=["responsibility", "updated_at"])
+            audit.record(
+                actor=actor,
+                action="user.responsibility_changed",
+                entity_type="user",
+                entity_id=str(target.pk),
+                metadata={"before": before, "after": clean},
+            )
+    user.responsibility = clean
+    return user
 
 
 def active_by_telegram_id(telegram_user_id: int) -> User | None:

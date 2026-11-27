@@ -83,6 +83,10 @@ These are technical parameters or choices that the approved decisions leave open
 | `/request` in a group | Ignored silently: the allowlist and the private hand-off of Q22 are not built | With Q22 |
 | `/task` in the bot: a deadline typed without a time | The end of that day (23:59) in `NOTIFICATION_TIME_ZONE` | Production |
 | `/task` in the bot: what it does not ask | Project and type (always an ordinary task without a project); both can be changed in the CRM | Production |
+| Company structure: who sees it | Whoever holds `department.read`: administrator — everything, manager — managed departments. Ordinary employees do not see the structure | Owner's confirmation |
+| Company structure: who edits "answers for" | Administrator only (`user.update`); a manager cannot write it for their own employees | Owner's confirmation |
+| Company structure: levels | Two: department manager → employees of the department. No level above the departments (director) and no nested departments | Owner's confirmation |
+| Company structure: several managers in a department | Employees are drawn under the designated manager; the others stand next to them as managers of the same department | Owner's confirmation |
 | D041: length of "a month" | 30 days, counted from the moment of completion; `COMPLETED_TASK_ARCHIVE_AFTER_DAYS`. Checked hourly, so the move may come up to an hour later | Production |
 | D041: what can be done with a completed task while it waits in its column | Nothing but reading, "Вернуть в работу" and "В архив" (both the manager's). No edits, comments, files or checkpoint ticks | Production |
 | D041: who returns a completed task to work | The manager of the task's department (as from the archive, Q05). The assignee cannot undo their own completion | Production |
