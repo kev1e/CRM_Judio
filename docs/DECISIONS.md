@@ -361,3 +361,9 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - A notification is about a task or about a project invitation — exactly one (database constraint).
 - At send time: a request to decide goes only while the invitation is still pending and the recipient may still decide it (`invitations_to_decide`); a decision goes only to a requester who still runs the project; "you joined" only to somebody who is still a participant.
 - A completed task's link opens the archive.
+
+### 2026-11-27 — sub-columns by project inside a status (owner's request)
+
+- The owner asked for the board's status columns to be divided: the department's own tasks apart from the tasks of each project, **without** a switch between "by status" and "by project".
+- Built in the web interface only: inside a status, tasks without a project are grouped by department and shown first, then one sub-column per project, by name. Sub-columns appear only when the board holds more than one such group, and a status shows only the groups it has tasks in.
+- The grouping is computed from the cards the API already returned for the viewer; no project or department is shown that the viewer has no task in (D003, Q02). Dragging between statuses is unchanged and never changes the project.

@@ -321,6 +321,10 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
+### Board: sub-columns by project (`task-board.test.tsx`, `tasks.test.ts`)
+
+The department's tasks come first and the projects follow by name; each sub-column holds only its tasks and its count; a status shows only the groups it has tasks in; a board with a single group keeps plain columns; a project gathers its tasks from several departments; a project and a department with the same identifier are not confused. Verified by hand in a browser on 2026-11-27, including dragging a card to another status (it stays in its project).
+
 ### S6 — `/task` in the bot (`apps/telegram-bot/tests/test_task_wizard.py`)
 
 | Area | Covered |
