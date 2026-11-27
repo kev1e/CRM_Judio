@@ -417,6 +417,59 @@ describe("TaskBoard", () => {
     expect(dialog.getByText("Запуск")).toBeInTheDocument();
   });
 
+  it("splits each status into the department's tasks and each project's tasks", () => {
+    const launch = { id: "p1", name: "Запуск" };
+    const audit = { id: "p2", name: "Аудит" };
+    renderWithIntl(
+      <TaskBoard
+        view="all"
+        statuses={statuses}
+        initialCards={[
+          card({ id: "a", title: "Без проекта" }),
+          card({ id: "b", title: "Задача запуска", project: launch }),
+          card({ id: "c", title: "Задача аудита", project: audit }),
+          card({ id: "d", title: "Ещё запуск", project: launch }),
+          card({ id: "e", title: "В работе по запуску", project: launch, status_id: "work" }),
+        ]}
+      />,
+    );
+
+    const todo = within(screen.getByRole("region", { name: /^Нужно сделать/ }));
+    // The department first, then the projects by name.
+    expect(todo.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Отдел Продажи1",
+      "Проект Аудит1",
+      "Проект Запуск2",
+    ]);
+    const inLaunch = within(todo.getByRole("region", { name: "Проект «Запуск», Нужно сделать" }));
+    expect(inLaunch.getByRole("button", { name: /Задача запуска/ })).toBeInTheDocument();
+    expect(inLaunch.getByRole("button", { name: /Ещё запуск/ })).toBeInTheDocument();
+    expect(inLaunch.queryByRole("button", { name: /Задача аудита/ })).not.toBeInTheDocument();
+    expect(
+      within(
+        todo.getByRole("region", { name: "Отдел «Продажи» без проекта, Нужно сделать" }),
+      ).getByRole("button", { name: /Без проекта/ }),
+    ).toBeInTheDocument();
+    // A status shows only the groups it has tasks in.
+    const work = within(screen.getByRole("region", { name: /^В работе/ }));
+    expect(work.getAllByRole("heading", { level: 3 })).toHaveLength(1);
+    expect(
+      within(screen.getByRole("region", { name: /^Готово/ })).queryByRole("heading", { level: 3 }),
+    ).toBeNull();
+  });
+
+  it("keeps plain columns when there is nothing to tell apart", () => {
+    renderWithIntl(
+      <TaskBoard
+        view="mine"
+        statuses={statuses}
+        initialCards={[card({ id: "a" }), card({ id: "b", status_id: "work" })]}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+  });
+
   it("shows comments read-only to somebody who may not comment", async () => {
     const dialog = await openTask(
       detail({ comments: [mine], actions: { ...detail().actions, comment: false } }),

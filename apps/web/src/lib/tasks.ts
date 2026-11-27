@@ -48,3 +48,39 @@ export function toLocalInput(iso: string | null): string {
 export function fromLocalInput(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
+
+type Grouped = {
+  department: { id: string; name: string };
+  project: { id: string; name: string } | null;
+};
+
+export type CardGroup<C> = { key: string; name: string; isProject: boolean; cards: C[] };
+
+/** Which sub-column of a status a card belongs to: its project, or — for a
+ *  task without a project — its department. */
+export function groupKey(card: Grouped): string {
+  return card.project ? `project:${card.project.id}` : `department:${card.department.id}`;
+}
+
+/**
+ * Sub-columns for a set of cards: tasks without a project by department first,
+ * then one per project, each by name. Built only from the given cards, so it
+ * shows no project and no department the viewer has no task in.
+ */
+export function groupCards<C extends Grouped>(cards: readonly C[]): CardGroup<C>[] {
+  const groups = new Map<string, CardGroup<C>>();
+  for (const card of cards) {
+    const key = groupKey(card);
+    const group = groups.get(key) ?? {
+      key,
+      name: (card.project ?? card.department).name,
+      isProject: card.project !== null,
+      cards: [],
+    };
+    group.cards.push(card);
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort(
+    (a, b) => Number(a.isProject) - Number(b.isProject) || a.name.localeCompare(b.name, "ru"),
+  );
+}

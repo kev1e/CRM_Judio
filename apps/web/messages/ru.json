@@ -214,7 +214,11 @@
       "task_archived": "Задача в архиве. Сначала верните её в работу.",
       "task_deleted": "Задача в корзине. Сначала восстановите её."
     },
-    "newRequest": "Заявка по шаблону"
+    "newRequest": "Заявка по шаблону",
+    "projectPrefix": "Проект",
+    "departmentPrefix": "Отдел",
+    "groupProject": "Проект «{name}», {status}",
+    "groupDepartment": "Отдел «{name}» без проекта, {status}"
   },
   "task": {
     "close": "Закрыть",

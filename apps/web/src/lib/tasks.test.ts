@@ -1,7 +1,16 @@
 import type { Status, TaskCard } from "@crm/contracts";
 import { describe, expect, it } from "vitest";
 
-import { canMove, fromLocalInput, isOverdue, moveCard, toBoardView, toLocalInput } from "./tasks";
+import {
+  canMove,
+  fromLocalInput,
+  groupCards,
+  groupKey,
+  isOverdue,
+  moveCard,
+  toBoardView,
+  toLocalInput,
+} from "./tasks";
 
 const statuses: Status[] = [
   {
@@ -93,5 +102,42 @@ describe("local date input", () => {
     expect(fromLocalInput(toLocalInput(iso))).toBe(iso);
     expect(toLocalInput(null)).toBe("");
     expect(fromLocalInput("")).toBeNull();
+  });
+});
+
+describe("groupCards", () => {
+  const sales = { id: "d1", name: "Продажи" };
+  const support = { id: "d2", name: "Поддержка" };
+  const launch = { id: "p1", name: "Запуск" };
+  const card = (id: string, department: typeof sales, project: typeof launch | null = null) => ({
+    id,
+    department,
+    project,
+  });
+
+  it("puts departments' own tasks first, then projects, each by name", () => {
+    const groups = groupCards([
+      card("1", sales, launch),
+      card("2", sales),
+      card("3", support),
+      card("4", support, launch),
+      card("5", sales, { id: "p0", name: "Аудит" }),
+    ]);
+
+    expect(
+      groups.map((group) => [group.name, group.isProject, group.cards.map((c) => c.id)]),
+    ).toEqual([
+      ["Поддержка", false, ["3"]],
+      ["Продажи", false, ["2"]],
+      ["Аудит", true, ["5"]],
+      // One project gathers its tasks from every department.
+      ["Запуск", true, ["1", "4"]],
+    ]);
+  });
+
+  it("tells a project from a department with the same identifier", () => {
+    expect(groupKey(card("1", sales))).toBe("department:d1");
+    expect(groupKey(card("2", sales, { id: "d1", name: "X" }))).toBe("project:d1");
+    expect(groupCards([])).toEqual([]);
   });
 });
