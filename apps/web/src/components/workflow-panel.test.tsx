@@ -10,11 +10,21 @@ import { WorkflowPanel } from "./workflow-panel";
 const fetchMock = vi.fn<typeof fetch>();
 
 function status(id: string, name: string, category: WorkflowStatus["category"]): WorkflowStatus {
-  return { id, name, category, position: 0, is_active: true, next_status_ids: [], task_count: 0 };
+  return {
+    id,
+    name,
+    category,
+    position: 0,
+    is_active: true,
+    next_status_ids: [],
+    task_count: 0,
+    show_project: true,
+    group_by_project: false,
+  };
 }
 
 const todo = { ...status("s-todo", "Нужно сделать", "new"), next_status_ids: ["s-doing"] };
-const doing = { ...status("s-doing", "В работе", "active"), task_count: 3 };
+const doing = { ...status("s-doing", "В работе", "active"), task_count: 3, group_by_project: true };
 const done = status("s-done", "Готово", "completed");
 const cancelled = status("s-cancelled", "Отменено", "cancelled");
 const all = [todo, doing, done, cancelled];
@@ -64,13 +74,67 @@ describe("WorkflowPanel", () => {
 
     await user.type(form.getByLabelText("Название статуса"), "На проверке");
     await user.selectOptions(form.getByLabelText("Тип"), "active");
+    // The project is shown and the column is not divided unless asked.
+    expect(form.getByRole("checkbox", { name: "Показывать проект на карточках" })).toBeChecked();
+    await user.click(form.getByRole("checkbox", { name: /Разделять задачи по проектам/ }));
     await user.click(form.getByRole("button", { name: "Добавить" }));
 
     expect(await screen.findByRole("region", { name: "На проверке" })).toBeInTheDocument();
     expect(lastCall()).toEqual({
       url: "/api/v1/workflow/statuses",
       method: "POST",
-      body: { name: "На проверке", category: "active" },
+      body: {
+        name: "На проверке",
+        category: "active",
+        show_project: true,
+        group_by_project: true,
+      },
+    });
+  });
+
+  it("cannot divide a new status that does not show the project", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce(Response.json({ results: all }, { status: 201 }));
+    renderWithIntl(<WorkflowPanel initialStatuses={all} />);
+    const form = within(screen.getByRole("form", { name: "Новый статус" }));
+
+    await user.type(form.getByLabelText("Название статуса"), "Черновик");
+    await user.click(form.getByRole("checkbox", { name: /Разделять задачи по проектам/ }));
+    await user.click(form.getByRole("checkbox", { name: "Показывать проект на карточках" }));
+
+    const group = form.getByRole("checkbox", { name: /Разделять задачи по проектам/ });
+    expect(group).toBeDisabled();
+    expect(group).not.toBeChecked();
+    await user.click(form.getByRole("button", { name: "Добавить" }));
+    expect(lastCall().body).toMatchObject({ show_project: false, group_by_project: false });
+  });
+
+  it("changes how an existing status shows projects", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation(() => Promise.resolve(Response.json({ results: all })));
+    renderWithIntl(<WorkflowPanel initialStatuses={all} />);
+
+    // "В работе" is divided; "Нужно сделать" is not.
+    expect(
+      section("В работе").getByRole("checkbox", { name: /Разделять задачи по проектам/ }),
+    ).toBeChecked();
+    await user.click(
+      section("Нужно сделать").getByRole("checkbox", { name: /Разделять задачи по проектам/ }),
+    );
+    expect(lastCall()).toEqual({
+      url: "/api/v1/workflow/statuses/s-todo",
+      method: "PATCH",
+      body: { group_by_project: true },
+    });
+
+    // Hiding the project also ends the division, in one request.
+    await user.click(
+      section("В работе").getByRole("checkbox", { name: "Показывать проект на карточках" }),
+    );
+    expect(lastCall()).toEqual({
+      url: "/api/v1/workflow/statuses/s-doing",
+      method: "PATCH",
+      body: { show_project: false, group_by_project: false },
     });
   });
 

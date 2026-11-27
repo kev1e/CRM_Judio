@@ -171,7 +171,7 @@ Permission catalogue so far (codes are added together with the feature that chec
 | `task.attach` | own, managed departments, company | Yes. Every active employee for own tasks, the manager for managed departments; a superuser does not (Q29). Downloading needs only `task.read` |
 | `task.attachment.delete` | managed departments, company | Yes. Held by the department manager (provisional) |
 | `task.comment` | own, managed departments, company | Yes. Every active employee holds it for the tasks assigned to them, a manager for the managed departments; a superuser does not (Q29). Editing is limited to one's own comments |
-| `workflow.manage` | company | **No** — administrator only. Configures task statuses and moves (D005, Q09); shows task counts per status and never a task |
+| `workflow.manage` | company | **No** — administrator only. Configures task statuses and moves (D005, Q09); shows task counts per status and never a task. Also how each column shows projects (cards naming the project, division by project) |
 
 Rules enforced by the service and covered by tests:
 

@@ -321,9 +321,17 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
-### Board: work in progress by project (`task-board.test.tsx`, `tasks.test.ts`)
+### Board and statuses: project settings per status (`test_workflow.py`, `workflow-panel.test.tsx`, `task-board.test.tsx`, `tasks.test.ts`)
 
-Statuses that are not "in work" show one plain list whatever the project; an "in work" status lists the department first and the projects by name, each folded with its count; a click unfolds only that group and a second click folds it; an empty "in work" column is shown as empty. Verified by hand in a browser on 2026-11-27: folded list, unfolding, and dragging a card into "В работе" (its project unfolds by itself and the card is visible).
+| Area | Covered |
+|---|---|
+| Defaults and migration | Existing "in work" statuses stay divided, everything shows the project, a new status is not divided |
+| Service | The administrator changes both settings, each change is audited once, an unchanged save writes nothing; dividing without showing is refused on create and on edit; a manager and an employee are refused |
+| API | Create and PATCH carry the settings; the refusal has a stable code; the board's status list gives them to every user |
+| Statuses screen | A new status sends both settings; dividing is disabled and cleared when the project is hidden; ticking a setting of an existing status sends exactly that; hiding the project also ends the division in one request; a completed status offers no settings |
+| Board | A divided status lists the department first and the projects by name, folded with counts, and unfolds one group at a time; an undivided status is a plain list; a status that hides the project shows cards without it; the type of the status does not matter |
+
+Verified by hand in a browser on 2026-11-27 (see the pull request).
 
 ### S6 — `/task` in the bot (`apps/telegram-bot/tests/test_task_wizard.py`)
 

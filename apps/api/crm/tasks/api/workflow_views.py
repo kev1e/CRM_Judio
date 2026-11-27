@@ -1,6 +1,7 @@
 from typing import cast
 from uuid import UUID
 
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
@@ -41,6 +42,8 @@ def _respond(actor: Actor, code: int = status.HTTP_200_OK) -> Response:
                     "position": info.status.position,
                     "is_active": info.status.is_active,
                     "next_status_ids": info.next_status_ids,
+                    "show_project": info.status.show_project,
+                    "group_by_project": info.status.group_by_project,
                     "task_count": info.task_count,
                 }
                 for info in workflow.configuration(actor=actor)
@@ -87,12 +90,21 @@ class WorkflowStatusView(APIView):
         serializer.is_valid(raise_exception=True)
         actor = _actor(request)
         data = serializer.validated_data
-        if "name" in data:
-            workflow.rename_status(actor=actor, status_id=status_id, name=data["name"])
-        if "next_status_ids" in data:
-            workflow.set_moves(
-                actor=actor, status_id=status_id, next_status_ids=data["next_status_ids"]
-            )
+        # One save of the form: all of it or none of it.
+        with transaction.atomic():
+            if "name" in data:
+                workflow.rename_status(actor=actor, status_id=status_id, name=data["name"])
+            if "show_project" in data or "group_by_project" in data:
+                workflow.set_display(
+                    actor=actor,
+                    status_id=status_id,
+                    show_project=data.get("show_project"),
+                    group_by_project=data.get("group_by_project"),
+                )
+            if "next_status_ids" in data:
+                workflow.set_moves(
+                    actor=actor, status_id=status_id, next_status_ids=data["next_status_ids"]
+                )
         return _respond(actor)
 
 

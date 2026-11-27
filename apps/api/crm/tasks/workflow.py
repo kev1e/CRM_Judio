@@ -109,16 +109,66 @@ def configuration(*, actor: Actor) -> list[StatusInfo]:
 # --- Changes ----------------------------------------------------------------
 
 
-def create_status(*, actor: Actor, name: str, category: str) -> TaskStatus:
+def _display(show_project: bool, group_by_project: bool) -> None:
+    if group_by_project and not show_project:
+        raise DomainError(
+            "invalid_status_display",
+            "Tasks cannot be divided by project in a status that does not show the project.",
+        )
+
+
+def create_status(
+    *,
+    actor: Actor,
+    name: str,
+    category: str,
+    show_project: bool = True,
+    group_by_project: bool = False,
+) -> TaskStatus:
     _require_manage(actor)
     if category not in StatusCategory.values:
         raise DomainError("invalid_status_category", "Unknown status category.")
+    _display(show_project, group_by_project)
     with transaction.atomic():
         _lock_all()
         clean = _clean_name(name)
         last = TaskStatus.objects.aggregate(last=Max("position"))["last"] or 0
-        status = TaskStatus.objects.create(name=clean, category=category, position=last + 10)
+        status = TaskStatus.objects.create(
+            name=clean,
+            category=category,
+            position=last + 10,
+            show_project=show_project,
+            group_by_project=group_by_project,
+        )
         _log(actor, "task_status.created", status)
+    return status
+
+
+def set_display(
+    *,
+    actor: Actor,
+    status_id: UUID,
+    show_project: bool | None = None,
+    group_by_project: bool | None = None,
+) -> TaskStatus:
+    """How the board shows the column: the project on its cards, and the
+    division of its tasks by project. Changes nothing about tasks or access."""
+    _require_manage(actor)
+    with transaction.atomic():
+        status = _get(_lock_all(), status_id)
+        show = status.show_project if show_project is None else show_project
+        group = status.group_by_project if group_by_project is None else group_by_project
+        _display(show, group)
+        if (show, group) != (status.show_project, status.group_by_project):
+            status.show_project, status.group_by_project = show, group
+            status.save(update_fields=["show_project", "group_by_project"])
+            _log(
+                actor,
+                "task_status.display_changed",
+                status,
+                show_project=show,
+                group_by_project=group,
+            )
     return status
 
 

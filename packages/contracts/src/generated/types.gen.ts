@@ -292,6 +292,8 @@ export type PatchedTemplateUpdateRequest = {
 
 export type PatchedWorkflowStatusUpdateRequest = {
     name?: string;
+    show_project?: boolean;
+    group_by_project?: boolean;
     next_status_ids?: Array<string>;
 };
 
@@ -431,6 +433,14 @@ export type Status = {
      * Statuses a task may be moved to from this one.
      */
     next_status_ids: Array<string>;
+    /**
+     * Whether cards in this column show their project.
+     */
+    show_project: boolean;
+    /**
+     * Whether the column is divided into folded lists by project.
+     */
+    group_by_project: boolean;
 };
 
 export type StatusList = {
@@ -658,6 +668,14 @@ export type WorkflowStatus = {
      */
     next_status_ids: Array<string>;
     /**
+     * Whether cards in this column show their project.
+     */
+    show_project: boolean;
+    /**
+     * Whether the column is divided into folded lists by project.
+     */
+    group_by_project: boolean;
+    /**
      * False for a retired status.
      */
     is_active: boolean;
@@ -670,6 +688,8 @@ export type WorkflowStatus = {
 export type WorkflowStatusCreateRequest = {
     name: string;
     category: CategoryEnum;
+    show_project?: boolean;
+    group_by_project?: boolean;
 };
 
 export type LoginRequestRequestWritable = {
