@@ -371,3 +371,10 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 ### 2026-11-27 — the same sub-columns in every status (owner's correction)
 
 - The owner asked for the division to be present "in all columns, both in My tasks and in All tasks". Now every status shows the same sub-columns — every department and project the board's tasks belong to — including empty ones, on both boards, even when there is a single group. An empty board keeps plain columns. Supersedes "a status shows only the groups it has tasks in" of the previous entry.
+
+### 2026-11-27 — work in progress by project, folded (owner's change)
+
+- The owner changed the request: the division by projects applies **only to tasks in work**; the other statuses are one plain list; projects are shown as **expandable lists**, so that one sees which projects are in work and unfolds a project to see its tasks. Supersedes the two previous entries about sub-columns.
+- Built: in every status of the category "active" the column lists the department (tasks without a project) and each project that has tasks in that status, folded, with a count; a click unfolds the tasks. Groups are stacked, so the column keeps its ordinary width.
+- A card moved into such a status unfolds its group, so it does not seem to vanish. What is unfolded is kept while the page is open, not between visits.
+- Interpretation, to be confirmed by the owner: unfolding a project shows its tasks **in that status** (in work), not its tasks from "Нужно сделать".

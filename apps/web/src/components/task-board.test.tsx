@@ -417,73 +417,62 @@ describe("TaskBoard", () => {
     expect(dialog.getByText("Запуск")).toBeInTheDocument();
   });
 
-  it("splits each status into the department's tasks and each project's tasks", () => {
+  it("groups work in progress by project in folded lists and leaves other statuses plain", async () => {
     const launch = { id: "p1", name: "Запуск" };
     const audit = { id: "p2", name: "Аудит" };
+    const user = userEvent.setup();
     renderWithIntl(
       <TaskBoard
         view="all"
         statuses={statuses}
         initialCards={[
-          card({ id: "a", title: "Без проекта" }),
-          card({ id: "b", title: "Задача запуска", project: launch }),
-          card({ id: "c", title: "Задача аудита", project: audit }),
-          card({ id: "d", title: "Ещё запуск", project: launch }),
-          card({ id: "e", title: "В работе по запуску", project: launch, status_id: "work" }),
+          card({ id: "a", title: "Новая без проекта" }),
+          card({ id: "b", title: "Новая по запуску", project: launch }),
+          card({ id: "c", title: "Аудит в работе", project: audit, status_id: "work" }),
+          card({ id: "d", title: "Запуск в работе", project: launch, status_id: "work" }),
+          card({ id: "e", title: "Ещё запуск в работе", project: launch, status_id: "work" }),
+          card({ id: "f", title: "Отдел в работе", status_id: "work" }),
         ]}
       />,
     );
 
+    // Not in work: one plain list, whatever the project.
     const todo = within(screen.getByRole("region", { name: /^Нужно сделать/ }));
-    // The department first, then the projects by name.
-    expect(todo.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
-      "Отдел Продажи1",
-      "Проект Аудит1",
-      "Проект Запуск2",
-    ]);
-    const inLaunch = within(todo.getByRole("region", { name: "Проект «Запуск», Нужно сделать" }));
-    expect(inLaunch.getByRole("button", { name: /Задача запуска/ })).toBeInTheDocument();
-    expect(inLaunch.getByRole("button", { name: /Ещё запуск/ })).toBeInTheDocument();
-    expect(inLaunch.queryByRole("button", { name: /Задача аудита/ })).not.toBeInTheDocument();
-    expect(
-      within(
-        todo.getByRole("region", { name: "Отдел «Продажи» без проекта, Нужно сделать" }),
-      ).getByRole("button", { name: /Без проекта/ }),
-    ).toBeInTheDocument();
-    // Every status has the same sub-columns, the empty ones too.
-    for (const name of [/^В работе/, /^Готово/]) {
-      const column = within(screen.getByRole("region", { name }));
-      expect(column.getAllByRole("heading", { level: 3 })).toHaveLength(3);
-    }
+    expect(todo.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+    expect(todo.getByRole("button", { name: /Новая без проекта/ })).toBeInTheDocument();
+    expect(todo.getByRole("button", { name: /Новая по запуску/ })).toBeInTheDocument();
+
+    // In work: the department first, then the projects by name, all folded.
     const work = within(screen.getByRole("region", { name: /^В работе/ }));
-    expect(
-      within(work.getByRole("region", { name: "Проект «Запуск», В работе" })).getByRole("button", {
-        name: /В работе по запуску/,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(work.getByRole("region", { name: "Проект «Аудит», В работе" })).getByText("Пусто"),
-    ).toBeInTheDocument();
-  });
+    const groups = work.getAllByRole("button", { expanded: false });
+    expect(groups.map((group) => group.textContent)).toEqual([
+      "▸ Отдел Продажи1",
+      "▸ Проект Аудит1",
+      "▸ Проект Запуск2",
+    ]);
+    expect(work.queryByRole("button", { name: /Запуск в работе/ })).not.toBeInTheDocument();
 
-  it("divides the board even when all tasks belong to one group", () => {
-    renderWithIntl(
-      <TaskBoard
-        view="mine"
-        statuses={statuses}
-        initialCards={[card({ id: "a" }), card({ id: "b", status_id: "work" })]}
-      />,
+    await user.click(work.getByRole("button", { name: /Проект Запуск/ }));
+
+    expect(work.getByRole("button", { name: /Проект Запуск/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
     );
+    expect(work.getByRole("button", { name: /^Запуск в работе/ })).toBeInTheDocument();
+    expect(work.getByRole("button", { name: /^Ещё запуск в работе/ })).toBeInTheDocument();
+    // The other groups stay folded.
+    expect(work.queryByRole("button", { name: /^Аудит в работе/ })).not.toBeInTheDocument();
 
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
-    ).toEqual(["Отдел Продажи1", "Отдел Продажи1", "Отдел Продажи0"]);
+    await user.click(work.getByRole("button", { name: /Проект Запуск/ }));
+    expect(work.queryByRole("button", { name: /^Запуск в работе/ })).not.toBeInTheDocument();
   });
 
-  it("keeps plain columns on an empty board", () => {
-    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} />);
+  it("lists only what is in work and shows an empty column as empty", () => {
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[card()]} />);
 
-    expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+    const work = within(screen.getByRole("region", { name: /^В работе/ }));
+    expect(work.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
+    expect(work.getByText("Пусто")).toBeInTheDocument();
   });
 
   it("shows comments read-only to somebody who may not comment", async () => {

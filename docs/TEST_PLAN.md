@@ -321,9 +321,9 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 | Concurrency | A stale edit is refused (409) |
 | Web | Columns and the six facts of a card, archive list, read-only window with a separate edit mode, disabled manager-only fields, version sent with an edit, moving by the status list, checkpoint tick, unreadable task, creation receipt |
 
-### Board: sub-columns by project (`task-board.test.tsx`, `tasks.test.ts`)
+### Board: work in progress by project (`task-board.test.tsx`, `tasks.test.ts`)
 
-The department's tasks come first and the projects follow by name; each sub-column holds only its tasks and its count; every status shows the same sub-columns, the empty ones marked; a board with a single group is divided too and an empty board keeps plain columns; a project gathers its tasks from several departments; a project and a department with the same identifier are not confused. Verified by hand in a browser on 2026-11-27, including dragging a card to another status (it stays in its project).
+Statuses that are not "in work" show one plain list whatever the project; an "in work" status lists the department first and the projects by name, each folded with its count; a click unfolds only that group and a second click folds it; an empty "in work" column is shown as empty. Verified by hand in a browser on 2026-11-27: folded list, unfolding, and dragging a card into "В работе" (its project unfolds by itself and the card is visible).
 
 ### S6 — `/task` in the bot (`apps/telegram-bot/tests/test_task_wizard.py`)
 
