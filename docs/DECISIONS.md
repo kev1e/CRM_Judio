@@ -367,3 +367,7 @@ The owner's words: "1. Руководитель ставит задачи, ис�
 - The owner asked for the board's status columns to be divided: the department's own tasks apart from the tasks of each project, **without** a switch between "by status" and "by project".
 - Built in the web interface only: inside a status, tasks without a project are grouped by department and shown first, then one sub-column per project, by name. Sub-columns appear only when the board holds more than one such group, and a status shows only the groups it has tasks in.
 - The grouping is computed from the cards the API already returned for the viewer; no project or department is shown that the viewer has no task in (D003, Q02). Dragging between statuses is unchanged and never changes the project.
+
+### 2026-11-27 — the same sub-columns in every status (owner's correction)
+
+- The owner asked for the division to be present "in all columns, both in My tasks and in All tasks". Now every status shows the same sub-columns — every department and project the board's tasks belong to — including empty ones, on both boards, even when there is a single group. An empty board keeps plain columns. Supersedes "a status shows only the groups it has tasks in" of the previous entry.

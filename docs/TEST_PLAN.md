@@ -323,7 +323,7 @@ Verified by hand in a browser on 2026-11-25: create a department, add a member a
 
 ### Board: sub-columns by project (`task-board.test.tsx`, `tasks.test.ts`)
 
-The department's tasks come first and the projects follow by name; each sub-column holds only its tasks and its count; a status shows only the groups it has tasks in; a board with a single group keeps plain columns; a project gathers its tasks from several departments; a project and a department with the same identifier are not confused. Verified by hand in a browser on 2026-11-27, including dragging a card to another status (it stays in its project).
+The department's tasks come first and the projects follow by name; each sub-column holds only its tasks and its count; every status shows the same sub-columns, the empty ones marked; a board with a single group is divided too and an empty board keeps plain columns; a project gathers its tasks from several departments; a project and a department with the same identifier are not confused. Verified by hand in a browser on 2026-11-27, including dragging a card to another status (it stays in its project).
 
 ### S6 — `/task` in the bot (`apps/telegram-bot/tests/test_task_wizard.py`)
 

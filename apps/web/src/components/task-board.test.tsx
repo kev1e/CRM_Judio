@@ -450,15 +450,23 @@ describe("TaskBoard", () => {
         todo.getByRole("region", { name: "Отдел «Продажи» без проекта, Нужно сделать" }),
       ).getByRole("button", { name: /Без проекта/ }),
     ).toBeInTheDocument();
-    // A status shows only the groups it has tasks in.
+    // Every status has the same sub-columns, the empty ones too.
+    for (const name of [/^В работе/, /^Готово/]) {
+      const column = within(screen.getByRole("region", { name }));
+      expect(column.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+    }
     const work = within(screen.getByRole("region", { name: /^В работе/ }));
-    expect(work.getAllByRole("heading", { level: 3 })).toHaveLength(1);
     expect(
-      within(screen.getByRole("region", { name: /^Готово/ })).queryByRole("heading", { level: 3 }),
-    ).toBeNull();
+      within(work.getByRole("region", { name: "Проект «Запуск», В работе" })).getByRole("button", {
+        name: /В работе по запуску/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(work.getByRole("region", { name: "Проект «Аудит», В работе" })).getByText("Пусто"),
+    ).toBeInTheDocument();
   });
 
-  it("keeps plain columns when there is nothing to tell apart", () => {
+  it("divides the board even when all tasks belong to one group", () => {
     renderWithIntl(
       <TaskBoard
         view="mine"
@@ -466,6 +474,14 @@ describe("TaskBoard", () => {
         initialCards={[card({ id: "a" }), card({ id: "b", status_id: "work" })]}
       />,
     );
+
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
+    ).toEqual(["Отдел Продажи1", "Отдел Продажи1", "Отдел Продажи0"]);
+  });
+
+  it("keeps plain columns on an empty board", () => {
+    renderWithIntl(<TaskBoard view="mine" statuses={statuses} initialCards={[]} />);
 
     expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
   });
